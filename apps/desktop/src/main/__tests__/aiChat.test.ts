@@ -176,7 +176,7 @@ const setup = async ({ key = null as ReturnType<typeof createDataKey> | null } =
 const send = (
   ai: Awaited<ReturnType<typeof setup>>["ai"],
   text: string,
-  options: { mode?: "supervised" | "auto-accept-edits" | "full-access"; plan?: boolean } = {},
+  options: { mode?: "supervised" | "auto-accept-edits" | "full-access" } = {},
   threadId: string | null = null,
 ) =>
   ai.send({
@@ -184,7 +184,6 @@ const send = (
     text,
     context: null,
     mode: options.mode ?? "full-access",
-    plan: options.plan ?? false,
   });
 
 describe("side chat", () => {
@@ -343,33 +342,11 @@ describe("side chat", () => {
     ]);
     const { threadId } = await send(ai, "Go", { mode: "supervised" });
     const approval = await pendingApproval(threadId);
-    await ai.setMode(threadId, "full-access", false);
+    await ai.setMode(threadId, "full-access");
     ai.respond(threadId, approval.id, "accept");
     const thread = await settled(threadId);
     expect(thread.items.filter((item) => item.kind === "approval")).toHaveLength(1);
     expect((await store.getLibrary()).notes).toHaveLength(3);
-  });
-
-  it("in plan mode, offers only reading tools", async () => {
-    const { ai, enable, settled, store } = await setup();
-    await enable();
-    const id = noteId(1);
-    await createNote(store, id, { title: "Plans" });
-    script.turns.push([
-      { tool: "loam_notes_read", input: { noteId: id } },
-      { tool: "loam_notes_write", input: { noteId: id, markdown: "Nope" } },
-    ]);
-    const { threadId } = await send(ai, "Plan it", { plan: true });
-    await settled(threadId);
-    const offered = script.seen[0]!.tools;
-    expect(offered.every((tool) => tool.access === "read" || tool.access === "web")).toBe(true);
-    expect(script.seen[0]!.system).toContain("Plan mode is on");
-    expect(JSON.parse(script.answers[0]!.content)).toMatchObject({
-      title: "Plans",
-      tabs: [expect.objectContaining({ markdown: "Body" })],
-    });
-    expect(script.answers[1]).toMatchObject({ isError: true });
-    expect(JSON.stringify((await store.getNote(id)).blocksByTab)).not.toContain("Nope");
   });
 
   it("stops a turn that is waiting on an approval", async () => {
@@ -442,7 +419,6 @@ describe("side chat", () => {
       text: "",
       context: null,
       mode: "full-access",
-      plan: false,
       attachments: [
         { name: "chart.png", bytes: png, text: null },
         { name: "Lecture 3.pdf", bytes: pdf, text: "Osmosis moves water" },
@@ -494,7 +470,6 @@ describe("side chat", () => {
         mentions: [{ noteId: "11111111-1111-4111-8111-111111111111", title: "Reading list" }],
       },
       mode: "full-access",
-      plan: false,
     });
     await settled(threadId);
     const [request] = script.seen;
@@ -532,7 +507,6 @@ describe("side chat", () => {
         text: "Look",
         context: null,
         mode: "full-access",
-        plan: false,
         attachments: [{ name, bytes, text }],
       });
     await expect(send("app.exe", new Uint8Array([0x4d, 0x5a, 0, 0]))).rejects.toMatchObject({

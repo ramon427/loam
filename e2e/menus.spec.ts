@@ -1,4 +1,4 @@
-import type { Locator } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import { DESKTOP, expect, test } from "./app";
 import { appendToBody, createNote, expectSaved, noteBody, noteRow, storedNote } from "./notes";
@@ -107,13 +107,25 @@ const lookOf = (locator: Locator) =>
       padding: `${style.paddingTop} ${style.paddingRight} ${style.paddingBottom}`,
     };
   });
+/** Hovers `target` afresh until `shown` appears, for what a passing focus change can close. */
+const hoverUntilVisible = (window: Page, target: Locator, shown: Locator) =>
+  expect(async () => {
+    await window.mouse.move(0, 0);
+    await target.hover();
+    await expect(shown).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15_000 });
 const heightOf = async (locator: Locator) => Math.round((await locator.boundingBox())!.height);
 
 test("the editor's menus and tooltips look like the app's", async ({ loam }) => {
   const { window } = loam;
   await createNote(window, { title: "Look", body: "Words to format." });
 
-  await window.getByRole("button", { name: "New note" }).first().hover();
+  // The new note takes the focus a moment later, which closes a tooltip on its way.
+  await hoverUntilVisible(
+    window,
+    window.getByRole("button", { name: "New note" }).first(),
+    window.getByRole("tooltip"),
+  );
   const appTooltip = await lookOf(window.getByRole("tooltip"));
   await noteRow(window, "Look").click({ button: "right" });
   const appMenu = window.getByRole("menu");
@@ -148,8 +160,8 @@ test("the editor's menus and tooltips look like the app's", async ({ loam }) => 
   const blockMenu = window.getByRole("menu");
   expect(asMenu(await lookOf(blockMenu))).toEqual(menu);
   expect(await lookOf(blockMenu.getByRole("menuitem", { name: "Delete" }))).toEqual(row);
-  await blockMenu.getByRole("menuitem", { name: "Colors" }).hover();
   const colors = window.locator("[data-loam-block-color-menu]");
+  await hoverUntilVisible(window, blockMenu.getByRole("menuitem", { name: "Colors" }), colors);
   expect(asMenu(await lookOf(colors))).toEqual(menu);
   expect(asRow(await lookOf(colors.getByRole("menuitemcheckbox").first()))).toEqual(row);
 });

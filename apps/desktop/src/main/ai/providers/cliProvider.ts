@@ -37,7 +37,6 @@ export const createCliProvider = ({
     effort,
     tools,
     mode,
-    plan,
     history,
     io,
   }: TurnRequest) {
@@ -73,7 +72,6 @@ export const createCliProvider = ({
         model,
         effort,
         mode,
-        plan,
         sessionId,
         io,
       });

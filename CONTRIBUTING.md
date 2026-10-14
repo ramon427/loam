@@ -136,19 +136,18 @@ database itself.
 
 ## Releasing
 
-Releases are Windows-only for now. Bump `version` in
-`apps/desktop/package.json`, commit, then push a matching tag:
+Releases are Windows-only for now, and every merged pull request makes one:
+the Auto release workflow bumps the patch version in
+`apps/desktop/package.json`, commits `Release x.y.z` to `main` and tags it, then
+the Release workflow builds the installer and publishes it as a GitHub Release.
+For a minor or major version, set `version` in the pull request; a version not
+released yet is released as it is. Auto release can also be run by hand from
+the Actions tab.
 
-```sh
-git tag v0.3.0
-git push origin v0.3.0
-```
-
-The Release workflow builds the installer and uploads it to a draft GitHub
-Release; review the draft and publish it. Installed copies check for updates
-15 seconds after launch and then hourly (`apps/desktop/src/main/updates.ts`),
-download in the background, and offer "Restart to update" in the sidebar; an
-update also installs the next time the app quits. Drafts are never offered.
+Installed copies check for updates 15 seconds after launch and then hourly
+(`apps/desktop/src/main/updates.ts`), download in the background, and offer
+"Restart to update" in the sidebar; an update also installs the next time the
+app quits. Drafts are never offered.
 
 ## Security
 

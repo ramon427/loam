@@ -132,8 +132,6 @@ export type AiChatItem =
       context: AiChatContext | null;
       /** Files sent with the message; older chats have none. */
       attachments?: AiAttachment[];
-      /** Sent in plan mode: the assistant only reads and proposes. */
-      plan: boolean;
       at: number;
     }
   | { kind: "assistant"; id: string; turnId: string; text: string; streaming: boolean }
@@ -178,7 +176,6 @@ export type AiContextUsage = { tokens: number; window: number | null };
 export type AiThread = AiThreadSummary & {
   createdAt: number;
   mode: AiAccessMode;
-  plan: boolean;
   provider: AiProviderId;
   model: string;
   items: AiChatItem[];
@@ -194,6 +191,6 @@ export type AiChatEvent =
   | { type: "delta"; threadId: string; itemId: string; text: string }
   | {
       type: "thread";
-      thread: AiThreadSummary & { mode: AiAccessMode; plan: boolean; context?: AiContextUsage };
+      thread: AiThreadSummary & { mode: AiAccessMode; context?: AiContextUsage };
     }
   | { type: "threads"; threads: AiThreadSummary[] };

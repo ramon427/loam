@@ -198,7 +198,6 @@ export const BRIDGE_PARAMS: { [M in LoamBridgeMethod]: z.ZodType<LoamBridgeParam
       text: z.string().trim().max(100_000),
       context: chatContextSchema.nullable(),
       mode: accessModeSchema,
-      plan: z.boolean(),
       attachments: z
         .array(
           z.strictObject({
@@ -222,7 +221,7 @@ export const BRIDGE_PARAMS: { [M in LoamBridgeMethod]: z.ZodType<LoamBridgeParam
     decision: z.enum(["accept", "accept-for-chat", "decline"]),
   }),
   "ai.undo": z.strictObject({ threadId: idSchema, actionIds: z.array(idSchema).max(500) }),
-  "ai.setMode": z.strictObject({ threadId: idSchema, mode: accessModeSchema, plan: z.boolean() }),
+  "ai.setMode": z.strictObject({ threadId: idSchema, mode: accessModeSchema }),
   "ai.renameThread": z.strictObject({ threadId: idSchema, title: z.string().max(500) }),
   "ai.deleteThread": threadIdParams,
   "export.markdown": z.strictObject({ scope: exportScopeSchema }),

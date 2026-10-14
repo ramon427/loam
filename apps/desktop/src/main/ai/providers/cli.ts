@@ -10,7 +10,7 @@ import { lineDiff } from "../chatTools";
 import type { TurnAttachment, TurnRequest } from "./types";
 
 /** One turn as the CLI that runs it needs it, set up by `createCliProvider`. */
-export type CliTurn = Pick<TurnRequest, "model" | "system" | "effort" | "mode" | "plan" | "io"> & {
+export type CliTurn = Pick<TurnRequest, "model" | "system" | "effort" | "mode" | "io"> & {
   /** The CLI's executable. */
   path: string;
   /** Where the CLI runs. */

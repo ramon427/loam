@@ -16,8 +16,8 @@ import { threeLevelEffort } from "./types";
  * Codex's sandbox for the chat's access mode. Run this way, Codex can't stop
  * to ask, so modes that would ask keep it from changing anything.
  */
-const codexSandbox = (mode: AiAccessMode, plan: boolean) => {
-  if (plan || mode === "supervised") return "read-only";
+const codexSandbox = (mode: AiAccessMode) => {
+  if (mode === "supervised") return "read-only";
   return mode === "full-access" ? "danger-full-access" : "workspace-write";
 };
 
@@ -64,7 +64,6 @@ export const runCodexTurn = async ({
   model,
   effort,
   mode,
-  plan,
   sessionId: resumed,
   io,
 }: CliTurn) => {
@@ -80,7 +79,7 @@ export const runCodexTurn = async ({
       "-C",
       workDirectory,
       "--sandbox",
-      codexSandbox(mode, plan),
+      codexSandbox(mode),
       "-c",
       'approval_policy="never"',
       "-c",

@@ -44,7 +44,6 @@ type ChatHandlers = {
   onOpenNote: (noteId: string) => void;
   onRespond: (approvalId: string, decision: AiApprovalDecision) => void;
   onUndo: (actionIds: string[]) => void;
-  onImplementPlan: () => void;
   /** Sends a message again, for a new answer to it. */
   onAskAgain: (message: UserItem) => void;
 };
@@ -156,7 +155,6 @@ function Turn({
   onOpenNote,
   onRespond,
   onUndo,
-  onImplementPlan,
   onAskAgain,
 }: {
   items: AiChatItem[];
@@ -245,19 +243,12 @@ function Turn({
           ) : null}
         </li>
       ) : null}
-      {!running && (undoable.length > 0 || (message?.plan && latest)) ? (
-        <li className="flex flex-wrap gap-2">
-          {message?.plan && latest ? (
-            <Button size="sm" variant="outline" onClick={onImplementPlan}>
-              Implement plan
-            </Button>
-          ) : null}
-          {undoable.length > 0 ? (
-            <Button size="sm" variant="ghost-muted" onClick={() => onUndo(undoable)}>
-              <Undo2Icon aria-hidden />
-              Undo all changes from this reply
-            </Button>
-          ) : null}
+      {!running && undoable.length > 0 ? (
+        <li>
+          <Button size="sm" variant="ghost-muted" onClick={() => onUndo(undoable)}>
+            <Undo2Icon aria-hidden />
+            Undo all changes from this reply
+          </Button>
         </li>
       ) : null}
     </>
@@ -375,11 +366,9 @@ function Item({
 
 function UserMessage({ item, threadId }: { item: UserItem; threadId: string }) {
   const context = item.context;
-  const chips = [
-    context?.noteTitle ?? null,
-    context?.selection ? "Selection" : null,
-    item.plan ? "Plan" : null,
-  ].filter((chip): chip is string => Boolean(chip));
+  const chips = [context?.noteTitle ?? null, context?.selection ? "Selection" : null].filter(
+    (chip): chip is string => Boolean(chip),
+  );
   return (
     <div className="ml-6 flex flex-col items-end gap-1">
       {item.attachments?.length ? (

@@ -108,13 +108,11 @@ export const createThreadStore = ({
     async create({
       id,
       mode,
-      plan,
       provider,
       model,
     }: {
       id: string;
       mode: AiAccessMode;
-      plan: boolean;
       provider: AiProviderId;
       model: string;
     }) {
@@ -125,7 +123,6 @@ export const createThreadStore = ({
         createdAt: now,
         updatedAt: now,
         mode,
-        plan,
         provider,
         model,
         items: [],

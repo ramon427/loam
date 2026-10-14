@@ -4,7 +4,6 @@ import {
   CheckIcon,
   ChevronDownIcon,
   FileTextIcon,
-  ListChecksIcon,
   PaperclipIcon,
   SquareIcon,
   XIcon,
@@ -22,11 +21,11 @@ import {
 } from "../ui/DropdownMenu";
 import { Textarea } from "../ui/Textarea";
 
-import { ACCESS_MODES, PLAN_MODE } from "./accessModes";
+import { ACCESS_MODES } from "./accessModes";
 import styles from "./aiChat.module.css";
 import { AiChatContextMeter } from "./AiChatContextMeter";
 import { AiChatDictation, composerSquareClass } from "./AiChatDictation";
-import { AiChatEffortPicker, AiChatModelPicker } from "./AiChatModelPicker";
+import { AiChatModelPicker } from "./AiChatModelPicker";
 import { useNoteMentions, type MentionableNote } from "./useNoteMentions";
 import { usePromptQueue } from "./usePromptQueue";
 import {
@@ -41,7 +40,7 @@ import type { AiChat } from "./useAiChat";
 
 type PendingAttachments = ReturnType<typeof usePendingAttachments>;
 
-/** The access-mode menu and the Plan toggle: quiet pills that fill when on. */
+/** The access-mode menu: a quiet pill that fills while open. */
 const composerPillClass = "h-[30px] min-w-0 gap-[5px] rounded-[9px] px-2 text-[12.5px]";
 
 /** Send, and Stop in its place: one round button. */
@@ -72,6 +71,7 @@ export function AiChatComposer({
   attachments,
   status,
   notes,
+  onOpenSettings,
 }: {
   chat: AiChat;
   activeNote: ActiveNote | null;
@@ -83,6 +83,7 @@ export function AiChatComposer({
   status: AiChatStatus;
   /** The notes @ can name. */
   notes: readonly MentionableNote[];
+  onOpenSettings: () => void;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mentions = useNoteMentions(notes);
@@ -326,7 +327,7 @@ export function AiChatComposer({
                   <DropdownMenuItem
                     key={id}
                     className="items-start"
-                    onSelect={() => chat.changeMode({ mode: id, plan: chat.plan })}
+                    onSelect={() => chat.changeMode(id)}
                   >
                     <option.icon className="mt-0.5 size-3.5" aria-hidden />
                     <span className="flex min-w-0 flex-1 flex-col">
@@ -342,28 +343,9 @@ export function AiChatComposer({
               })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button
-            variant="ghost-muted"
-            size="sm"
-            className={cn(
-              composerPillClass,
-              chat.plan &&
-                "bg-(--app-control-hover) text-(--app-text) hover:bg-(--app-control-hover)",
-            )}
-            aria-pressed={chat.plan}
-            aria-label={PLAN_MODE.label}
-            title={PLAN_MODE.description}
-            disabled={disabled}
-            onClick={() => chat.changeMode({ mode: chat.mode, plan: !chat.plan })}
-          >
-            <ListChecksIcon aria-hidden />
-            <span className="@max-[26rem]/composer:hidden">{PLAN_MODE.label}</span>
-          </Button>
           <span className="flex-1" />
           {chat.thread?.context ? <AiChatContextMeter usage={chat.thread.context} /> : null}
-          <AiChatModelPicker status={status} disabled={disabled} />
-          <span aria-hidden className="h-4 w-px shrink-0 bg-(--app-border-strong)" />
-          <AiChatEffortPicker status={status} disabled={disabled} />
+          <AiChatModelPicker status={status} disabled={disabled} onManage={onOpenSettings} />
           {chat.running ? (
             <Button
               size="icon-sm"

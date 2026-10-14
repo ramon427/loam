@@ -195,8 +195,8 @@ export const createHandlers = (app: AppServices): Handlers => {
       await app.ai.undo(threadId, actionIds);
       return null;
     },
-    "ai.setMode": async ({ threadId, mode, plan }) => {
-      await app.ai.setMode(threadId, mode, plan);
+    "ai.setMode": async ({ threadId, mode }) => {
+      await app.ai.setMode(threadId, mode);
       return null;
     },
     "ai.renameThread": async ({ threadId, title }) => {

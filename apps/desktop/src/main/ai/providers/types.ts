@@ -62,11 +62,10 @@ export type TurnRequest = {
   attachments: TurnAttachment[];
   /** How hard the model thinks; null leaves it to the model. */
   effort: AiEffort | null;
-  /** Only the tools this turn may use; plan mode offers reading only. */
+  /** Only the tools this turn may use. */
   tools: ChatTool[];
   /** The chat's access mode when the turn starts, for providers that run their own tools. */
   mode: AiAccessMode;
-  plan: boolean;
   /**
    * The chat so far, when it was with this provider. Null starts fresh; a
    * chat continued from another provider carries its earlier messages in `prompt`.
