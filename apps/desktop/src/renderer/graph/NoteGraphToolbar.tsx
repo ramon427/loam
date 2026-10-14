@@ -62,8 +62,9 @@ type NoteGraphExportCommands = {
   downloadJsonCanvas: () => void;
 };
 
+// Saved graphs name the graph paper "dots", the grid it replaced.
 const gridLabels: Record<NoteGraphViewPreferences["grid"], string> = {
-  dots: "Dots",
+  dots: "Graph paper",
   lines: "Lines",
   off: "No grid",
 };

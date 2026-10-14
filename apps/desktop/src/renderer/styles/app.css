@@ -72,6 +72,8 @@
   --app-glow: rgba(21, 21, 21, 0.12);
   --app-shadow-elevated: 0 2px 6px rgba(0, 0, 0, 0.05), 0 20px 40px -16px rgba(0, 0, 0, 0.16);
   --app-focus-ring: #808080;
+  /* The graph paper behind the note's paper and the graph. */
+  --canvas-grid-line: rgb(0 0 0 / 5%);
   --app-focus-ring-on-dark: rgba(255, 255, 255, 0.78);
   --app-hit-target: 2rem;
   --app-hit-target-min: 1.5rem;
@@ -151,6 +153,7 @@
   --app-glow: rgba(255, 255, 255, 0.18);
   --app-shadow-elevated: 0 1px 0 rgba(255, 255, 255, 0.06), 0 20px 48px -28px rgba(0, 0, 0, 0.75);
   --app-focus-ring: #747474;
+  --canvas-grid-line: rgb(255 255 255 / 5%);
 
   --sidebar-item-active-bg: var(--app-surface-2);
 
