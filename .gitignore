@@ -1,0 +1,20 @@
+node_modules/
+dist/
+dist-electron/
+dist-renderer/
+out/
+release/
+coverage/
+tmp/
+*.log
+*.tsbuildinfo
+.env
+.env.*
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+.DS_Store
+
+# Local agent and editor state.
+.claude/

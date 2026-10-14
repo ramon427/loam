@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/src/**/*.tsx",
+    "apps/desktop/src/renderer/**/*.ts",
+    "apps/desktop/src/renderer/**/*.tsx",
+    "apps/desktop/src/shared/**/*.ts",
+    "bench/**/*.ts",
+    "e2e/**/*.ts",
+    "*.config.ts",
+    "apps/desktop/vite.config.ts",
+    "scripts/**/*.ts"
+  ]
+}

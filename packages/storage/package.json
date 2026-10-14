@@ -1,0 +1,11 @@
+{
+  "name": "@loam/storage",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "NotesStore (notes, folders, links, search, version history) over pluggable storage adapters.",
+  "dependencies": {
+    "@loam/shared": "0.1.0"
+  }
+}

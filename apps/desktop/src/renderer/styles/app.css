@@ -1,0 +1,252 @@
+/* The renderer's design tokens: one light set on :root and one dark set on .dark. */
+
+@import "./raisedSurface.css";
+@import "./editableTables.css";
+@import "./dropIndicators.css";
+
+@theme inline {
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-code);
+}
+
+/* .loam-tokens lays the default tokens down again inside an element, as a theme preview does. */
+:root,
+.loam-tokens {
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-code:
+    ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-body: var(--font-ui);
+  --font-mono: var(--font-code);
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --h2-weight: var(--font-weight-semibold);
+
+  --radius: 0.5rem;
+  --radius-control: 8px;
+  --sidebar-padding-x: 16px;
+  --page-gutter: clamp(18px, 2.4vw, 32px);
+
+  --duration-fast: 150ms;
+  --duration-hover: 45ms;
+  /* What appears (a message, a panel) settles in this long; what you made yourself, quicker. */
+  --duration-enter: 300ms;
+  --duration-enter-fast: 220ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* The Whirl theme's light colours. A theme preset (renderer/themes) overrides any of the
+     colour tokens below; everything else derives from them. */
+  --app-page: #f3f3f4;
+  --app-page-2: #e9e9eb;
+  --app-bg: #f3f3f4;
+  --app-surface: #ffffff;
+  --app-surface-2: #f4f4f5;
+  --app-surface-overlay: #ffffff;
+  --app-border: #dcdcdd;
+  --app-border-subtle: #e6e6e8;
+  --app-border-strong: #cfcfd1;
+  /* The lines between the window's regions (sidebar edge, top row), fainter than a border. */
+  --app-divider: color-mix(in srgb, var(--app-border-subtle) 60%, transparent);
+  --app-input: #dedede;
+  --app-text: #141414;
+  --app-muted: #696969;
+  --app-icon-muted: #6b6b6b;
+  --app-secondary-label: #555555;
+  --app-placeholder: #8f8f8f;
+  --app-accent: #0f0f0f;
+  --app-accent-2: #141414;
+  --app-accent-foreground: #fafafa;
+  --app-accent-muted: #ebebeb;
+  --app-accent-muted-foreground: #141414;
+  --app-code-bg: #f4f4f5;
+  --app-selection-bg: #1414141f;
+  --app-search-match-bg: #ffe5a3;
+  --app-search-match-foreground: #141414;
+  --app-control: #ffffff;
+  --app-control-hover: #ececed;
+  --app-sidebar-hover: #f8f8f9;
+  --app-scrollbar: #0000001f;
+  --app-scrollbar-hover: #00000033;
+  --app-glow: rgba(21, 21, 21, 0.12);
+  --app-shadow-elevated: 0 2px 6px rgba(0, 0, 0, 0.05), 0 20px 40px -16px rgba(0, 0, 0, 0.16);
+  --app-focus-ring: #808080;
+  --app-focus-ring-on-dark: rgba(255, 255, 255, 0.78);
+  --app-hit-target: 2rem;
+  --app-hit-target-min: 1.5rem;
+  --app-hit-target-touch: 2.75rem;
+  --app-disabled-opacity: 0.72;
+
+  /* Aliases older components read; they track the --app-* values. */
+  --text: var(--app-text);
+  --muted-text: var(--app-muted);
+  --card-bg: var(--app-surface);
+  --pill-bg: var(--app-page-2);
+  --pill-border: var(--app-border);
+  --shell-bg: var(--app-bg);
+  --focus-ring: var(--app-focus-ring);
+
+  --sidebar-bg: var(--app-bg);
+  --sidebar-foreground: var(--app-secondary-label);
+  --sidebar-border: var(--app-border-subtle);
+  --sidebar-item-hover-bg: var(--app-sidebar-hover);
+  --sidebar-item-active-bg: var(--app-surface);
+
+  --control-border: color-mix(in srgb, var(--app-text) 9%, transparent);
+  --control-border-hover: color-mix(in srgb, var(--app-text) 16%, transparent);
+  --control-border-strong: color-mix(in srgb, var(--app-text) 24%, transparent);
+  --control-hover-on-pill: color-mix(in srgb, var(--pill-bg) 94%, var(--app-text));
+  --table-border: color-mix(in srgb, var(--app-text) 5.5%, transparent);
+  --scrollbar-thumb-idle: var(--app-scrollbar);
+  --scrollbar-thumb-hover: var(--app-scrollbar-hover);
+
+  /* Menu rows; the editor's own popups share these. */
+  --control-menu-padding: 4px;
+  --control-menu-row-padding-x: 6px;
+  --control-menu-gap: 6px;
+  --control-menu-font-size: 12px;
+  --control-menu-line-height: 16px;
+  --menu-item-hover-bg: var(--raised-control-hover-bg);
+
+  --status-success: #00915e;
+  --status-success-bright: var(--status-success);
+  --status-warning: #b45309;
+  --status-danger: #e7000b;
+  --status-info: #1c6fca;
+}
+
+/* The Whirl theme's dark colours. */
+.dark {
+  --app-page: #131313;
+  --app-page-2: #262626;
+  --app-bg: #131313;
+  --app-surface: #1c1c1c;
+  --app-surface-2: #252526;
+  --app-surface-overlay: #262627;
+  --app-border: #2a2a2b;
+  --app-border-subtle: #202021;
+  --app-border-strong: #363637;
+  --app-divider: rgb(255 255 255 / 5%);
+  --app-input: #363637;
+  --app-text: #f0f0f0;
+  --app-muted: #888888;
+  --app-icon-muted: #9a9a9a;
+  --app-secondary-label: #b7b7b7;
+  --app-placeholder: #6e6e6e;
+  --app-accent: #dedede;
+  --app-accent-2: #f0f0f0;
+  --app-accent-foreground: #161616;
+  --app-accent-muted: #383838;
+  --app-accent-muted-foreground: #fafafa;
+  --app-code-bg: #252526;
+  --app-selection-bg: #ffffff2e;
+  --app-search-match-bg: oklch(0.55 0.1 85);
+  --app-search-match-foreground: #f0f0f0;
+  --app-control: #232324;
+  --app-control-hover: #2c2c2d;
+  --app-sidebar-hover: #1e1e1f;
+  --app-scrollbar: #ffffff1f;
+  --app-scrollbar-hover: #ffffff33;
+  --app-glow: rgba(255, 255, 255, 0.18);
+  --app-shadow-elevated: 0 1px 0 rgba(255, 255, 255, 0.06), 0 20px 48px -28px rgba(0, 0, 0, 0.75);
+  --app-focus-ring: #747474;
+
+  --sidebar-item-active-bg: var(--app-surface-2);
+
+  --control-border: var(--app-border);
+  --control-border-hover: var(--app-border);
+  --control-border-strong: var(--app-input);
+  --control-hover-on-pill: var(--app-control-hover);
+  --table-border: color-mix(in srgb, var(--app-border) 60%, transparent);
+
+  --status-success: #34d399;
+  --status-warning: #f5a524;
+  --status-danger: #ff6467;
+  --status-info: #3987e5;
+}
+
+/* Inside the app shell, controls take tighter corners and an elevated shadow; floating portals
+   outside it keep the root values. */
+.app-shell-theme {
+  --radius-control: 4px;
+  --shadow-elevated: var(--app-shadow-elevated);
+}
+
+@layer base {
+  .app-shell-theme {
+    color: var(--app-text);
+    font-family: var(--font-body);
+    background-color: var(--shell-bg);
+  }
+
+  .app-typography h1 {
+    font-size: clamp(1.6rem, 2.8vw, 2.6rem);
+  }
+  .app-typography h2 {
+    font-size: clamp(1.2rem, 2vw, 2rem);
+  }
+  .app-typography h3 {
+    font-size: clamp(1rem, 1.6vw, 1.4rem);
+  }
+  .app-typography h4 {
+    font-size: 0.85rem;
+  }
+  .app-typography h5 {
+    font-size: 0.75rem;
+  }
+}
+
+::-webkit-scrollbar {
+  width: var(--scrollbar-size, 24px);
+  height: var(--scrollbar-size, 24px);
+}
+
+/* Native top and bottom step buttons keep the full accessible hit area. */
+::-webkit-scrollbar-button:vertical {
+  display: block;
+  width: var(--scrollbar-size, 24px);
+  height: var(--scrollbar-size, 24px);
+  background-color: transparent;
+  background-repeat: no-repeat;
+}
+
+::-webkit-scrollbar-button:vertical:decrement {
+  background:
+    linear-gradient(135deg, transparent 38%, var(--scrollbar-thumb-idle) 40% 60%, transparent 62%)
+      calc(50% - 2px) 50% / 5px 8px no-repeat,
+    linear-gradient(45deg, transparent 38%, var(--scrollbar-thumb-idle) 40% 60%, transparent 62%)
+      calc(50% + 2px) 50% / 5px 8px no-repeat;
+}
+
+::-webkit-scrollbar-button:vertical:increment {
+  background:
+    linear-gradient(45deg, transparent 38%, var(--scrollbar-thumb-idle) 40% 60%, transparent 62%)
+      calc(50% - 2px) 50% / 5px 8px no-repeat,
+    linear-gradient(135deg, transparent 38%, var(--scrollbar-thumb-idle) 40% 60%, transparent 62%)
+      calc(50% + 2px) 50% / 5px 8px no-repeat;
+}
+
+::-webkit-scrollbar-button:vertical:increment:start,
+::-webkit-scrollbar-button:vertical:decrement:end {
+  display: none;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-idle);
+  background-clip: padding-box;
+  border: 7px solid transparent;
+  border-radius: 999px;
+  min-height: 28px;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+*:hover::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}

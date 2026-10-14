@@ -1,0 +1,53 @@
+# Builds the Windows installer when a version tag (v1.2.3) is pushed and uploads it
+# to a draft GitHub Release. Review the draft on GitHub, then publish it.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    # Creates the draft release and uploads the installer to it.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Check the tag matches the app version
+        shell: bash
+        run: |
+          version=$(node -p "require('./apps/desktop/package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match apps/desktop/package.json version $version"
+            exit 1
+          fi
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # electron-builder uploads its files in parallel; with no release yet, each
+      # upload would create its own draft.
+      - name: Create the draft release
+        shell: bash
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 ||
+            gh release create "$GITHUB_REF_NAME" --draft --title "${GITHUB_REF_NAME#v}" --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Package and upload to a draft release
+        working-directory: apps/desktop
+        run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

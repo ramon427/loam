@@ -1,0 +1,10 @@
+{
+  "id": "focus-timer",
+  "name": "Focus timer",
+  "version": "1.0.0",
+  "description": "A 25-minute focus timer in a pane, with a button in the sidebar to open it.",
+  "author": "Loam",
+  "apiVersion": 1,
+  "permissions": ["ui"],
+  "settings": [{ "key": "minutes", "type": "number", "label": "Minutes", "default": 25 }]
+}

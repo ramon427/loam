@@ -1,0 +1,47 @@
+/* Table tokens, shared with the data grid's module, and the look of tables in the editor. */
+:root {
+  --table-font-size: 12px;
+  --table-line-height: 16px;
+  --table-cell-x: 12px;
+  --table-radius: 4px;
+  --table-hover: color-mix(in srgb, var(--app-text) 7%, var(--app-surface));
+  --table-selected: color-mix(in srgb, var(--app-text) 12%, var(--app-surface));
+  --table-cell-y: 8px;
+}
+.ui-editable-tables .ProseMirror table {
+  border: 1px solid var(--table-border);
+  border-radius: var(--table-radius);
+  background: var(--app-surface);
+  color: var(--app-text);
+}
+.ui-editable-tables .ProseMirror table th,
+.ui-editable-tables .ProseMirror table td {
+  border: 1px solid var(--table-border);
+  padding: var(--table-cell-y) var(--table-cell-x);
+  font-size: var(--table-font-size);
+  line-height: var(--table-line-height);
+  text-align: left;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+.ui-editable-tables .ProseMirror table th {
+  font-weight: 400;
+  color: var(--app-muted);
+  background: var(--app-page);
+}
+.ui-editable-tables .ProseMirror table .bn-inline-content {
+  font-size: var(--table-font-size);
+  line-height: var(--table-line-height);
+}
+.ui-editable-tables [data-editor-active="true"] .ProseMirror table tr:hover td {
+  background: var(--app-surface);
+}
+.ui-editable-tables [data-editor-active="true"] .ProseMirror table tr td:hover,
+.ui-editable-tables [data-editor-active="true"] .ProseMirror table tr th:hover {
+  background: var(--table-hover);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-editable-tables .ProseMirror table th,
+  .ui-editable-tables .ProseMirror table td {
+    transition: none;
+  }
+}

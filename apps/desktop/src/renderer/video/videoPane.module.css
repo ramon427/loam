@@ -1,0 +1,73 @@
+/*
+ * The video's column of the note's paper. A dashed seam parts it from the
+ * note; the column's content sticks in view while the note scrolls.
+ */
+.pane {
+  position: relative;
+  flex: 0 0 var(--video-pane-width, 420px);
+  min-width: min(var(--video-pane-min, 320px), 100%);
+  max-width: 60%;
+  border-left: 1px dashed color-mix(in srgb, var(--app-border) 90%, transparent);
+}
+
+.maximized {
+  flex: 1 1 auto;
+  max-width: none;
+  border-left: 0;
+}
+
+/* Drag the seam to resize; it lights up under the pointer. */
+.seam {
+  position: absolute;
+  z-index: 2;
+  inset-block: 0;
+  left: -6px;
+  width: 11px;
+  /* A handle on the pane's left edge; the cursor points into the pane it resizes. */
+  cursor: e-resize;
+  touch-action: none;
+}
+
+.seam::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 4px;
+  width: 2px;
+  background: transparent;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.seam:hover::after {
+  background: var(--app-border-strong);
+}
+
+.body {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100svh - 7rem);
+  overflow-y: auto;
+  padding: 1.25rem 1.25rem 1.5rem;
+  scrollbar-width: thin;
+}
+
+/* Too narrow for two columns, the video goes under the note. */
+@container note-view (width < 44rem) {
+  .pane {
+    flex: 0 0 auto;
+    max-width: none;
+    border-top: 1px dashed color-mix(in srgb, var(--app-border) 90%, transparent);
+    border-left: 0;
+  }
+
+  .seam {
+    display: none;
+  }
+
+  .body {
+    position: static;
+    max-height: none;
+  }
+}

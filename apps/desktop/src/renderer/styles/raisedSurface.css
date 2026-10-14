@@ -1,0 +1,24 @@
+:root {
+  --raised-control-radius: var(--radius-control);
+  --raised-control-bg: var(--app-control);
+  --raised-control-shadow: none;
+  --raised-control-hover-bg: var(--app-control-hover);
+  --control-transition-duration: 120ms;
+  --control-transition-easing: cubic-bezier(0, 0, 0.2, 1);
+  --control-selected-bg: color-mix(in srgb, var(--app-surface) 95%, var(--app-text));
+  --control-selected-hover-bg: color-mix(in srgb, var(--app-surface) 93%, var(--app-text));
+  --control-selected-border: var(--control-border-strong);
+  --control-selected-focus-border: var(--app-text);
+  --control-selected-text: var(--app-text);
+  --control-selected-shadow: var(--raised-control-shadow);
+}
+
+.dark {
+  --raised-control-shadow: 0 1px 1px rgba(0, 0, 0, 0.14);
+  --control-selected-bg: var(--app-accent-muted);
+  --control-selected-hover-bg: color-mix(in srgb, var(--app-accent-muted) 92%, var(--app-text));
+  --control-selected-border: var(--app-input);
+  --control-selected-focus-border: var(--app-focus-ring);
+  --control-selected-text: var(--app-accent-muted-foreground);
+  --control-selected-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+}

@@ -1,0 +1,11 @@
+/* A hovered block color is drawn on .bn-block-outer (see hoverPreview.ts);
+   the block's own color underneath is hidden until the pointer moves on. */
+.bn-block-outer[data-loam-color-preview="textColor"] > .bn-block,
+.bn-block-outer[data-loam-color-preview="textColor"] > .bn-block > .bn-block-content {
+  color: inherit !important;
+}
+
+.bn-block-outer[data-loam-color-preview="backgroundColor"] > .bn-block,
+.bn-block-outer[data-loam-color-preview="backgroundColor"] > .bn-block > .bn-block-content {
+  background-color: transparent !important;
+}

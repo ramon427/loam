@@ -1,0 +1,5 @@
+# Line endings are LF everywhere, including Windows checkouts, so formatting
+# checks and tests see the same files on every machine.
+* text=auto eol=lf
+*.png binary
+*.ico binary

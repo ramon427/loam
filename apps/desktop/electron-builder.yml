@@ -1,0 +1,46 @@
+# Packages the built app into a Windows installer and publishes it to GitHub Releases.
+# Main, preload, and renderer are fully bundled, so no node_modules ship in the app.
+appId: io.github.ramon427.loam
+productName: Loam
+artifactName: Loam-Setup-${version}.${ext}
+
+directories:
+  buildResources: build
+  output: release
+
+files:
+  - dist-electron/**/*
+  - dist-renderer/**/*
+  - package.json
+  - "!node_modules/**/*"
+
+asarUnpack:
+  - dist-electron/mcp.cjs
+
+# Offered under "Open with"; Loam opens them where they are, to keep as references.
+fileAssociations:
+  - ext: pdf
+    name: PDF
+    role: Viewer
+  - ext: docx
+    name: Word document
+    role: Viewer
+  - ext: [md, markdown]
+    name: Markdown
+    role: Editor
+
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch: x64
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+
+publish:
+  provider: github
+  owner: ramon427
+  repo: loam
+  releaseType: draft

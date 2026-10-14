@@ -1,0 +1,58 @@
+# Checks every pull request and every push to main. Run the same locally with
+# `npm run check` and `npm run e2e` (see CONTRIBUTING.md).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run knip
+      - run: npm run format:check
+      - run: npm test
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/electron
+          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npm ci
+      # The Electron binary otherwise downloads during the first test.
+      - run: node node_modules/electron/install.js
+      # Some tests click through the window system, as a user does.
+      - run: sudo apt-get install -y xdotool
+      - run: xvfb-run -a npm run e2e
+      - if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: e2e-results
+          path: tmp/e2e-results
+          retention-days: 7

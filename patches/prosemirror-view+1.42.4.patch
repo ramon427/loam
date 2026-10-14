@@ -1,0 +1,45 @@
+diff --git a/node_modules/prosemirror-view/src/index.ts b/node_modules/prosemirror-view/src/index.ts
+index 54f4d0ec..ebc008ab 100644
+--- a/node_modules/prosemirror-view/src/index.ts
++++ b/node_modules/prosemirror-view/src/index.ts
+@@ -463,8 +463,9 @@ export class EditorView {
+     destroyInput(this)
+     this.destroyPluginViews()
+     if (this.mounted) {
+-      this.docView.update(this.state.doc, [], viewDecorations(this), this)
++      // Retiring children must not be redrawn or consulted after plugin cleanup.
+       this.dom.textContent = ""
++      this.docView.updateOuterDeco([])
+     } else if (this.dom.parentNode) {
+       this.dom.parentNode.removeChild(this.dom)
+     }
+diff --git a/node_modules/prosemirror-view/dist/index.js b/node_modules/prosemirror-view/dist/index.js
+index 56424047..735c57bf 100644
+--- a/node_modules/prosemirror-view/dist/index.js
++++ b/node_modules/prosemirror-view/dist/index.js
+@@ -5850,8 +5850,9 @@ class EditorView {
+         destroyInput(this);
+         this.destroyPluginViews();
+         if (this.mounted) {
+-            this.docView.update(this.state.doc, [], viewDecorations(this), this);
++            // Retiring children must not be redrawn or consulted after plugin cleanup.
+             this.dom.textContent = "";
++            this.docView.updateOuterDeco([]);
+         }
+         else if (this.dom.parentNode) {
+             this.dom.parentNode.removeChild(this.dom);
+diff --git a/node_modules/prosemirror-view/dist/index.cjs b/node_modules/prosemirror-view/dist/index.cjs
+index 926a1490..81f1f7c6 100644
+--- a/node_modules/prosemirror-view/dist/index.cjs
++++ b/node_modules/prosemirror-view/dist/index.cjs
+@@ -5357,8 +5357,9 @@ var EditorView = function () {
+       destroyInput(this);
+       this.destroyPluginViews();
+       if (this.mounted) {
+-        this.docView.update(this.state.doc, [], viewDecorations(this), this);
++        // Retiring children must not be redrawn or consulted after plugin cleanup.
+         this.dom.textContent = "";
++        this.docView.updateOuterDeco([]);
+       } else if (this.dom.parentNode) {
+         this.dom.parentNode.removeChild(this.dom);
+       }

@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react",
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "Fragment",
+    "noEmit": true,
+    "types": [],
+    "lib": ["ES2023", "WebWorker"],
+    "paths": {
+      "@loam/plugin-api": ["../../packages/plugin-api/index.d.ts"]
+    }
+  },
+  "include": ["*/src/**/*.ts", "*/src/**/*.tsx", "../../packages/plugin-api/index.d.ts"]
+}

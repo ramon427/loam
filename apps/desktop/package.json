@@ -1,0 +1,29 @@
+{
+  "name": "@loam/desktop",
+  "productName": "Loam",
+  "version": "0.8.1",
+  "private": true,
+  "description": "Loam desktop app.",
+  "license": "MIT",
+  "main": "dist-electron/main.cjs",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "vite build && node scripts/build-electron.mjs",
+    "start": "electron .",
+    "package:win": "npm run build && electron-builder --win --publish never"
+  },
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@loam/shared": "0.1.0",
+    "@loam/storage": "0.1.0",
+    "@loam/transfer": "0.1.0"
+  },
+  "author": "Loam contributors",
+  "homepage": "https://github.com/ramon427/loam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ramon427/loam.git"
+  },
+  "bugs": "https://github.com/ramon427/loam/issues"
+}

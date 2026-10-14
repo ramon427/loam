@@ -1,0 +1,318 @@
+/* The side chat's column, at the window's right edge beside the note. */
+.panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  grid-column: 3;
+  grid-row: 1;
+  overflow: hidden;
+  border-left: 1px solid var(--sidebar-border);
+  background: var(--app-bg);
+}
+
+/* Files dragged over the chat land in the next message. */
+.dropping {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--app-accent) 45%, transparent);
+}
+
+/* While the column opens or closes, the chat keeps its width and slides rather than squeezes. */
+.panel > * {
+  min-width: var(--loam-chat-content-width, 0);
+}
+
+/* The chat's top row is the window's right end, under the native window buttons. */
+.header {
+  padding-right: calc(var(--loam-window-controls-width) + 8px);
+  padding-left: 8px;
+}
+
+/* The seam on the chat's left edge that resizes it. */
+.resize {
+  position: absolute;
+  z-index: 20;
+  top: 0;
+  right: calc(var(--loam-chat-width) - 5px);
+  bottom: 0;
+  width: 10px;
+  outline: none;
+  /* The cursor points into the region the handle resizes. */
+  cursor: e-resize;
+  touch-action: none;
+}
+
+.resize::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 2px;
+  content: "";
+  background: transparent;
+  transition: background 120ms ease;
+}
+
+.resize:hover::after,
+.resize:focus-visible::after,
+.resize[data-resizing="true"]::after {
+  background: var(--app-focus-ring);
+}
+
+/* An answer, written in Markdown. */
+.markdown {
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown :is(p, ul, ol, pre, blockquote, table) {
+  margin: 0 0 0.6em;
+}
+
+.markdown :is(ul, ol) {
+  padding-left: 1.25em;
+}
+
+.markdown ul {
+  list-style: disc;
+}
+
+.markdown ol {
+  list-style: decimal;
+}
+
+.markdown :is(h1, h2, h3, h4) {
+  margin: 0.8em 0 0.4em;
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.markdown a {
+  color: var(--app-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown code {
+  padding: 0 0.25em;
+  border-radius: 4px;
+  background: var(--app-code-bg);
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+
+.markdown pre {
+  overflow: auto;
+  padding: 8px;
+  border-radius: var(--radius-control);
+  background: var(--app-code-bg);
+}
+
+.markdown pre code {
+  padding: 0;
+  background: none;
+}
+
+.markdown blockquote {
+  padding-left: 0.75em;
+  border-left: 2px solid var(--app-border);
+  color: var(--app-muted);
+}
+
+.markdown table {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.markdown :is(th, td) {
+  padding: 2px 6px;
+  border: 1px solid var(--app-border);
+}
+
+/* While an answer streams, a slim caret pulses where the next words go: after the last text. */
+.streaming > :is(p, h1, h2, h3, h4, blockquote):last-child::after,
+.streaming > :is(ul, ol):last-child > li:last-child::after,
+.streaming > div:last-child pre code::after {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  content: "";
+  vertical-align: text-bottom;
+  background: color-mix(in srgb, var(--app-text) 70%, transparent);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* What arrives in the chat rises into place; what was there already doesn't move. */
+.riseIn {
+  animation: rise-in var(--duration-enter) var(--ease-out) both;
+}
+
+/* What the user did themselves, such as their own message, settles quicker. */
+.fast {
+  animation-duration: var(--duration-enter-fast);
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Send and Stop trade places with a quick scale and fade. */
+.swapIn {
+  animation: swap-in var(--duration-fast) var(--ease-out) both;
+}
+
+@keyframes swap-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+/* A bar of the voice level while dictating; its height follows the voice. */
+.voiceBar {
+  width: 2px;
+  height: 100%;
+  border-radius: 9999px;
+  background: currentcolor;
+  transform: scaleY(0.2);
+  transition: transform 80ms linear;
+}
+
+/* Opened detail fades in. */
+.softIn {
+  animation: soft-in var(--duration-enter-fast) ease-out both;
+}
+
+@keyframes soft-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The label of what is happening now: a light passes across its letters. */
+.shimmer {
+  color: transparent;
+  background-image: linear-gradient(
+    90deg,
+    var(--app-muted) 30%,
+    var(--app-text) 50%,
+    var(--app-muted) 70%
+  );
+  background-size: 250% 100%;
+  background-clip: text;
+  animation: shimmer 2.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -150% 0;
+  }
+}
+
+.chevron {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+/* An action that only matters on the row in hand shows on hover or focus. */
+.revealOnHover {
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+:global(.group):is(:hover, :focus-within) .revealOnHover {
+  opacity: 1;
+}
+
+/* A code block in an answer, with its copy button in the corner. */
+.codeBlock {
+  position: relative;
+}
+
+.codeCopy {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.codeBlock:is(:hover, :focus-within) .codeCopy {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streaming > :is(p, h1, h2, h3, h4, blockquote):last-child::after,
+  .streaming > :is(ul, ol):last-child > li:last-child::after,
+  .streaming > div:last-child pre code::after {
+    animation: none;
+    opacity: 0.6;
+  }
+
+  .riseIn,
+  .softIn,
+  .swapIn {
+    animation: none;
+  }
+
+  .shimmer {
+    color: var(--app-muted);
+    background: none;
+    animation: none;
+  }
+
+  .voiceBar {
+    transform: none !important;
+  }
+
+  .chevron,
+  .revealOnHover,
+  .codeCopy,
+  .resize::after {
+    transition: none;
+  }
+}
+
+/* A proposed change; lines a diff adds or removes are colored. */
+.preview {
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+  padding: 8px;
+  border-radius: var(--radius-control);
+  background: var(--app-code-bg);
+  font-family: var(--font-code);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.added {
+  color: var(--status-success);
+}
+
+.removed {
+  color: var(--status-danger);
+}

@@ -1,0 +1,18 @@
+{
+  "id": "word-count",
+  "name": "Word count",
+  "version": "1.0.0",
+  "description": "Shows how many words the open note has, in its header.",
+  "author": "Loam",
+  "apiVersion": 1,
+  "permissions": ["notes:read"],
+  "settings": [
+    {
+      "key": "goal",
+      "type": "number",
+      "label": "Daily goal",
+      "description": "Words to aim for; 0 for none.",
+      "default": 0
+    }
+  ]
+}

@@ -1,0 +1,297 @@
+@import "tailwindcss" source(none);
+@import "./styles/app.css";
+@source "./";
+@source not "./**/__tests__";
+@source not "./**/*.test.{ts,tsx}";
+
+@custom-variant dark (&:is(.dark, .dark *));
+
+@theme inline {
+  --color-primary: var(--app-accent);
+  --color-muted: var(--app-page-2);
+  --color-destructive: var(--status-danger);
+}
+
+:root {
+  --app-viewport-top: 0px;
+  --app-viewport-height: 100dvh;
+  /* The native window buttons' height (TITLEBAR_HEIGHT in the main process);
+     macOS has none, so its rows take the fallback. */
+  --loam-titlebar-height: env(titlebar-area-height, 44px);
+  /* How far the native window buttons reach in from the right; none on macOS. */
+  --loam-window-controls-width: calc(
+    100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px)
+  );
+  color: var(--app-text);
+  background: var(--app-bg);
+  font-family: var(--font-body);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--app-border);
+    outline-color: color-mix(in srgb, var(--app-accent) 50%, transparent);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    min-width: 320px;
+    margin: 0;
+  }
+
+  body {
+    overflow: hidden;
+    background-color: var(--app-bg);
+    font-weight: var(--font-weight-normal);
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+}
+
+.loam-window {
+  display: flex;
+  height: 100dvh;
+  flex-direction: column;
+}
+
+/*
+ * The window's top row: the sidebar's first row and each screen's header. It
+ * is as tall as the native window buttons and is the drag area that moves
+ * the window; controls in it stay clickable.
+ */
+.loam-chrome-row {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: var(--loam-titlebar-height);
+  border-bottom: 1px solid var(--app-divider);
+  background: var(--app-bg);
+  user-select: none;
+  -webkit-app-region: drag;
+}
+
+.loam-chrome-row :is(button, input, textarea, select, a, [role="button"]) {
+  -webkit-app-region: no-drag;
+}
+
+.loam-app-name {
+  color: var(--app-text);
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+}
+
+/* The locked window has one row: the traffic lights sit at its left end on
+   macOS, and the native buttons cover its right end elsewhere. */
+.loam-titlebar {
+  padding-right: calc(var(--loam-window-controls-width) + 8px);
+  padding-left: 14px;
+}
+
+[data-platform="darwin"] .loam-titlebar {
+  padding-left: 80px;
+}
+
+.loam-shell {
+  /* The sidebar toggle stays at the top-left corner, after the macOS traffic lights. */
+  --loam-toggle-left: 10px;
+  --loam-toggle-inset: calc(var(--loam-toggle-left) + 36px);
+  position: relative;
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: var(--loam-sidebar-width, 280px) minmax(0, 1fr) var(--loam-chat-width, 0px);
+  background: var(--app-bg);
+  transition: grid-template-columns var(--duration-enter-fast) var(--ease-out);
+}
+
+[data-platform="darwin"] .loam-shell {
+  --loam-toggle-left: 80px;
+}
+
+.loam-sidebar-toggle {
+  position: absolute;
+  z-index: 30;
+  top: 0;
+  left: var(--loam-toggle-left);
+  display: flex;
+  height: var(--loam-titlebar-height);
+  align-items: center;
+  -webkit-app-region: no-drag;
+}
+
+.loam-sidebar {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--app-divider);
+  background: var(--sidebar-bg);
+}
+
+.loam-sidebar-titlebar {
+  position: relative;
+  padding-right: 12px;
+  padding-left: var(--loam-toggle-inset);
+}
+
+/* The no-drag area under the sidebar toggle; see SidebarToggleSlot. */
+.loam-sidebar-toggle-slot {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--loam-toggle-inset);
+  -webkit-app-region: no-drag;
+}
+
+/* With the sidebar open, the toggle is over the sidebar's row, not the header. */
+.loam-shell:not([data-sidebar-collapsed="true"]) .loam-main-header > .loam-sidebar-toggle-slot {
+  display: none;
+}
+
+.loam-sidebar-body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 8px;
+}
+
+.loam-sidebar[hidden],
+.loam-sidebar-resize[hidden] {
+  display: none;
+}
+
+.loam-sidebar-resize {
+  position: absolute;
+  z-index: 20;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--loam-sidebar-width, 280px) - 5px);
+  width: 10px;
+  outline: none;
+  /* The cursor points into the region the handle resizes. */
+  cursor: w-resize;
+  touch-action: none;
+}
+
+.loam-sidebar-resize::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 2px;
+  content: "";
+  background: transparent;
+  transition: background 120ms ease;
+}
+
+/* A quiet line under the pointer marks the handle without a border at rest; the focus ring only for the keyboard. */
+.loam-sidebar-resize:hover::after,
+.loam-shell[data-sidebar-resizing="true"] .loam-sidebar-resize::after {
+  background: var(--app-border-strong);
+}
+
+.loam-sidebar-resize:focus-visible::after {
+  background: var(--app-focus-ring);
+}
+
+.loam-shell:is([data-sidebar-resizing="true"], [data-chat-resizing="true"]) {
+  transition: none;
+}
+
+.loam-shell[data-sidebar-resizing="true"],
+.loam-shell[data-sidebar-resizing="true"] * {
+  cursor: w-resize !important;
+  user-select: none !important;
+}
+
+/* The side chat's handle is on its left edge. */
+.loam-shell[data-chat-resizing="true"],
+.loam-shell[data-chat-resizing="true"] * {
+  cursor: e-resize !important;
+  user-select: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loam-shell,
+  .loam-sidebar-resize::after {
+    transition: none;
+  }
+}
+
+.loam-sidebar-tree {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.loam-sidebar-footer {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.loam-sidebar-header {
+  display: flex;
+  min-width: 0;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The main column doesn't scroll; each screen's page under its header does. */
+.loam-main {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  grid-column: 2;
+  overflow: hidden;
+}
+
+.loam-main-header {
+  position: relative;
+  padding-right: calc(var(--loam-window-controls-width) + 12px);
+  padding-left: 8px;
+}
+
+.loam-shell[data-sidebar-collapsed="true"] .loam-main-header {
+  padding-left: var(--loam-toggle-inset);
+}
+
+/* The side chat's header takes the window's right end, with its buttons. */
+.loam-shell[data-chat-open="true"] .loam-main-header {
+  padding-right: 12px;
+}
+::highlight(note-find) {
+  color: var(--app-search-match-foreground);
+  background: var(--app-search-match-bg);
+}
+::highlight(note-find-active) {
+  color: var(--app-text);
+  background: var(--app-accent-muted);
+  text-decoration: underline;
+}
+
+.loam-shell[hidden] {
+  display: none;
+}

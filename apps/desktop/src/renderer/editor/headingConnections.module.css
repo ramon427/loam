@@ -1,0 +1,52 @@
+.root :global([data-note-heading-connection-count] .bn-block-content[data-content-type="heading"]) {
+  position: relative;
+}
+
+.root
+  :global(
+    [data-note-heading-connection-count] .bn-block-content[data-content-type="heading"]
+  )::after {
+  align-items: center;
+  background: color-mix(in srgb, var(--app-page-2) 86%, transparent);
+  border: 1px solid color-mix(in srgb, var(--app-border) 72%, transparent);
+  border-radius: 999px;
+  color: var(--app-muted);
+  content: "\1f517\00a0" attr(data-note-heading-connection-count);
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  margin-inline-start: 0.45rem;
+  height: auto;
+  opacity: 1;
+  padding: 0.18rem 0.35rem;
+  vertical-align: middle;
+  width: auto;
+}
+
+.root :global([data-note-heading-highlight="true"] .bn-block-content[data-content-type="heading"]) {
+  animation: note-heading-connection-highlight 1.5s ease-out;
+  border-radius: 0.45rem;
+}
+
+@keyframes note-heading-connection-highlight {
+  0%,
+  35% {
+    background: color-mix(in srgb, var(--app-accent) 18%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent) 12%, transparent);
+  }
+
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root
+    :global([data-note-heading-highlight="true"] .bn-block-content[data-content-type="heading"]) {
+    animation: none;
+    background: color-mix(in srgb, var(--app-accent) 14%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent) 10%, transparent);
+  }
+}

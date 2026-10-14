@@ -1,0 +1,7 @@
+{
+  "name": "@loam/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Note models, block helpers and the bridge contract shared by every package.",
+  "license": "MIT"
+}

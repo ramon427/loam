@@ -1,0 +1,290 @@
+/*
+ * The open note's page: the canvas around the note, and the paper (or the
+ * graph's full-bleed paper) with the note's tabs on its top edge. The
+ * editor's own styles are in editor/blocknote/editorStyles.module.css.
+ */
+.canvas {
+  --notes-document-width: 860px;
+  --notes-document-height: 1216px;
+
+  align-items: center;
+  background-color: var(--app-page);
+  isolation: isolate;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-height: 100%;
+  /* Clip, not hide: a hidden overflow would scroll, and keep the video column from sticking. */
+  overflow-x: clip;
+  padding: clamp(1rem, 3vw, 2rem) clamp(0.75rem, 4vw, 2.5rem) clamp(2rem, 6vw, 4rem);
+  transition:
+    background-color 240ms ease,
+    gap 240ms ease,
+    padding 240ms ease;
+  width: 100%;
+}
+
+.canvas[data-notes-document-mode="immersive"] {
+  --notes-document-width: 100%;
+  align-items: stretch;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* The paper and the tabs on its top edge share one column, the paper's width. */
+.sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, var(--notes-document-width));
+  transition: width 240ms ease;
+}
+
+.paper {
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--app-border) 86%, transparent);
+  border-radius: 8px;
+  background: var(--app-surface);
+  /* No inner top highlight: the shown tab runs into the paper along that edge. */
+  box-shadow:
+    0 36px 90px -68px rgba(15, 23, 42, 0.48),
+    0 14px 42px -34px rgba(15, 23, 42, 0.28);
+  display: flex;
+  flex-direction: column;
+  min-height: var(--notes-document-height);
+  overflow: visible;
+  transition:
+    background-color 240ms ease,
+    border-color 240ms ease,
+    border-radius 240ms ease,
+    box-shadow 240ms ease;
+  width: 100%;
+}
+
+/* No shadow to repaint while the page scrolls. */
+.canvas[data-notes-scrolling="true"] .paper {
+  box-shadow: none;
+  transition: none;
+}
+
+/* Dark's paper shadow disappears into the canvas; light matches it with a flat edge. */
+:global(:root:not(.dark)) .paper {
+  border-color: var(--app-border);
+  box-shadow: none;
+}
+
+/*
+ * The note's tabs stand on the paper's top edge like folder tabs, clear of
+ * its rounded corner: the shown tab is cut from the paper, the others stand
+ * behind it. The tab strip paints them in these colors.
+ */
+.tabs {
+  --note-tab-surface: var(--app-surface);
+  --note-tab-edge: color-mix(in srgb, var(--app-border) 86%, transparent);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 0;
+  /* The shown tab covers the paper's top border, so the two read as one sheet. */
+  margin-bottom: -1px;
+  padding-inline: 12px;
+}
+
+/* Light paper has a plain border; match it. */
+:global(:root:not(.dark)) .tabs {
+  --note-tab-edge: var(--app-border);
+}
+
+.widthHandle {
+  position: absolute;
+  z-index: 5;
+  top: 2px;
+  bottom: 24px;
+  right: -7px;
+  width: 14px;
+  /* The sidebar handle's cursor and line, so every resize handle reads alike. */
+  cursor: w-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.widthHandle::before {
+  content: "";
+  position: absolute;
+  inset: 0 6px;
+  border-radius: 2px;
+}
+
+.cornerHandle {
+  position: absolute;
+  z-index: 6;
+  right: 2px;
+  bottom: 2px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.widthHandle:hover::before,
+.canvas[data-paper-resize-axis] .widthHandle::before {
+  background: var(--app-border-strong);
+}
+
+.widthHandle:focus-visible::before {
+  background: var(--app-focus-ring);
+}
+
+.cornerHandle:is(:hover, :focus-visible) {
+  background: var(--app-page-2);
+  color: var(--app-text);
+  outline: 2px solid var(--app-accent);
+  outline-offset: 1px;
+}
+
+.canvas[data-paper-resize-axis] :is(.sheet, .paper) {
+  transition: none;
+}
+
+.canvas[data-paper-resize-axis],
+.canvas[data-paper-resize-axis] * {
+  user-select: none !important;
+  cursor: nwse-resize !important;
+}
+
+.canvas[data-paper-resize-axis="width"],
+.canvas[data-paper-resize-axis="width"] * {
+  cursor: w-resize !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .paper {
+    transition: none;
+  }
+}
+
+@media print {
+  .widthHandle,
+  .cornerHandle {
+    display: none;
+  }
+}
+.canvas[data-notes-scrolling="true"] {
+  transition: none;
+}
+
+/* With a side column, the note and the column share the paper as two columns. */
+.paperWithSide {
+  flex-direction: row;
+}
+
+.paperMain {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+@container note-view (width < 44rem) {
+  .paperWithSide {
+    flex-direction: column;
+  }
+}
+
+:is(.paper, .paperMain) > :global(.loam-editor-root),
+:is(.paper, .paperMain) > :global([data-notes-document-skeleton]),
+.paper :global([data-slot="editor-container"]),
+.paper :global([data-slot="editor-content-switch"]) {
+  flex: 1;
+}
+
+.graphCanvas {
+  align-items: stretch;
+  background: var(--app-page);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  height: calc(100svh - var(--notes-graph-top, 8.5rem));
+  min-height: min(34rem, calc(100svh - var(--notes-graph-top, 8.5rem)));
+  overflow: hidden;
+  padding: 0;
+  transition:
+    background-color 240ms ease,
+    gap 240ms ease,
+    padding 240ms ease;
+  width: 100%;
+}
+
+/* A graph fills the page: its tabs run along the top, over the full-bleed paper. */
+.graphCanvas > .sheet {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+/* A graph's paper is the canvas itself, with no border: this line is its top edge. */
+.graphCanvas .tabs {
+  --note-tab-surface: var(--app-page);
+  margin-bottom: 0;
+  padding-top: 6px;
+  box-shadow: inset 0 -1px var(--note-tab-edge);
+}
+
+.graphPaper {
+  background: var(--app-page);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  transition:
+    background-color 240ms ease,
+    border-color 240ms ease,
+    border-radius 240ms ease,
+    box-shadow 240ms ease,
+    width 240ms ease;
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas,
+  .paper,
+  .graphCanvas,
+  .graphPaper {
+    transition: none;
+  }
+}
+
+.tabsScroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tabsScroll::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .canvas {
+    gap: 0.75rem;
+    padding: 0.75rem 0.75rem 1.5rem;
+  }
+
+  .paper {
+    min-height: min(720px, calc(100svh - 8rem));
+    width: 100%;
+  }
+}

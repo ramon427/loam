@@ -1,0 +1,2112 @@
+/* BlockNote Editor Styling - Clean Utility Design
+   Import this module only through blockNoteStyles.ts so vendor and override
+   ordering stays deterministic across every editor route. */
+
+.editorRoot,
+.slashMenuShell {
+  /* Editor-specific variables - Clean Utility */
+  --editor-radius: 8px;
+  --editor-border: var(--app-border);
+  --editor-surface: var(--app-surface);
+  --editor-text: var(--app-text);
+  --editor-text-muted: var(--app-muted);
+  --editor-hover-bg: var(--app-page-2);
+  --editor-active-bg: color-mix(in srgb, var(--app-page-2) 40%, transparent);
+  --editor-focus-ring: var(--app-accent);
+  --editor-selection-bg: var(
+    --app-selection-bg,
+    color-mix(in srgb, var(--editor-focus-ring) 24%, transparent)
+  );
+  --editor-selection-text: var(--editor-text);
+  --editor-icon-color: var(--app-icon-muted, var(--app-muted));
+  --editor-icon-hover: var(--app-text);
+  --editor-code-bg: var(--app-code-bg, var(--app-page-2));
+  --editor-code-text: var(--app-text);
+  --editor-table-border: var(--app-border);
+  --editor-table-header-bg: var(--app-page-2);
+  --editor-check-size: 16px;
+  --editor-check-radius: 0.35rem;
+  --editor-font-family: var(--font-body), "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --editor-paragraph-font-size: 14px;
+  --editor-paragraph-line-height: 1.45;
+  --editor-inline-control-hit-size: 20px;
+  --editor-inline-control-icon-size: 14px;
+  --editor-popup-surface: var(--app-surface-overlay, var(--raised-control-bg));
+  --editor-popup-border: color-mix(in srgb, var(--control-border) 78%, var(--raised-control-bg));
+  --editor-popup-radius: var(--raised-control-radius);
+  --editor-popup-shadow: var(--raised-control-shadow);
+  --editor-popup-padding: var(--control-menu-padding);
+  --editor-popup-width: min(414px, calc(100vw - 24px));
+  --editor-popup-max-width: min(520px, calc(100vw - 24px));
+  --editor-popup-max-height: min(360px, calc(100vh - 24px));
+  --editor-popup-row-gap: 2px;
+  --editor-popup-item-radius: var(--raised-control-radius);
+  --editor-popup-item-min-height: 36px;
+  /* Clean Utility button sizing */
+  --editor-btn-size: 22px;
+  --editor-btn-size-mobile: 28px;
+  --editor-icon-size: 13px;
+}
+
+.editorRoot {
+  /* Reserve both block controls plus breathing room, mirrored on the right. */
+  --editor-content-x: calc((var(--editor-btn-size) * 2) + 1.5rem);
+
+  /*
+   * Block geometry. Every block's first line, the side menu beside it, the
+   * inline controls on it (list markers, checkboxes, toggle arrows) and the
+   * hover box around it are derived from these, so they line up by
+   * construction instead of by per-block pixel nudges. The side menu renders
+   * in a portal that carries this class too, so it reads the same values.
+   */
+  --editor-text-line: calc(var(--editor-paragraph-font-size) * var(--editor-paragraph-line-height));
+  --editor-text-padding-y: 1px;
+  --editor-heading-padding-y: 2px;
+  --editor-h1-size: 1.375rem;
+  --editor-h1-leading: 1.25;
+  --editor-h1-space: 12px;
+  --editor-h2-size: 1.1875rem;
+  --editor-h2-leading: 1.3;
+  --editor-h2-space: 8px;
+  --editor-h3-size: 1.0625rem;
+  --editor-h3-leading: 1.4;
+  --editor-h3-space: 6px;
+  /* List markers, checkboxes and toggle arrows share one column. */
+  --editor-marker-width: 24px;
+  /* Code, tables, media and graph snapshots sit in boxes with this much air. */
+  --editor-box-space-y: 4px;
+  --editor-code-size: 0.8125rem;
+  --editor-code-leading: 1.5;
+  --editor-code-padding-y: 10px;
+  --editor-code-padding-x: 14px;
+  --editor-file-placeholder-height: 40px;
+  /* The hover box reaches this far past the block on each side. A tint of the
+     text color reads the same on light and dark paper. */
+  --editor-hover-inset-x: 4px;
+  --editor-block-hover-bg: color-mix(in srgb, var(--app-text) 4%, transparent);
+  --editor-hover-radius: 4px;
+  /* Between the drag handle and the block it moves. */
+  --editor-side-menu-gap: 6px;
+  font-family: var(--editor-font-family);
+}
+
+.notesEditorRoot,
+.notesEditorSwitchLoading {
+  --notes-editor-content-x: calc((var(--editor-btn-size) * 2) + 0.875rem);
+}
+
+/* The document canvas owns its gutters so its background reaches the page edges. */
+
+/* Reduce shadow painting while scrolling, keeping the dotted canvas visible. */
+
+/* Keep the top spacing inside the sticky chrome so it cannot scroll away. */
+
+/* The tab row draws the divider around its protruding controls. */
+
+/* Graph editing keeps its tabs and tools inside one solid header. */
+
+.notesEditorSwitchLoading {
+  padding-left: var(--notes-editor-content-x);
+  padding-right: var(--notes-editor-content-x);
+}
+
+@media (max-width: 768px) {
+  .notesEditorRoot,
+  .notesEditorSwitchLoading {
+    --notes-editor-content-x: calc((var(--editor-btn-size-mobile) * 2) + 0.5rem);
+  }
+}
+
+/* Editor Container */
+.editorContainer {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Editor Shell - Clean Utility Style */
+.editorShell {
+  flex: 1;
+  position: relative;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0rem 0rem 0rem 0rem;
+  transition:
+    box-shadow 150ms ease,
+    border-color 150ms ease;
+}
+
+.editorShell:focus-within {
+  box-shadow: none;
+  border-color: transparent;
+}
+
+@media (max-width: 768px) {
+  .editorRoot {
+    --editor-content-x: calc((var(--editor-btn-size-mobile) * 2) + 1rem);
+    --editor-h1-size: 1.25rem;
+    --editor-h2-size: 1.125rem;
+    --editor-h3-size: 1rem;
+  }
+
+  .editorShell {
+    padding: 0.5rem 0.75rem 1rem;
+    border-radius: 6px;
+  }
+
+  .notesEditorRoot .editorShell {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+/* BlockNote Core Overrides */
+.editorRoot :global(.bn-container) {
+  min-height: 100%;
+  /* Override BlockNote's internal color variables */
+  --bn-colors-editor-text: var(--editor-text) !important;
+  --bn-colors-editor-background: transparent !important;
+  --bn-colors-menu-text: var(--editor-text) !important;
+  --bn-colors-menu-background: var(--editor-surface) !important;
+  --bn-colors-hovered-background: var(--editor-hover-bg) !important;
+  --bn-colors-selected-text: var(--editor-selection-text) !important;
+  --bn-colors-selected-background: var(--editor-selection-bg) !important;
+  --bn-colors-border: var(--editor-border) !important;
+  --bn-colors-side-menu: var(--editor-icon-color) !important;
+  --bn-ui-base-z-index: 1000 !important;
+  --bn-font-family: var(--editor-font-family) !important;
+  font-family: var(--editor-font-family) !important;
+}
+
+.editorRoot :global(.bn-editor),
+.notesDocumentSkeleton {
+  padding-bottom: clamp(2rem, 8vh, 5rem);
+  padding-inline: var(--editor-content-x);
+  font-size: var(--editor-paragraph-font-size) !important;
+  line-height: var(--editor-paragraph-line-height);
+  color: var(--editor-text);
+  font-family: var(--editor-font-family) !important;
+  letter-spacing: normal;
+  background: transparent;
+}
+
+/* A read-only document inside other UI, such as a saved version, has no gutters. */
+.editorRoot.documentPreview :global(.bn-editor) {
+  padding: 0;
+}
+
+.editorRoot.notesEditorRoot :global(.bn-editor),
+.notesDocumentSkeleton {
+  padding-top: clamp(1.25rem, 3vw, 2rem);
+  padding-left: var(--notes-editor-content-x);
+  padding-right: var(--notes-editor-content-x);
+}
+
+/* Read-only documents can skip off-screen blocks. Pointer hover does not
+   determine editability: keyboard editing still needs every block laid out.
+   Keep print fully laid out, including blocks beyond the screen viewport. */
+@media screen {
+  .editorRoot :global(.ProseMirror[contenteditable="false"] .bn-block-outer) {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 28px;
+  }
+}
+
+/*
+ * Note mention chrome (including video timestamps).
+ * Apply `.noteMentionsRoot` anywhere BlockNote renders note references —
+ * notes editor and shared entry reader — so styling has one source of truth.
+ */
+.editorRoot.noteMentionsRoot :global(a[data-note-mention]) {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 34%, transparent);
+  background: color-mix(in srgb, var(--app-accent) 12%, transparent);
+  padding: 0 0.45rem;
+  color: var(--app-text);
+  font-size: 0.92em;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+  vertical-align: baseline;
+}
+
+.editorRoot.noteMentionsRoot :global(a[data-note-mention]:hover),
+.editorRoot.noteMentionsRoot :global(a[data-note-mention]:focus-visible) {
+  border-color: color-mix(in srgb, var(--app-accent) 58%, transparent);
+  background: color-mix(in srgb, var(--app-accent) 20%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent) 14%, transparent);
+  outline: none;
+}
+
+.editorRoot.noteMentionsRoot :global(a[data-note-mention][data-note-mention-broken="true"]) {
+  border-color: color-mix(in srgb, var(--status-danger) 48%, transparent);
+  background: color-mix(in srgb, var(--status-danger) 10%, transparent);
+  color: var(--status-danger);
+}
+
+/*
+ * Links to other notes read as text with a soft highlight, not as chips. They are
+ * styled from their href, so a re-render that drops the decoration attributes
+ * cannot turn them back into plain links.
+ */
+.editorRoot.noteMentionsRoot :global(a[href^="/notes?noteId="]),
+.editorRoot.noteMentionsRoot :global(a[data-note-mention="note"]) {
+  display: inline;
+  max-width: none;
+  border: 0;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--app-text) 7%, transparent);
+  padding: 0.05em 0.25em;
+  color: var(--app-text);
+  font-size: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  box-shadow: none;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.editorRoot.noteMentionsRoot :global(a[href^="/notes?noteId="]:hover),
+.editorRoot.noteMentionsRoot :global(a[href^="/notes?noteId="]:focus-visible),
+.editorRoot.noteMentionsRoot :global(a[data-note-mention="note"]:hover),
+.editorRoot.noteMentionsRoot :global(a[data-note-mention="note"]:focus-visible) {
+  background: color-mix(in srgb, var(--app-text) 12%, transparent);
+  box-shadow: none;
+  outline: none;
+}
+
+.editorRoot.noteMentionsRoot :global(a[data-note-mention="note"][data-note-mention-broken="true"]) {
+  background: color-mix(in srgb, var(--status-danger) 10%, transparent);
+  color: var(--status-danger);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--status-danger) 55%, transparent);
+}
+
+.editorRoot.noteMentionsRoot :global(a[data-note-mention="video-timestamp"]) {
+  display: inline;
+  max-width: none;
+  align-items: baseline;
+  gap: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  /* Keep a little air from preceding text in both editor and shared readers. */
+  margin-inline-start: 0.25em;
+  padding: 0;
+  color: var(--app-muted);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 0.92em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  line-height: inherit;
+  white-space: nowrap;
+  text-decoration: none;
+  text-underline-offset: 0.18em;
+  box-shadow: none;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.editorRoot.noteMentionsRoot :global(a[data-note-mention="video-timestamp"]:hover),
+.editorRoot.noteMentionsRoot :global(a[data-note-mention="video-timestamp"]:focus-visible) {
+  border: 0;
+  background: transparent;
+  color: var(--app-text);
+  text-decoration: underline;
+  box-shadow: none;
+  outline: none;
+}
+
+.editorRoot.noteMentionsRoot
+  :global(a[data-note-mention="video-timestamp"][data-note-mention-broken="true"]) {
+  border: 0;
+  background: transparent;
+  color: var(--status-danger);
+  box-shadow: none;
+}
+
+/* While the video plays, the timestamp it has reached and its block stand out. */
+.editorRoot.noteMentionsRoot
+  :global(a[data-note-mention="video-timestamp"][data-note-video-current="true"]) {
+  color: var(--app-accent);
+}
+
+.editorRoot.noteMentionsRoot :global(.bn-block-content:has(a[data-note-video-current="true"])) {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--app-accent) 9%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent) 9%, transparent);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+/* Shared / read-only surfaces: timestamps are display-only, not controls. */
+
+.editorRoot :global(.bn-default-styles) {
+  font-family: var(--editor-font-family) !important;
+  font-size: var(--editor-paragraph-font-size) !important;
+  font-weight: var(--font-weight-normal);
+}
+
+.editorRoot :global(.ProseMirror),
+.editorRoot :global(.bn-block),
+.editorRoot :global(.bn-block-content),
+.editorRoot :global(.bn-inline-content) {
+  font-family: var(--editor-font-family) !important;
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="codeBlock"]),
+.editorRoot :global(.bn-block-content[data-content-type="codeBlock"] .bn-inline-content) {
+  font-family: var(--font-mono) !important;
+}
+
+/* BlockNote's 1.5 would give list markers and placeholders a taller line than the text. */
+.editorRoot :global(.bn-block-outer) {
+  line-height: var(--editor-paragraph-line-height);
+}
+
+/* BlockNote animates a block's old size while its type changes; body text keeps its size. */
+.editorRoot
+  :global(
+    .bn-block-content:is(
+      [data-content-type="paragraph"],
+      [data-content-type="bulletListItem"],
+      [data-content-type="numberedListItem"],
+      [data-content-type="checkListItem"],
+      [data-content-type="toggleListItem"],
+      [data-content-type="quote"]
+    )
+  ) {
+  font-size: var(--editor-paragraph-font-size) !important;
+}
+
+.editorRoot :global(.bn-block-content) {
+  padding-block: var(--editor-text-padding-y);
+}
+
+/* BlockNote puts placeholders on .bn-block-content::after, a flex child. Zero
+   its box so appearing text does not shift neighboring blocks; it inherits the
+   block's font and line, so it sits where typed text will, a hair to the
+   right: at the very start, the caret would stand on its first letter. */
+.editorRoot :global(.bn-block-content:has(.ProseMirror-trailingBreak:only-child))::after {
+  width: 0;
+  height: 0;
+  margin-inline: 0;
+  text-indent: 0.2em;
+  overflow: visible;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--editor-text-muted);
+  font-style: inherit;
+  opacity: 0.5;
+}
+
+.editorRoot :global(.bn-editor:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+.editorRoot :global(.ProseMirror) {
+  outline: none;
+  caret-color: var(--editor-focus-ring);
+}
+
+/* Headings: each level sets its size and leading once; the side menu reads the same tokens. */
+.editorRoot :global(.bn-block-content[data-content-type="heading"]) {
+  --editor-heading-size: var(--editor-h1-size);
+  --editor-heading-leading: var(--editor-h1-leading);
+  padding-block: var(--editor-heading-padding-y);
+  font-weight: 700;
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="heading"][data-level="2"]) {
+  --editor-heading-size: var(--editor-h2-size);
+  --editor-heading-leading: var(--editor-h2-leading);
+  font-weight: 600;
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="heading"][data-level="3"]) {
+  --editor-heading-size: var(--editor-h3-size);
+  --editor-heading-leading: var(--editor-h3-leading);
+  font-weight: 600;
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="heading"]),
+.editorRoot :global(.bn-block-content[data-content-type="heading"] .bn-inline-content) {
+  font-size: var(--editor-heading-size) !important;
+  line-height: var(--editor-heading-leading);
+  margin: 0;
+}
+
+/* Space above a heading (unless it opens its group) sits outside the block,
+   so the side menu and hover box still start at the heading's first line. */
+.editorRoot
+  :global(
+    .bn-block-outer:not(:first-child):has(
+        > .bn-block > .bn-block-content[data-content-type="heading"]
+      )
+  ) {
+  margin-top: var(--editor-h1-space);
+}
+
+.editorRoot
+  :global(
+    .bn-block-outer:not(:first-child):has(
+        > .bn-block > .bn-block-content[data-content-type="heading"][data-level="2"]
+      )
+  ) {
+  margin-top: var(--editor-h2-space);
+}
+
+.editorRoot
+  :global(
+    .bn-block-outer:not(:first-child):has(
+        > .bn-block > .bn-block-content[data-content-type="heading"][data-level="3"]
+      )
+  ) {
+  margin-top: var(--editor-h3-space);
+}
+
+/* Hover: only the hovered block's own row, never its children or the blocks
+   around it, reaching the same distance past the text on both sides. */
+.editorRoot[data-editor-active="true"]
+  :global(
+    .bn-block-content:is(
+        [data-content-type="paragraph"],
+        [data-content-type="heading"],
+        [data-content-type="bulletListItem"],
+        [data-content-type="numberedListItem"],
+        [data-content-type="checkListItem"],
+        [data-content-type="toggleListItem"],
+        [data-content-type="quote"],
+        [data-content-type="divider"]
+      ):hover:not(.ProseMirror-selectednode)
+  ) {
+  border-radius: var(--editor-hover-radius);
+  background-color: var(--editor-block-hover-bg);
+  box-shadow:
+    calc(var(--editor-hover-inset-x) * -1) 0 0 0 var(--editor-block-hover-bg),
+    var(--editor-hover-inset-x) 0 0 0 var(--editor-block-hover-bg);
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+/* A selected block (an image, divider, snapshot...) gets the selection tint in the same box. */
+.editorRoot :global(.bn-block-content.ProseMirror-selectednode),
+.editorRoot :global(.ProseMirror-selectednode > .bn-block-content) {
+  border-radius: var(--editor-hover-radius);
+  background-color: var(--editor-selection-bg);
+  box-shadow:
+    calc(var(--editor-hover-inset-x) * -1) 0 0 0 var(--editor-selection-bg),
+    var(--editor-hover-inset-x) 0 0 0 var(--editor-selection-bg);
+}
+
+/* BlockNote's own selected-node ring is a thick blue outline. */
+.editorRoot :global(.bn-block-content.ProseMirror-selectednode > *),
+.editorRoot :global(.ProseMirror-selectednode > .bn-block-content > *) {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editorRoot[data-editor-active="true"] :global(.bn-block-content:hover) {
+    transition: none;
+  }
+}
+
+/* Inline controls (list markers, checkboxes, toggle arrows) share one marker
+   column and are centered on the block's first line with `1lh`. */
+.editorRoot :global(.bn-toggle-wrapper) {
+  align-items: flex-start;
+  display: flex;
+  gap: calc(var(--editor-marker-width) - var(--editor-inline-control-hit-size));
+  min-width: 0;
+  width: 100%;
+}
+
+.editorRoot :global(.bn-toggle-button) {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: var(--editor-icon-color);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 var(--editor-inline-control-hit-size);
+  font: inherit;
+  height: var(--editor-inline-control-hit-size);
+  justify-content: center;
+  margin: calc((1lh - var(--editor-inline-control-hit-size)) / 2) 0 0;
+  padding: 0;
+  width: var(--editor-inline-control-hit-size);
+}
+
+.editorRoot :global(.bn-toggle-button:hover) {
+  background: var(--editor-hover-bg);
+  color: var(--editor-icon-hover);
+}
+
+.editorRoot :global(.bn-toggle-button > svg) {
+  height: var(--editor-inline-control-icon-size);
+  width: var(--editor-inline-control-icon-size);
+}
+
+.editorRoot :global(.bn-toggle-add-block-button) {
+  align-items: center;
+  color: color-mix(in srgb, var(--editor-text-muted) 74%, transparent);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.35;
+  margin: 2px 0 2px var(--editor-marker-width);
+  min-height: 18px;
+  opacity: 0.58;
+  padding: 1px 4px;
+}
+
+.editorRoot :global(.bn-toggle-add-block-button:hover) {
+  background: color-mix(in srgb, var(--editor-hover-bg) 58%, transparent);
+  color: var(--editor-text-muted);
+  opacity: 0.82;
+}
+
+/* Drop BlockNote's nested-list indent guide — keep nesting, no vertical rule.
+   Match BlockNote's own selector so we win on specificity. */
+.editorRoot
+  :global(
+    .bn-block-group
+      .bn-block:not(:has(.bn-toggle-wrapper))
+      .bn-block-group
+      .bn-block-outer:not([data-prev-depth-changed])
+  )::before {
+  border-left: 0;
+}
+
+/* Bullets and numbers: BlockNote's ::before is already the marker column. */
+.editorRoot
+  :global(
+    .bn-block-content:is(
+      [data-content-type="bulletListItem"],
+      [data-content-type="numberedListItem"]
+    )
+  )::before {
+  min-width: var(--editor-marker-width);
+}
+
+/* Check list: BlockNote wraps the native input in a div. */
+.editorRoot :global(.bn-block-content[data-content-type="checkListItem"] > div:has(> input)) {
+  display: flex;
+  flex: 0 0 var(--editor-marker-width);
+  align-items: center;
+  justify-content: center;
+  height: 1lh;
+  padding-right: calc(var(--editor-marker-width) - var(--editor-inline-control-hit-size));
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="checkListItem"] > div > input) {
+  /* Mirror ui/Checkbox.tsx; BlockNote owns the native input. */
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 var(--editor-check-size);
+  width: var(--editor-check-size);
+  height: var(--editor-check-size);
+  margin: 0;
+  border-radius: var(--editor-check-radius);
+  border: 1px solid color-mix(in srgb, var(--app-border-strong) 85%, var(--editor-text-muted));
+  background-color: var(--app-page);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 10px 8px;
+  box-shadow: none;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="checkListItem"] > div > input:hover) {
+  border-color: var(--editor-text-muted);
+}
+
+.editorRoot
+  :global(.bn-block-content[data-content-type="checkListItem"] > div > input:focus-visible) {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--app-page),
+    0 0 0 4px var(--app-focus-ring);
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="checkListItem"] > div > input:checked) {
+  border-color: var(--app-accent);
+  background-color: var(--app-accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8' viewBox='0 0 10 8' fill='none'%3E%3Cpath d='M1 4.25L3.55 6.75L9 1.25' stroke='%23ffffff' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  box-shadow: none;
+}
+
+/* The check takes the accent's foreground: dark on the light dark-mode accent. */
+:global(html.dark)
+  .editorRoot
+  :global(.bn-block-content[data-content-type="checkListItem"] > div > input:checked) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8' viewBox='0 0 10 8' fill='none'%3E%3Cpath d='M1 4.25L3.55 6.75L9 1.25' stroke='%23262626' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="checkListItem"] > div > input:active) {
+  transform: scale(0.96);
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="checkListItem"] .bn-inline-content) {
+  min-width: 0;
+}
+
+.editorRoot
+  :global(
+    .bn-block-content[data-content-type="checkListItem"][data-checked="true"] .bn-inline-content
+  ) {
+  color: color-mix(in srgb, var(--editor-text) 72%, var(--editor-text-muted) 28%);
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, var(--editor-text-muted) 55%, transparent);
+}
+
+/* Blockquote */
+.editorRoot :global(.bn-block-content[data-content-type="quote"]) {
+  align-items: stretch;
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="quote"] blockquote) {
+  border-left: 2px solid var(--editor-border);
+  color: var(--editor-text-muted);
+  margin: 0;
+  padding: 0 0 0 0.75rem;
+}
+
+/* Divider: one text line tall, the rule on its middle, like Notion. */
+.editorRoot :global(.bn-block-content[data-content-type="divider"] hr) {
+  margin: calc((var(--editor-text-line) - 1px) / 2) 0;
+  border-top-color: var(--app-border-strong);
+}
+
+/* Boxed blocks: code, tables, media and graph snapshots. */
+.editorRoot
+  :global(
+    .bn-block-content:is(
+      [data-content-type="table"],
+      [data-file-block],
+      [data-content-type="graphSnapshot"]
+    )
+  ) {
+  padding-block: var(--editor-box-space-y);
+}
+
+/* Inline code marks; the code block's own <code> is its .bn-inline-content. */
+.editorRoot :global(.bn-inline-content code) {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  background: var(--editor-code-bg);
+  color: var(--editor-code-text);
+  border-radius: 4px;
+  padding: 0.125rem 0.3125rem;
+}
+
+/* The block content is the code box, so nothing paints around it. */
+.editorRoot :global(.bn-block-content[data-content-type="codeBlock"]) {
+  margin-block: var(--editor-box-space-y);
+  padding: 0;
+  border: 1px solid var(--editor-border);
+  border-radius: 6px;
+  background: var(--editor-code-bg);
+  color: var(--editor-code-text);
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="codeBlock"] > pre) {
+  margin: 0;
+  padding: var(--editor-code-padding-y) var(--editor-code-padding-x);
+  font-size: var(--editor-code-size);
+  line-height: var(--editor-code-leading);
+}
+
+/* BlockNote's language picker is white text for its dark box. */
+.editorRoot :global(.bn-block-content[data-content-type="codeBlock"] > div > select) {
+  top: 4px;
+  right: 8px;
+  left: auto;
+  color: var(--editor-text-muted);
+  font-family: var(--editor-font-family);
+  font-size: 12px;
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="codeBlock"] > div > select > option) {
+  color: var(--editor-text);
+  background: var(--editor-surface);
+}
+
+/* Tables: BlockNote pads the wrapper for its row and column handles, which this editor turns off. */
+.editorRoot :global(.bn-block-content[data-content-type="table"] .tableWrapper) {
+  padding: 0;
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="table"] table) {
+  margin: 0;
+}
+
+/* Images */
+.editorRoot :global(.bn-block-content[data-content-type="image"] img) {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+  border-radius: var(--editor-radius);
+  -webkit-user-drag: none;
+  user-select: none;
+  /* Alt text renders in the foreground color; keep it invisible until the
+     resolved signed URL has finished downloading so users never see the raw
+     file-name fallback flash before the picture paints. */
+  color: transparent;
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="image"]) {
+  outline: none;
+}
+
+.editorRoot[data-editor-active="false"] :global(.bn-block-content[data-content-type="image"]),
+.editorRoot[data-editor-active="false"] :global([data-content-type="image"] img) {
+  cursor: zoom-in;
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="image"] .bn-visual-media) {
+  pointer-events: none;
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="image"] .bn-visual-media-wrapper),
+.editorRoot :global(.bn-block-content[data-content-type="image"] .bn-resize-handle) {
+  pointer-events: auto;
+}
+
+.editorRoot :global(.bn-block-content[data-content-type="image"][data-file-block]) {
+  width: 100% !important;
+}
+
+/* Every empty file block (image, video, audio, file) shows the same placeholder. */
+.editorRoot :global(.bn-block-content[data-file-block] .bn-add-file-button) {
+  width: 100%;
+  height: var(--editor-file-placeholder-height);
+  justify-content: flex-start;
+  gap: 0.5rem;
+  border: 1px dashed var(--editor-border);
+  border-radius: var(--editor-radius);
+  background: color-mix(in srgb, var(--editor-hover-bg) 55%, transparent);
+  color: var(--editor-icon-color);
+  padding: 0 0.75rem;
+  box-shadow: none;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.editorRoot
+  :global(.bn-editor[contenteditable="true"] [data-file-block] .bn-add-file-button:hover) {
+  border-color: var(--app-border-strong);
+  background: var(--editor-hover-bg);
+  color: var(--editor-icon-hover);
+}
+
+.editorRoot :global(.bn-block-content[data-file-block] .bn-add-file-button-icon),
+.editorRoot :global(.bn-block-content[data-file-block] .bn-add-file-button svg) {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: currentColor;
+}
+
+.editorRoot :global(.bn-block-content[data-file-block] .bn-add-file-button-text) {
+  color: currentColor;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+}
+
+/* Match image resize handles to the compact editor controls. */
+.editorRoot
+  :global(.bn-block-content[data-content-type="image"][data-file-block] .bn-resize-handle) {
+  outline: none !important;
+  top: 50% !important;
+  width: 0.375rem !important;
+  height: 1.75rem !important;
+  border: 1px solid var(--app-border-strong) !important;
+  border-radius: 999px !important;
+  background: var(--app-page) !important;
+  box-shadow: 0 6px 14px -12px rgba(15, 23, 42, 0.34) !important;
+  cursor: ew-resize !important;
+  z-index: 2 !important;
+  transform: translateY(-50%) !important;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease !important;
+}
+
+.editorRoot
+  :global(.bn-block-content[data-content-type="image"][data-file-block] .bn-resize-handle:hover),
+.editorRoot
+  :global(.bn-block-content[data-content-type="image"][data-file-block] .bn-resize-handle:active) {
+  border-color: var(--app-accent) !important;
+  background: var(--app-surface) !important;
+  box-shadow: 0 6px 14px -12px rgba(15, 23, 42, 0.34) !important;
+}
+
+/*
+ * Side menu (add block + drag handle). BlockNote pins it to the top-left of
+ * the block; its height is the block's first-line box, so centering the
+ * buttons in it centers them on that line for every block type. The
+ * attribute selector outranks BlockNote's fixed per-type heights.
+ */
+.editorRoot :global(.bn-side-menu[data-block-type]) {
+  --editor-side-menu-line: calc(var(--editor-text-line) + 2 * var(--editor-text-padding-y));
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: var(--editor-side-menu-line);
+  margin-inline-end: var(--editor-side-menu-gap);
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 150ms ease;
+}
+
+.editorRoot :global(.bn-side-menu[data-block-type="heading"]) {
+  --editor-side-menu-line: calc(
+    var(--editor-h1-size) * var(--editor-h1-leading) + 2 * var(--editor-heading-padding-y)
+  );
+}
+
+.editorRoot :global(.bn-side-menu[data-block-type="heading"][data-level="2"]) {
+  --editor-side-menu-line: calc(
+    var(--editor-h2-size) * var(--editor-h2-leading) + 2 * var(--editor-heading-padding-y)
+  );
+}
+
+.editorRoot :global(.bn-side-menu[data-block-type="heading"][data-level="3"]) {
+  --editor-side-menu-line: calc(
+    var(--editor-h3-size) * var(--editor-h3-leading) + 2 * var(--editor-heading-padding-y)
+  );
+}
+
+/* The first line of code, inside the box's margin, border and padding. */
+.editorRoot :global(.bn-side-menu[data-block-type="codeBlock"]) {
+  --editor-side-menu-line: calc(
+    2 * (var(--editor-box-space-y) + 1px + var(--editor-code-padding-y)) + var(--editor-code-size) *
+      var(--editor-code-leading)
+  );
+}
+
+/* Boxes without a first line of text: a text line at the top of the box. */
+.editorRoot
+  :global(
+    .bn-side-menu:is(
+      [data-block-type="table"],
+      [data-block-type="image"],
+      [data-block-type="video"],
+      [data-block-type="audio"],
+      [data-block-type="file"],
+      [data-block-type="graphSnapshot"]
+    )
+  ) {
+  --editor-side-menu-line: calc(2 * var(--editor-box-space-y) + var(--editor-text-line));
+}
+
+/* An empty file block: the middle of its placeholder. */
+.editorRoot :global(.bn-side-menu[data-url="false"]) {
+  --editor-side-menu-line: calc(
+    2 * var(--editor-box-space-y) + var(--editor-file-placeholder-height)
+  );
+}
+
+.editorRoot[data-editor-active="false"] :global(.bn-side-menu),
+.editorRoot:has(:global(.bn-toolbar)) :global(.bn-side-menu) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editorRoot :global(.bn-side-menu) {
+    transition: none;
+  }
+}
+
+.editorRoot :global(.bn-side-menu .bn-button) {
+  display: flex !important;
+  flex: none;
+  align-items: center !important;
+  justify-content: center !important;
+  width: var(--editor-btn-size) !important;
+  height: var(--editor-btn-size) !important;
+  min-width: var(--editor-btn-size) !important;
+  min-height: var(--editor-btn-size) !important;
+  border-radius: 6px !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--editor-icon-color) !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    transform 120ms ease !important;
+  transform-origin: center center;
+}
+
+.editorRoot[data-editor-active="true"] :global(.bn-side-menu .bn-button:hover) {
+  background: var(--editor-hover-bg) !important;
+  color: var(--editor-icon-hover) !important;
+  transform: scale(1.08);
+}
+
+.editorRoot :global(.bn-side-menu .bn-button:active) {
+  transform: scale(0.92);
+  background: var(--editor-active-bg) !important;
+}
+
+.editorRoot :global(.bn-side-menu .bn-button svg) {
+  display: block;
+  width: var(--editor-icon-size) !important;
+  height: var(--editor-icon-size) !important;
+  color: inherit !important;
+  fill: currentColor !important;
+  opacity: 1 !important;
+}
+
+.editorRoot :global(.bn-side-menu button[draggable="true"]),
+.editorRoot :global(.bn-side-menu button[draggable="true"] *) {
+  cursor: grab;
+}
+
+.editorRoot :global(.bn-side-menu button[draggable="true"]:active),
+.editorRoot :global(.bn-side-menu button[draggable="true"]:active *) {
+  cursor: grabbing;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editorRoot :global(.bn-side-menu .bn-button) {
+    transition: none !important;
+  }
+
+  .editorRoot[data-editor-active="true"] :global(.bn-side-menu .bn-button:hover),
+  .editorRoot :global(.bn-side-menu .bn-button:active) {
+    transform: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .editorRoot :global(.bn-side-menu .bn-button) {
+    min-height: var(--editor-btn-size-mobile) !important;
+    min-width: var(--editor-btn-size-mobile) !important;
+    width: var(--editor-btn-size-mobile) !important;
+    height: var(--editor-btn-size-mobile) !important;
+  }
+
+  .editorRoot :global(.bn-side-menu .bn-button svg) {
+    width: 16px !important;
+    height: 16px !important;
+  }
+}
+
+.editorRoot :global(.prosemirror-dropcursor-block),
+.editorRoot :global(.prosemirror-dropcursor-inline),
+.editorRoot :global(.prosemirror-dropcursor-vertical) {
+  border-radius: 1px;
+}
+
+/* Drag Handle Menu (Dropdown) - Modern Notion-like Style */
+.editorRoot :global(.bn-menu-dropdown),
+.editorRoot :global(.bn-drag-handle-menu),
+.editorRoot :global([data-radix-popper-content-wrapper]) > :global([role="menu"]) {
+  background: var(--editor-popup-surface);
+  border: 1px solid var(--editor-popup-border);
+  border-radius: var(--editor-popup-radius);
+  box-shadow: var(--editor-popup-shadow);
+  padding: var(--control-menu-padding);
+  min-width: 168px;
+  animation: dropdownSlideIn 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: visible;
+  position: relative;
+  z-index: 10060;
+}
+
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Menu Items */
+.editorRoot :global(.bn-menu-dropdown) :global([role="menuitem"]),
+.editorRoot :global(.bn-drag-handle-menu) :global([role="menuitem"]),
+.editorRoot :global([data-radix-popper-content-wrapper]) :global([role="menuitem"]) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--app-text);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+
+.editorRoot :global(.bn-menu-dropdown) :global([role="menuitem"]):hover,
+.editorRoot :global(.bn-drag-handle-menu) :global([role="menuitem"]):hover,
+.editorRoot :global([data-radix-popper-content-wrapper]) :global([role="menuitem"]):hover,
+.editorRoot :global(.bn-menu-dropdown) :global([role="menuitem"][data-highlighted]),
+.editorRoot :global(.bn-drag-handle-menu) :global([role="menuitem"][data-highlighted]),
+.editorRoot
+  :global([data-radix-popper-content-wrapper])
+  :global([role="menuitem"][data-highlighted]) {
+  background: var(--app-page-2);
+  outline: none;
+}
+
+.editorRoot :global(.bn-menu-dropdown) :global([role="menuitem"]):active,
+.editorRoot :global(.bn-drag-handle-menu) :global([role="menuitem"]):active,
+.editorRoot :global([data-radix-popper-content-wrapper]) :global([role="menuitem"]):active {
+  background: var(--editor-active-bg);
+}
+
+/* Menu Item Icons */
+.editorRoot :global(.bn-menu-dropdown) :global([role="menuitem"]) svg,
+.editorRoot :global(.bn-drag-handle-menu) :global([role="menuitem"]) svg,
+.editorRoot :global([data-radix-popper-content-wrapper]) :global([role="menuitem"]) svg {
+  width: 14px;
+  height: 14px;
+  color: var(--app-muted);
+  flex-shrink: 0;
+  transition: color 100ms ease;
+}
+
+.editorRoot :global(.bn-menu-dropdown) :global([role="menuitem"]):hover svg,
+.editorRoot :global(.bn-drag-handle-menu) :global([role="menuitem"]):hover svg,
+.editorRoot :global([data-radix-popper-content-wrapper]) :global([role="menuitem"]):hover svg {
+  color: var(--app-text);
+}
+
+/* Menu Separators */
+.editorRoot :global(.bn-menu-dropdown) :global([role="separator"]),
+.editorRoot :global(.bn-drag-handle-menu) :global([role="separator"]),
+.editorRoot :global([data-radix-popper-content-wrapper]) :global([role="separator"]) {
+  height: 1px;
+  background: var(--app-border);
+  margin: 6px 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editorRoot :global(.bn-menu-dropdown),
+  .editorRoot :global(.bn-drag-handle-menu),
+  .editorRoot :global([data-radix-popper-content-wrapper]) > :global([role="menu"]) {
+    animation: none;
+  }
+}
+
+:global(body.bn-editor-dragging) .editorRoot {
+  overscroll-behavior: contain;
+}
+
+:global(body.bn-editor-dragging) .editorRoot :global(.bn-formatting-toolbar),
+:global(body.bn-editor-dragging) .editorRoot :global(.bn-toolbar),
+:global(body.bn-editor-dragging) .editorRoot :global(.bn-panel),
+:global(body.bn-editor-dragging) .editorRoot :global(.bn-add-file-button),
+:global(body.bn-editor-dragging) .editorRoot :global([data-content-type="image"] img) {
+  pointer-events: none !important;
+}
+
+:global(body.bn-editor-dragging) .editorRoot :global(.bn-block-content[data-content-type="image"]),
+:global(body.bn-editor-dragging) .editorRoot :global(.bn-block-content[data-content-type="file"]),
+:global(body.bn-editor-dragging) .editorRoot :global(.bn-block-content[data-content-type="audio"]),
+:global(body.bn-editor-dragging) .editorRoot :global(.bn-block-content[data-content-type="video"]) {
+  pointer-events: auto !important;
+}
+
+/* Shadcn Dropdown Menu Overrides */
+.editorRoot :global([data-radix-popper-content-wrapper]) {
+  z-index: 10060 !important;
+  pointer-events: auto;
+}
+
+/* Force drag handle menu to appear on-screen */
+/* The BlockNote DragHandleButton hardcodes position="left" which causes menu to go under sidebar */
+.editorRoot :global([data-radix-popper-content-wrapper]) {
+  /* Ensure menu doesn't get cut off by overflow */
+  pointer-events: auto;
+}
+
+/* When menu is positioned to the left (data-side="left"), force it to appear on the right instead */
+.editorRoot :global([data-radix-popper-content-wrapper][data-side="left"]) {
+  /* Flip the menu to appear on the right side */
+  --radix-popper-transform-origin: left center !important;
+  margin-left: 8px;
+}
+
+/* Override Radix's calculated position for left-positioned menus in side menu */
+.editorRoot :global(.bn-side-menu ~ [data-radix-popper-content-wrapper]),
+.editorRoot :global(.bn-side-menu) + :global([data-radix-popper-content-wrapper]) {
+  max-width: min(320px, calc(100vw - 1rem));
+}
+
+/* Ensure all dropdown menus appear on screen with proper spacing */
+.editorRoot :global([data-radix-popper-content-wrapper][data-side="left"]) :global([role="menu"]),
+.editorRoot :global([data-radix-popper-content-wrapper][data-side="right"]) :global([role="menu"]),
+.editorRoot
+  :global([data-radix-popper-content-wrapper][data-side="bottom"])
+  :global([role="menu"]) {
+  margin: 4px;
+}
+
+.editorRoot :global(.bn-shadcn) :global([role="menu"]),
+.editorRoot :global([data-state="open"]) > :global([role="menu"]) {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-elevated);
+  padding: 4px;
+  min-width: 168px;
+  overflow: hidden;
+}
+
+/* Keyboard Shortcut Hints in Menus */
+.editorRoot :global([role="menuitem"]) :global(kbd) {
+  margin-left: auto;
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--editor-hover-bg);
+  color: var(--editor-text-muted);
+  font-family: inherit;
+  border: 1px solid var(--editor-border);
+}
+
+/* Menu Section Labels */
+.editorRoot :global([role="group"]) > :global([role="presentation"]) {
+  font-size: 12px;
+  letter-spacing: normal;
+  color: var(--editor-text-muted);
+  padding: 8px 10px 5px;
+  font-weight: 500;
+}
+
+/* Suggestion Menu (Slash Menu) - Clean Utility */
+.editorRoot :global(.bn-suggestion-menu) {
+  background: var(--editor-popup-surface);
+  border: 1px solid var(--editor-popup-border);
+  border-radius: var(--editor-popup-radius);
+  box-shadow: var(--editor-popup-shadow);
+  padding: var(--control-menu-padding);
+  min-width: 240px;
+  max-width: 280px;
+  max-height: 320px;
+  overflow-y: auto;
+  animation: menuSlideIn 150ms ease;
+  z-index: 10;
+}
+
+@media (max-width: 768px) {
+  .editorRoot :global(.bn-suggestion-menu) {
+    min-width: 220px;
+    max-width: calc(100vw - 2rem);
+    position: fixed !important;
+    bottom: 1rem !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    animation: menuSlideUp 150ms ease;
+  }
+}
+
+@keyframes menuSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes menuSlideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editorRoot :global(.bn-suggestion-menu) {
+    animation: none;
+  }
+}
+
+.editorRoot :global(.bn-suggestion-menu-item) {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: var(--editor-text);
+  transition: background-color 150ms ease;
+}
+
+.editorRoot :global(.bn-suggestion-menu-item):hover,
+.editorRoot :global(.bn-suggestion-menu-item[data-selected="true"]) {
+  background: var(--editor-hover-bg);
+}
+
+.editorRoot :global(.bn-suggestion-menu-label) {
+  font-size: 12px;
+  letter-spacing: normal;
+  color: var(--editor-text-muted);
+  padding: 0.375rem 0.5rem 0.125rem;
+  font-weight: 500;
+}
+
+.slashMenuShell {
+  position: relative;
+  width: var(--editor-popup-width);
+  max-width: var(--editor-popup-max-width);
+}
+
+.slashMenu {
+  width: 100%;
+  max-height: var(--editor-popup-max-height);
+  border-radius: var(--editor-popup-radius);
+  border: 1px solid var(--editor-popup-border);
+  background: var(--editor-popup-surface);
+  box-shadow: var(--editor-popup-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: var(--editor-popup-padding);
+}
+
+.slashMenuHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.125rem 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--app-border);
+  font-size: 12px;
+  color: var(--app-muted);
+}
+
+.slashMenuToken {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--app-page-2);
+  color: var(--app-text);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.slashMenuQuery {
+  color: var(--app-text);
+  font-weight: 400;
+}
+
+.slashMenuList {
+  max-height: calc(var(--editor-popup-max-height) - 76px);
+  overflow-y: auto;
+  padding: var(--editor-popup-padding) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--editor-popup-row-gap);
+  scroll-padding-bottom: var(--editor-popup-padding);
+  scrollbar-gutter: stable both-edges;
+}
+
+.slashMenuList::after {
+  content: "";
+  display: block;
+  height: 0;
+}
+
+.slashMenuSection {
+  position: static;
+  padding: 6px 6px 4px;
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--app-muted);
+  margin-top: 4px;
+  border-top: 1px solid var(--app-border);
+}
+
+.slashMenuSection:first-child {
+  margin-top: 0;
+  border-top: none;
+  padding-top: 0.125rem;
+}
+
+.slashMenuItem {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--editor-popup-item-radius);
+  border: 1px solid transparent;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  min-height: var(--editor-popup-item-min-height);
+  background: transparent;
+  color: var(--app-text);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+  cursor: pointer;
+}
+
+.slashMenuItem:hover {
+  background: var(--app-page-2);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.slashMenuItem:hover .slashMenuIcon {
+  color: var(--app-text);
+  transform: none;
+}
+
+.slashMenuItem:active {
+  transform: scale(0.99);
+}
+
+.slashMenuItemActive {
+  background: color-mix(in srgb, var(--editor-hover-bg) 9.8%, transparent);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.slashMenuIcon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-muted);
+  border-radius: 5px;
+  background: transparent;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+}
+
+.slashMenuIcon svg {
+  display: block;
+  width: 13px;
+  height: 13px;
+}
+
+.slashMenuItemBody {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.125rem;
+  min-width: 0;
+  align-self: center;
+}
+
+.slashMenuItemTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text);
+  line-height: 1.22;
+}
+
+.slashMenuMeta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  align-self: center;
+}
+
+.slashMenuShortcut {
+  font-size: 12px;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 6px;
+  border: 1px solid var(--app-border);
+  color: var(--app-muted);
+  background: var(--app-page-2);
+}
+
+.blockPreviewCard {
+  width: 252px;
+  border: 1px solid var(--app-border, rgba(0, 0, 0, 0.1));
+  border-radius: 12px;
+  background: var(--app-surface, #fff);
+  box-shadow: var(--shadow-elevated, 0 16px 40px rgba(15, 23, 42, 0.16));
+  color: var(--app-text, #111827);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.slashMenuPreview {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 48px;
+  z-index: 2;
+  animation: blockPreviewIn 120ms ease;
+}
+
+.blockPreviewCardFloating {
+  position: fixed;
+  z-index: 10100;
+  animation: blockPreviewIn 120ms ease;
+}
+
+.blockPreviewVisual {
+  min-height: 112px;
+  padding: 18px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--app-page-2, #f6f7f8) 86%, transparent),
+    color-mix(in srgb, var(--app-surface, #fff) 94%, transparent)
+  );
+  border-bottom: 1px solid var(--app-border, rgba(0, 0, 0, 0.1));
+}
+
+.blockPreviewPaper {
+  position: relative;
+  display: flex;
+  min-height: 76px;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 7px;
+  border-radius: 10px;
+  background: var(--app-surface, #fff);
+  padding: 15px 16px;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.08),
+    0 10px 26px rgba(15, 23, 42, 0.08);
+}
+
+.blockPreviewBody {
+  padding: 14px 16px 16px;
+}
+
+.blockPreviewExampleLine {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 8px;
+  color: color-mix(in srgb, var(--app-text, #111827) 84%, transparent);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.blockPreviewExampleTextLine,
+.blockPreviewExampleBullet,
+.blockPreviewExampleNumber,
+.blockPreviewExampleCheckLine {
+  color: color-mix(in srgb, var(--app-text, #111827) 78%, transparent);
+}
+
+.blockPreviewExampleText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockPreviewExampleHeading {
+  margin-bottom: 2px;
+  color: var(--app-text, #111827);
+  font-size: 16px;
+  font-weight: 720;
+  line-height: 1.2;
+}
+
+.blockPreviewCard[data-preview-kind="heading-1"] .blockPreviewExampleHeading,
+.blockPreviewCard[data-preview-kind="toggle-heading-1"] .blockPreviewExampleHeading {
+  font-size: 18px;
+}
+
+.blockPreviewCard[data-preview-kind="heading-2"] .blockPreviewExampleHeading,
+.blockPreviewCard[data-preview-kind="toggle-heading-2"] .blockPreviewExampleHeading {
+  font-size: 15px;
+}
+
+.blockPreviewCard[data-preview-kind="heading-3"] .blockPreviewExampleHeading,
+.blockPreviewCard[data-preview-kind="toggle-heading-3"] .blockPreviewExampleHeading {
+  font-size: 14px;
+}
+
+.blockPreviewExampleMarker {
+  flex: 0 0 16px;
+  color: color-mix(in srgb, var(--app-text, #111827) 64%, transparent);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.blockPreviewExampleCheck {
+  position: relative;
+  flex: 0 0 13px;
+  width: 13px;
+  height: 13px;
+  margin-top: 1px;
+  border: 1px solid color-mix(in srgb, var(--app-text, #111827) 42%, transparent);
+  border-radius: 3px;
+  background: var(--app-surface, #fff);
+}
+
+.blockPreviewExampleCheck[data-checked="true"] {
+  border-color: var(--app-accent, #111827);
+  background: var(--app-accent, #111827);
+}
+
+.blockPreviewExampleCheck[data-checked="true"]::after {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  width: 5px;
+  height: 8px;
+  border: solid var(--app-accent-foreground);
+  border-width: 0 1.5px 1.5px 0;
+  content: "";
+  transform: rotate(45deg);
+}
+
+.blockPreviewExampleQuote {
+  border-left: 2px solid color-mix(in srgb, var(--app-text, #111827) 28%, transparent);
+  color: color-mix(in srgb, var(--app-text, #111827) 70%, transparent);
+  font-style: italic;
+  padding-left: 10px;
+}
+
+.blockPreviewExampleToggle .blockPreviewExampleText {
+  font-weight: 650;
+}
+
+.blockPreviewImageFrame {
+  position: relative;
+  min-height: 92px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--app-border, #d1d5db) 84%, transparent);
+  border-radius: 10px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--app-accent, #2563eb) 16%, var(--app-surface, #fff) 84%),
+    color-mix(in srgb, var(--app-page-2, #f6f7f8) 86%, var(--app-surface, #fff) 14%)
+  );
+}
+
+.blockPreviewImageSun {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-accent, #2563eb) 52%, var(--app-surface) 48%);
+}
+
+.blockPreviewImageMountain {
+  position: absolute;
+  right: 0;
+  bottom: 22px;
+  left: 0;
+  height: 44px;
+  background:
+    linear-gradient(135deg, transparent 48%, var(--app-surface, #fff) 49% 68%, transparent 69%),
+    linear-gradient(
+      45deg,
+      transparent 40%,
+      color-mix(in srgb, var(--app-text, #111827) 20%, transparent) 41% 62%,
+      transparent 63%
+    );
+}
+
+.blockPreviewImageCaption {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  left: 12px;
+  color: color-mix(in srgb, var(--app-text, #111827) 76%, transparent);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.blockPreviewTable {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--app-border, #d1d5db) 88%, transparent);
+  border-radius: 10px;
+  background: var(--app-surface, #fff);
+}
+
+.blockPreviewTableHeader,
+.blockPreviewTableCell {
+  min-width: 0;
+  overflow: hidden;
+  border-right: 1px solid color-mix(in srgb, var(--app-border, #d1d5db) 88%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--app-border, #d1d5db) 88%, transparent);
+  padding: 8px 9px;
+  color: var(--app-text, #111827);
+  font-size: 12px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockPreviewTableHeader {
+  background: color-mix(in srgb, var(--app-page-2, #f6f7f8) 82%, transparent);
+  font-weight: 700;
+}
+
+.blockPreviewColumns {
+  display: grid;
+  grid-template-columns: repeat(var(--preview-column-count, 2), minmax(0, 1fr));
+  gap: 8px;
+}
+
+.blockPreviewColumns[data-column-count="3"] {
+  --preview-column-count: 3;
+}
+
+.blockPreviewColumns[data-column-count="4"] {
+  --preview-column-count: 4;
+  gap: 6px;
+}
+
+.blockPreviewColumn {
+  display: flex;
+  min-height: 86px;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid color-mix(in srgb, var(--app-border, #d1d5db) 88%, transparent);
+  border-radius: 9px;
+  background: var(--app-surface, #fff);
+  padding: 10px 8px;
+}
+
+.blockPreviewColumn strong,
+.blockPreviewColumn span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockPreviewColumn strong {
+  color: var(--app-text, #111827);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.blockPreviewColumn span {
+  color: color-mix(in srgb, var(--app-text, #111827) 68%, transparent);
+  font-size: 11px;
+}
+
+.blockPreviewDividerLine {
+  display: block;
+  height: 1px;
+  margin: 4px 0;
+  background: color-mix(in srgb, var(--app-text, #111827) 24%, transparent);
+}
+
+.blockPreviewTitle {
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.3;
+  color: var(--app-text, #111827);
+}
+
+.blockPreviewDescription {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--app-muted, #6b7280);
+}
+
+.slashMenuEmpty {
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--app-muted);
+}
+
+.slashMenuFooter {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 6px 0;
+  font-size: 12px;
+  color: var(--app-muted);
+  border-top: 1px solid var(--app-border);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes blockPreviewIn {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .slashMenuShell {
+    width: 92vw;
+    max-width: 92vw;
+    position: fixed !important;
+    left: 50% !important;
+    bottom: 1rem !important;
+    transform: translateX(-50%) !important;
+  }
+
+  .slashMenu {
+    max-height: 55vh;
+    border-radius: var(--editor-popup-radius);
+  }
+
+  .slashMenuList {
+    max-height: 48vh;
+  }
+
+  .slashMenuPreview,
+  .blockPreviewCardFloating {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slashMenuItem,
+  .slashMenuItem:hover,
+  .slashMenuItemActive {
+    transition: none;
+    transform: none;
+  }
+
+  .slashMenuItem:hover .slashMenuIcon {
+    transform: none;
+  }
+}
+
+/* Adapt BlockNote's toolbar to the shared menu surface and density. */
+.editorRoot :global(.bn-toolbar) {
+  background: var(--editor-popup-surface) !important;
+  border: 1px solid var(--editor-popup-border) !important;
+  border-radius: var(--editor-popup-radius) !important;
+  box-shadow: var(--editor-popup-shadow) !important;
+  padding: var(--control-menu-padding) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  max-width: calc(100vw - 24px);
+  animation: menuSlideIn 150ms ease;
+  pointer-events: auto !important;
+  z-index: 50 !important;
+}
+
+/* Only toolbar actions are square; nested popover controls keep their own sizing. */
+.editorRoot :global(.bn-toolbar) > :global(.bn-button) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: var(--app-hit-target-min, 24px) !important;
+  min-height: var(--app-hit-target-min, 24px) !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: var(--raised-control-radius) !important;
+  background: transparent !important;
+  color: var(--app-text) !important;
+  cursor: pointer;
+}
+
+.editorRoot :global(.bn-toolbar) > :global(.bn-button) svg {
+  width: var(--editor-inline-control-icon-size) !important;
+  height: var(--editor-inline-control-icon-size) !important;
+}
+
+/* Text actions, such as BlockNote's "Edit link", fit their label like the toolbar's select. */
+.editorRoot :global(.bn-toolbar) > :global(.bn-button:not(:has(svg))) {
+  width: auto !important;
+  padding: 0 var(--control-menu-row-padding-x) !important;
+  font-size: var(--control-menu-font-size) !important;
+  line-height: var(--control-menu-line-height) !important;
+  font-weight: 400 !important;
+  white-space: nowrap;
+}
+
+.editorRoot :global(.bn-toolbar) > :global(.bn-button):is(:hover, [data-state="open"]) {
+  background: var(--raised-control-hover-bg) !important;
+}
+
+.editorRoot :global(.bn-toolbar) > :global(.bn-button[data-state="on"]) {
+  background: var(--control-selected-bg) !important;
+  color: var(--control-selected-text) !important;
+}
+
+.editorRoot :global(.bn-toolbar) > :global([data-slot="select-trigger"]) {
+  height: 24px !important;
+  min-height: var(--app-hit-target-min, 24px) !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: min(176px, 42vw) !important;
+  padding: 0 var(--control-menu-row-padding-x) !important;
+  border: 0 !important;
+  border-radius: var(--raised-control-radius) !important;
+  background: transparent !important;
+  font-size: var(--control-menu-font-size) !important;
+  line-height: var(--control-menu-line-height) !important;
+  font-weight: 400 !important;
+  gap: var(--control-menu-gap) !important;
+}
+
+.editorRoot :global(.bn-toolbar) > :global([data-slot="select-trigger"]):hover {
+  background: var(--raised-control-hover-bg) !important;
+}
+
+/* BlockNote's chevron asks for opacity-50, which this app's Tailwind build doesn't generate. */
+.editorRoot :global(.bn-toolbar) > :global([data-slot="select-trigger"] > svg) {
+  opacity: 0.5;
+}
+
+.editorRoot :global(.bn-toolbar) > :global([data-slot="select-trigger"] > span) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* These adapters already carry the shared dropdown surface and row classes. */
+.editorRoot :global([data-slot="select-content"]) {
+  z-index: 10060 !important;
+}
+
+@media (max-width: 768px) {
+  .editorRoot :global(.bn-toolbar) {
+    position: fixed !important;
+    bottom: 1rem !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    animation: menuSlideUp 150ms ease;
+  }
+
+  .editorRoot :global(.bn-toolbar) > :global(.bn-button) {
+    width: var(--app-hit-target-touch, 40px) !important;
+    height: var(--app-hit-target-touch, 40px) !important;
+  }
+
+  .editorRoot :global(.bn-toolbar) > :global([data-slot="select-trigger"]) {
+    min-height: var(--app-hit-target-touch, 40px) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editorRoot :global(.bn-toolbar) {
+    animation: none;
+  }
+}
+
+.editorRoot.dark .editorShell {
+  box-shadow: none;
+}
+
+/* Focus Visible for Accessibility */
+.editorRoot :global(*:focus-visible) {
+  outline: none;
+}
+
+/* Selection */
+.editorRoot :global(.ProseMirror)::selection,
+.editorRoot :global(.ProseMirror) *::selection {
+  background-color: var(--editor-selection-bg);
+  color: var(--editor-selection-text);
+  text-shadow: none;
+}
+
+.editorRoot :global(.ProseMirror)::-moz-selection,
+.editorRoot :global(.ProseMirror) *::-moz-selection {
+  background-color: var(--editor-selection-bg);
+  color: var(--editor-selection-text);
+  text-shadow: none;
+}
+
+/*
+ * Columns. A column list sits in the flow like any block: no extra margins or
+ * minimum heights, so it leaves no gap below. A resize starts from the gap or
+ * the 20px inside a column's edge that faces another column (see
+ * columnResize.ts), so that edge is padded 20px to keep text out of it. The gap is wide enough that the next
+ * column's side menu (about 50px left of its text) leaves the zone uncovered.
+ */
+.editorRoot :global(.bn-block-column-list) {
+  --column-gap: 2rem;
+  display: flex !important;
+  align-items: stretch !important;
+  gap: var(--column-gap) !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+.editorRoot :global(.bn-block-column) {
+  position: relative;
+  min-width: 0 !important;
+  padding: 0 20px !important;
+  overflow-x: visible !important;
+}
+
+.editorRoot :global(.bn-block-column:first-child) {
+  padding-left: 0 !important;
+}
+
+.editorRoot :global(.bn-block-column:last-child) {
+  padding-right: 0 !important;
+}
+
+.editorRoot :global(.bn-block-column .bn-block-content) {
+  min-width: 0;
+}
+
+/* An empty column has no height of its own, so it names itself while editing. */
+.editorRoot
+  :global(
+    .ProseMirror[contenteditable="true"]
+      .bn-block-column
+      > .bn-block-outer:only-child
+      > .bn-block
+      > .bn-block-content[data-content-type="paragraph"]:not([data-is-empty-and-focused]):has(
+        .ProseMirror-trailingBreak:only-child
+      )
+  )::after {
+  content: "Empty column";
+}
+
+/* While the gap after a column is pointed at or dragged, an accent rail runs down its middle. */
+.editorRoot :global(.bn-block-column[data-column-resize])::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: calc(var(--column-gap) / -2 - 1px);
+  z-index: 6;
+  width: 2px;
+  pointer-events: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-accent) 78%, transparent);
+}
+
+.editorRoot :global(.ProseMirror[data-column-resize]) {
+  cursor: col-resize;
+}
+
+.editorRoot :global(.bn-block-column[data-column-resize-width]) {
+  flex-grow: var(--column-resize-width) !important;
+}
+
+/* Narrow windows stack columns. */
+@media (max-width: 768px) {
+  .editorRoot :global(.bn-block-column-list) {
+    flex-direction: column !important;
+  }
+
+  .editorRoot :global(.bn-block-column) {
+    padding: 0 !important;
+  }
+}
+
+/* Table column resize + drop cues — match the column resize rail. */
+.editorRoot :global(.ProseMirror .column-resize-handle) {
+  z-index: 20;
+  top: 0.2rem;
+  bottom: 0.2rem;
+  right: -1px;
+  width: 0.125rem;
+  pointer-events: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-accent) 78%, transparent);
+}
+
+.editorRoot :global(.ProseMirror.resize-cursor) {
+  cursor: col-resize;
+}
+
+.editorRoot :global(.bn-table-drop-cursor) {
+  z-index: 20;
+  width: 0.125rem;
+  pointer-events: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-accent) 78%, transparent);
+}
+
+/* Narrow windows: smaller headings */
+@media (max-width: 768px) {
+  .editorRoot :global(.ProseMirror) h1 {
+    font-size: 1.25rem;
+    margin: 0;
+  }
+
+  .editorRoot :global(.ProseMirror) h2 {
+    font-size: 1.125rem;
+    margin: 0;
+  }
+
+  .editorRoot :global(.ProseMirror) h3 {
+    font-size: 1rem;
+    margin: 0;
+  }
+}
+
+/* Tablet Responsive */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .editorShell {
+    padding: 0.625rem;
+  }
+}

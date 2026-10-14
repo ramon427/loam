@@ -1,0 +1,131 @@
+.snapshot {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-page);
+  user-select: none;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--app-border);
+  font:
+    11px/1.5 Inter,
+    system-ui,
+    sans-serif;
+  color: var(--app-muted);
+}
+
+.source {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.source span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.live::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--status-success);
+}
+.header button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 2px;
+}
+.header button:hover {
+  color: var(--app-accent);
+}
+.header button:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+.preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+  pointer-events: none;
+}
+.notice {
+  margin: 0;
+  padding: 28px 16px;
+  font-size: 12px;
+  color: var(--app-muted);
+}
+.retry {
+  margin-left: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--app-accent);
+  font: inherit;
+  cursor: pointer;
+}
+.node {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  padding: 10px 12px;
+  font:
+    11px/15px Inter,
+    system-ui,
+    sans-serif;
+  color: var(--app-text);
+}
+.title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.notes {
+  margin-top: 4px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 10px;
+  line-height: 14px;
+}
+.timestamp {
+  margin-top: 6px;
+  font:
+    10px/14px ui-monospace,
+    monospace;
+  color: var(--app-muted);
+}
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media print {
+  .header button {
+    display: none;
+  }
+}

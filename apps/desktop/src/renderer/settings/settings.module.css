@@ -1,0 +1,396 @@
+/* Settings reuses the notes sidebar (.loam-sidebar, SidebarRow, the sidebar search) and top row. */
+.screen {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: 280px minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--app-bg);
+}
+
+.titlebar {
+  padding-right: 12px;
+  padding-left: 14px;
+}
+
+[data-platform="darwin"] .titlebar {
+  padding-left: 80px;
+}
+
+.navGroups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.navGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.main {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.header {
+  padding-right: calc(var(--loam-window-controls-width) + 12px);
+  padding-left: 8px;
+}
+
+.content {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 32px clamp(20px, 4vw, 48px) 64px;
+  outline: none;
+}
+
+/* A readable column in the middle of the window, so rows stay short on a wide screen. */
+.page {
+  display: flex;
+  max-width: 720px;
+  flex-direction: column;
+  gap: 32px;
+  margin-inline: auto;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-inline: 16px;
+}
+
+.sectionHeader h2 {
+  color: color-mix(in srgb, var(--app-text) 70%, transparent);
+  font-size: 13px;
+  font-weight: var(--font-weight-normal);
+}
+
+.sectionHeader p {
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--app-border) 70%, transparent);
+  border-radius: 12px;
+  background: var(--app-surface);
+}
+
+.card > * + * {
+  border-top: 1px solid color-mix(in srgb, var(--app-border) 55%, transparent);
+}
+
+.cardNotice {
+  margin: 12px 16px;
+}
+
+.card > .cardNotice + * {
+  border-top: none;
+}
+
+.row {
+  container: settings-row / inline-size;
+  padding: 14px 16px;
+}
+
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@container settings-row (min-width: 32rem) {
+  .rowMain {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 32px;
+  }
+}
+
+.rowText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rowText h3 {
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: var(--font-weight-medium);
+  line-height: 20px;
+}
+
+.rowDescription,
+.rowStatus {
+  max-width: 36rem;
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.rowControl {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.rowBody {
+  margin-top: 12px;
+}
+
+.detailsToggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 16px;
+  color: var(--app-muted);
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  text-align: left;
+  outline: none;
+}
+
+.detailsToggle:hover,
+.detailsToggle:focus-visible {
+  color: var(--app-text);
+}
+
+.detailsToggle:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--focus-ring);
+}
+
+.detailsContent {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid color-mix(in srgb, var(--app-border) 55%, transparent);
+}
+
+.detailsContent[hidden] {
+  display: none;
+}
+
+.detailsContent > * + * {
+  border-top: 1px solid color-mix(in srgb, var(--app-border) 55%, transparent);
+}
+
+.note {
+  padding: 12px 16px;
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.status {
+  color: var(--app-muted);
+}
+
+.path {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11.5px;
+  user-select: text;
+}
+
+/* Back to notes sits at the foot of the settings sidebar, apart from the pages it lists. */
+.navFooter {
+  margin-top: auto;
+  padding: 8px;
+  border-top: 1px solid var(--app-divider);
+}
+
+.breadcrumb {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  padding-inline: 13px;
+  font-size: 13px;
+}
+
+.breadcrumb span:first-child {
+  color: var(--app-muted);
+}
+
+.breadcrumb h1 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--app-text);
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.importSkipped {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.importSkipped ul {
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-control);
+}
+
+.importSkipped li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.importSkipped li:last-child {
+  border-bottom: none;
+}
+
+.importSkippedPath {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.importSkippedReason {
+  flex-shrink: 0;
+  color: var(--app-muted);
+}
+
+.backupList {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.backupList ul {
+  width: 100%;
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid var(--app-border);
+  border-radius: var(--radius-control);
+}
+
+.backupList li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 4px 4px 10px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.backupList li:last-child {
+  border-bottom: none;
+}
+
+.formDialog {
+  max-width: 440px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.syncUnlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.syncUnlockPassphrase {
+  width: 100%;
+  max-width: 360px;
+}
+
+@media (max-width: 900px) {
+  .screen {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .backupList li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .backupList li > .status {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .backupList li > .backupRestore {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+}
+
+@media (max-width: 600px) {
+  .screen {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .nav {
+    border-right: none;
+    border-bottom: 1px solid var(--sidebar-border);
+  }
+
+  .navShortcut {
+    display: none;
+  }
+
+  .navTree {
+    flex: none;
+  }
+
+  .navGroups,
+  .navGroup {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+
+  .navRow {
+    width: auto;
+    white-space: nowrap;
+  }
+
+  .searchResults {
+    max-height: 160px;
+    overflow: auto;
+  }
+}

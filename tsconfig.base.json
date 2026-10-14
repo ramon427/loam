@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node", "vite/client"],
+    "paths": {
+      "@loam/shared/*": ["./packages/shared/src/*"],
+      "@loam/storage/*": ["./packages/storage/src/*"],
+      "@loam/transfer/*": ["./packages/transfer/src/*"]
+    }
+  }
+}

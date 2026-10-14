@@ -1,0 +1,37 @@
+.grid {
+  display: inline-grid;
+  width: 0.875rem;
+  height: 0.875rem;
+  flex: none;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5px;
+}
+
+.dot {
+  border-radius: 9999px;
+  background: currentcolor;
+  opacity: 0.15;
+  animation: light 650ms linear infinite;
+}
+
+@keyframes light {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+
+  38% {
+    opacity: 1;
+  }
+
+  72% {
+    opacity: 0.24;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+    opacity: 0.5;
+  }
+}

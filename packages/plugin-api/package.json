@@ -1,0 +1,8 @@
+{
+  "name": "@loam/plugin-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Types for writing Loam plugins: register, on, $, events and the elements plugins draw.",
+  "types": "index.d.ts",
+  "license": "MIT"
+}

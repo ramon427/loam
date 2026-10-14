@@ -1,0 +1,20 @@
+/*
+ * Drop indicators for native drag and drop (lib/nativeSortable.ts).
+ * The hovered target carries data-drop-marker="before" | "after" and the list
+ * axis; a 2px accent line shows the side the dragged item will land on.
+ */
+[data-native-sortable-axis="vertical"][data-drop-marker="before"] {
+  box-shadow: inset 0 2px 0 0 var(--app-accent);
+}
+
+[data-native-sortable-axis="vertical"][data-drop-marker="after"] {
+  box-shadow: inset 0 -2px 0 0 var(--app-accent);
+}
+
+[data-native-sortable-axis="horizontal"][data-drop-marker="before"] {
+  box-shadow: inset 2px 0 0 0 var(--app-accent);
+}
+
+[data-native-sortable-axis="horizontal"][data-drop-marker="after"] {
+  box-shadow: inset -2px 0 0 0 var(--app-accent);
+}

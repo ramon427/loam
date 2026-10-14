@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // The window is sandboxed: no Node.js globals such as process or Buffer.
+    "types": ["vite/client"]
+  },
+  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"],
+  "exclude": ["src/renderer/**/__tests__/**"]
+}

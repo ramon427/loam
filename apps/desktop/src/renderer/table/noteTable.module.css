@@ -1,0 +1,61 @@
+/* The data grid's look on the app's table tokens; react-data-grid keeps its own layout. */
+.grid {
+  --rdg-selection-color: color-mix(in srgb, var(--app-text) 55%, var(--app-surface));
+  --rdg-color: var(--app-text);
+  --rdg-border-color: var(--table-border);
+  --rdg-background-color: var(--app-surface);
+  --rdg-header-background-color: var(--app-page);
+  --rdg-header-draggable-background-color: color-mix(
+    in srgb,
+    var(--app-page-2) 82%,
+    var(--app-accent)
+  );
+  --rdg-row-hover-background-color: var(--app-surface);
+  --rdg-row-selected-background-color: var(--table-selected);
+  --rdg-row-selected-hover-background-color: var(--table-selected);
+  --rdg-font-size: var(--table-font-size);
+  border: 1px solid var(--table-border);
+  border-radius: var(--table-radius);
+  font-variant-numeric: tabular-nums;
+}
+
+.grid [role="gridcell"],
+.grid [role="columnheader"] {
+  padding-inline: var(--table-cell-x);
+  border-inline-end: 1px solid var(--table-border);
+  font-size: var(--table-font-size);
+  text-align: left;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.grid [role="columnheader"] {
+  color: var(--app-muted);
+  font-weight: 400;
+}
+
+.grid [role="columnheader"] [data-slot="dropdown-menu-trigger"]:hover {
+  background: color-mix(in srgb, var(--table-hover) 93%, black);
+}
+
+.grid [role="row"]:has([role="gridcell"]) {
+  background: var(--app-surface);
+}
+
+.grid [role="gridcell"]:hover,
+.grid [role="columnheader"]:hover {
+  background: var(--table-hover);
+}
+
+.grid .rowNumber {
+  justify-content: end;
+  color: var(--app-muted);
+  background: var(--app-page-2);
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grid [role="gridcell"],
+  .grid [role="columnheader"] {
+    transition: none;
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "daily-note",
+  "name": "Daily note",
+  "version": "1.0.0",
+  "description": "Opens today's note, making it from a template the first time, and inserts today's date.",
+  "author": "Loam",
+  "apiVersion": 1,
+  "permissions": ["notes:read", "notes:write"],
+  "settings": [
+    {
+      "key": "template",
+      "type": "string",
+      "label": "Template",
+      "description": "Markdown for a new day's note.",
+      "default": "## Plan\n\n- \n\n## Notes\n\n"
+    }
+  ]
+}

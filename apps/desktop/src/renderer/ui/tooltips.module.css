@@ -1,0 +1,17 @@
+/* A tooltip settles in from a little smaller and fainter. */
+.enter {
+  animation: enter var(--duration-fast) var(--ease-out) both;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter {
+    animation: none;
+  }
+}

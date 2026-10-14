@@ -1,0 +1,24 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  // react-data-grid imports ecij without declaring it.
+  "ignoreDependencies": ["ecij"],
+  // A system tool some end-to-end tests click with, not a package.
+  "ignoreBinaries": ["xdotool"],
+  "workspaces": {
+    ".": {
+      "project": ["bench/**/*.ts", "e2e/**/*.ts", "scripts/**/*.ts"],
+    },
+    "apps/desktop": {
+      "entry": [
+        "src/main/main.ts",
+        "src/main/mcp/stdio.ts",
+        "src/preload/preload.ts",
+        "scripts/*.mjs",
+      ],
+      "project": ["src/**/*.{ts,tsx}", "scripts/*.mjs"],
+    },
+    "packages/*": {
+      "project": ["src/**/*.{ts,tsx}"],
+    },
+  },
+}
