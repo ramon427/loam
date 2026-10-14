@@ -2,7 +2,6 @@ import { useDeferredValue, useId, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { callBridge } from "../bridge";
-import { formatShortcut } from "../keyboard/shortcuts";
 import { useNotesWorkspace } from "../workspace/NotesWorkspace";
 import { cn } from "../ui/cn";
 import { SearchField } from "../ui/SearchField";
@@ -98,7 +97,6 @@ export function NotesSearch({
         inputClassName={sidebarSearchInputClassName}
         id="notes-search-input"
         ref={inputRef}
-        title={`Search all notes (${formatShortcut("app.notes.search")})`}
         value={query}
         placeholder="Search"
         label="Search notes"

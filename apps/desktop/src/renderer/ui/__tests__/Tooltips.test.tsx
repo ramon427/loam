@@ -102,4 +102,15 @@ describe("tooltips", () => {
     hover(screen.getByRole("button", { name: "Bold" }));
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
+
+  it("leaves a field to its own placeholder", () => {
+    render(
+      <>
+        <Tooltips />
+        <input title="Search all notes" placeholder="Search" />
+      </>,
+    );
+    hover(screen.getByPlaceholderText("Search"));
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
 });

@@ -33,6 +33,8 @@ const tooltipOf = (element: Element): string | null => {
     if (title !== element.getAttribute("aria-label"))
       element.setAttribute("aria-description", title);
   }
+  // A field shows its own placeholder or text, so a tooltip only covers what is below it.
+  if (element.matches("input, textarea, select, [contenteditable='true']")) return null;
   const tooltip = element.getAttribute("data-tooltip");
   // A label that shows in full already says what its tooltip would.
   if (tooltip && element.textContent?.trim() === tooltip.trim() && !isCutOff(element)) return null;

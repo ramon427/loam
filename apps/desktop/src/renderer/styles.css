@@ -80,7 +80,6 @@
   align-items: center;
   gap: 8px;
   height: var(--loam-titlebar-height);
-  border-bottom: 1px solid var(--app-divider);
   background: var(--app-bg);
   user-select: none;
   -webkit-app-region: drag;

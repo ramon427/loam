@@ -106,11 +106,7 @@ function NoteGraphFilters({
         onValueChange={(colors) => onChange({ ...filters, colors })}
       />
       <DropdownMenu>
-        <NoteGraphMenuTrigger
-          aria-label="Filter nodes"
-          disabled={disabled}
-          title="Filter: dim nodes that do not match"
-        >
+        <NoteGraphMenuTrigger aria-label="Filter nodes" disabled={disabled}>
           <FunnelIcon className="size-3.5 text-(--app-muted)" />
           {active ? "Filtered" : "Filter"}
         </NoteGraphMenuTrigger>
