@@ -74,7 +74,7 @@ Add or update tests with your change:
   restart.
 - **Benchmarks** (`npm run bench`) time the store at 10,000 notes. Run them
   when you change how notes are stored, searched or listed, and update the
-  README table if the numbers move.
+  table in [docs/performance.md](docs/performance.md) if the numbers move.
 
 ## Changing stored data
 
