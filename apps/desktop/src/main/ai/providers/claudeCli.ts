@@ -50,6 +50,7 @@ export const runClaudeTurn = async ({
   system,
   prompt,
   model,
+  effort,
   mode,
   sessionId: resumed,
   io,
@@ -100,6 +101,7 @@ export const runClaudeTurn = async ({
       "--append-system-prompt-file",
       systemFile,
       ...(model ? ["--model", model] : []),
+      ...(effort ? ["--effort", effort] : []),
       ...(sessionId ? ["--resume", sessionId] : []),
     ],
     {

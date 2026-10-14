@@ -337,6 +337,33 @@ describe("AiChatSide", () => {
     expect(await screen.findByRole("button", { name: /^Model: .*, Extra High$/ })).toBeTruthy();
   });
 
+  it("offers the effort for Claude Code too", async () => {
+    const { invoke } = renderShell({
+      status: {
+        ...STATUS,
+        provider: "claude-cli",
+        model: "opus",
+        providers: [
+          {
+            id: "claude-cli",
+            label: "Claude Code (your sign-in)",
+            kind: "cli",
+            ready: true,
+            detail: "claude 2.1.0",
+            models: ["opus", "sonnet"],
+            experimental: true,
+          },
+        ],
+      },
+    });
+    await openChat();
+    const picker = await screen.findByRole("button", { name: "Model: Opus" });
+    fireEvent.pointerDown(picker, { button: 0, ctrlKey: false });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Effort, Default" }));
+    fireEvent.click(await screen.findByRole("menuitemradio", { name: "Max" }));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("ai.configure", { effort: "max" }));
+  });
+
   it("picks a model of another provider that is set up, grouped by provider", async () => {
     const { invoke } = renderShell({
       status: {

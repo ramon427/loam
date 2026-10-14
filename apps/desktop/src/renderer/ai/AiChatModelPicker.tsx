@@ -69,8 +69,7 @@ const subValueClass =
 /**
  * The model the next message goes to and how hard it thinks, in one menu
  * beside it: the models of each provider that is set up, and the effort.
- * Picking a model of another provider switches to that provider. Claude Code
- * keeps its own effort, so it offers none.
+ * Picking a model of another provider switches to that provider.
  */
 export function AiChatModelPicker({
   status,
@@ -88,19 +87,18 @@ export function AiChatModelPicker({
   const choose = (provider: AiProviderId, model: string) =>
     configure.mutate(provider === status.provider ? { model } : { provider, model });
   const label = nameOf(status.model);
-  const showEffort = status.provider !== "claude-cli";
   const effort = status.effort ? EFFORT_LABELS[status.effort] : null;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className={controlClass}
-        aria-label={`Model: ${label}${showEffort && effort ? `, ${effort}` : ""}`}
+        aria-label={`Model: ${label}${effort ? `, ${effort}` : ""}`}
         disabled={disabled}
       >
         <ModelIcon provider={status.provider} model={status.model} className="size-4" />
         <span className="max-w-28 truncate text-(--app-text)">{label}</span>
-        {showEffort && effort ? <span className="shrink-0">{effort}</span> : null}
+        {effort ? <span className="shrink-0">{effort}</span> : null}
         <ChevronDownIcon
           className="size-3 shrink-0 text-(--app-placeholder)"
           strokeWidth={2.25}
@@ -140,30 +138,28 @@ export function AiChatModelPicker({
             ))}
           </DropdownMenuSubContent>
         </DropdownMenuSub>
-        {showEffort ? (
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger aria-label={`Effort, ${effort ?? "Default"}`}>
-              <span>Effort</span>
-              <span className={subValueClass}>{effort ?? "Default"}</span>
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="w-44">
-              {[null, ...AI_EFFORTS].map((option) => {
-                const selected = option === status.effort;
-                return (
-                  <DropdownMenuItem
-                    key={option ?? "default"}
-                    role="menuitemradio"
-                    aria-checked={selected}
-                    onSelect={() => configure.mutate({ effort: option })}
-                  >
-                    <span className="flex-1">{option ? EFFORT_LABELS[option] : "Default"}</span>
-                    <CheckIcon className={cn("size-3.5", !selected && "invisible")} aria-hidden />
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-        ) : null}
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger aria-label={`Effort, ${effort ?? "Default"}`}>
+            <span>Effort</span>
+            <span className={subValueClass}>{effort ?? "Default"}</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-44">
+            {[null, ...AI_EFFORTS].map((option) => {
+              const selected = option === status.effort;
+              return (
+                <DropdownMenuItem
+                  key={option ?? "default"}
+                  role="menuitemradio"
+                  aria-checked={selected}
+                  onSelect={() => configure.mutate({ effort: option })}
+                >
+                  <span className="flex-1">{option ? EFFORT_LABELS[option] : "Default"}</span>
+                  <CheckIcon className={cn("size-3.5", !selected && "invisible")} aria-hidden />
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={onManage}>
           <Settings2Icon aria-hidden />
