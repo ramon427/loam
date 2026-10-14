@@ -47,6 +47,8 @@
   body {
     overflow: hidden;
     background-color: var(--app-bg);
+    font-size: 14px;
+    line-height: 1.5;
     font-weight: var(--font-weight-normal);
   }
 
@@ -90,7 +92,7 @@
 
 .loam-app-name {
   color: var(--app-text);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: var(--font-weight-semibold);
 }
 
@@ -168,7 +170,7 @@
   flex: 1;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 8px;
+  padding: 12px 10px;
 }
 
 .loam-sidebar[hidden],

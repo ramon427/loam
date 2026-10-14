@@ -235,7 +235,7 @@ describe("a library too large to render at once", () => {
     expect(screen.queryByRole("button", { name: "Note 149" })).toBeNull();
 
     const body = screen.getByRole("group", { name: "Notes tree selection area" });
-    body.scrollTop = 150 * 30;
+    body.scrollTop = 150 * 34;
     fireEvent.scroll(body);
 
     expect(await screen.findByRole("button", { name: "Note 149" })).toBeTruthy();

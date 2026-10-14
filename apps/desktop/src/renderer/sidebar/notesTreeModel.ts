@@ -197,7 +197,7 @@ export type NotesTreeRow =
   | { kind: "root-drop"; key: string }
   | { kind: "creating-folder"; key: string; depth: 0 | 1 };
 
-export const notesTreeRowHeight = (row: NotesTreeRow) => (row.kind === "root-drop" ? 16 : 30);
+export const notesTreeRowHeight = (row: NotesTreeRow) => (row.kind === "root-drop" ? 16 : 34);
 
 /** Which projects the tree shows; null stands for everything outside projects. */
 export type NotesProjectScope = ReadonlySet<string | null>;

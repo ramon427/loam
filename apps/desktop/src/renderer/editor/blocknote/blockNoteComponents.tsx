@@ -354,7 +354,7 @@ function SelectContent({
           dropdownSurfaceClass,
           // BlockNote merges with an older tailwind-merge that keeps its own
           // rounded-md and shadow-md beside these.
-          "rounded-(--raised-control-radius)! shadow-(--raised-control-shadow)!",
+          "rounded-(--radius-menu)! shadow-(--raised-panel-shadow)!",
           "max-h-[min(420px,calc(100vh-24px))] w-(--radix-select-trigger-width) min-w-0",
           className,
         )}

@@ -42,8 +42,8 @@
 
 .paper {
   position: relative;
-  border: 1px solid color-mix(in srgb, var(--app-border) 86%, transparent);
-  border-radius: 8px;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
   background: var(--app-surface);
   /* No inner top highlight: the shown tab runs into the paper along that edge. */
   box-shadow:
@@ -80,19 +80,15 @@
  */
 .tabs {
   --note-tab-surface: var(--app-surface);
-  --note-tab-edge: color-mix(in srgb, var(--app-border) 86%, transparent);
+  --note-tab-edge: var(--app-border);
   position: relative;
   z-index: 1;
   display: flex;
   min-width: 0;
   /* The shown tab covers the paper's top border, so the two read as one sheet. */
   margin-bottom: -1px;
-  padding-inline: 12px;
-}
-
-/* Light paper has a plain border; match it. */
-:global(:root:not(.dark)) .tabs {
-  --note-tab-edge: var(--app-border);
+  /* Clear of the paper's rounded corner. */
+  padding-inline: 18px;
 }
 
 .widthHandle {

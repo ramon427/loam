@@ -48,7 +48,7 @@ export function SearchField({
   return (
     <Frame className={cn(surface === "plain" && "flex min-w-0 items-center gap-1.5", className)}>
       {icon ? (
-        <SearchIcon aria-hidden="true" className="size-3.5 shrink-0 text-(--app-muted)" />
+        <SearchIcon aria-hidden="true" className="size-4 shrink-0 text-(--app-placeholder)" />
       ) : null}
       <InputGroupInput
         {...inputProps}

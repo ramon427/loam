@@ -4,9 +4,9 @@ import { Button } from "../ui/Button";
 
 import { useNotesTreeCommands } from "./useNotesTreeCommands";
 
-/** Icon buttons in the sidebar's header, which stay muted on hover. */
+/** Icon buttons in the sidebar's header. */
 export const sidebarActionClass =
-  "min-h-7 min-w-7 shrink-0 text-(--app-muted) hover:text-(--app-muted)";
+  "size-[30px] min-h-[30px] min-w-[30px] shrink-0 text-(--app-icon-muted) hover:text-(--app-text) [&_svg:not([class*='size-'])]:size-4";
 
 /** A sidebar action whose option is on. */
 export const sidebarActionActiveClass =
