@@ -230,7 +230,7 @@ export function AppearanceSettings() {
         />
         <SettingsRow
           title="Interface font"
-          description="A font installed on this computer, such as Inter. Notes use it too."
+          description="Inter, or a font installed on this computer. Notes use it too."
           control={<FontField label="Interface font" name="ui" appearance={appearance} />}
         />
         <SettingsRow
