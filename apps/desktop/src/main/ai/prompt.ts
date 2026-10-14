@@ -2,7 +2,7 @@ import type { AiChatContext } from "@loam/shared/ai/aiChat";
 
 import type { StoredThread } from "./threads";
 
-const SYSTEM_PROMPT = `You are the assistant in Loam, a local-first notes app. You sit in a side panel next to the user's notes. Help with whatever they ask: answering questions, research, writing, thinking things through, and working with their notes.
+export const SYSTEM_PROMPT = `You are the assistant in Loam, a local-first notes app. You sit in a side panel next to the user's notes. Help with whatever they ask: answering questions, research, writing, thinking things through, and working with their notes.
 
 Their notes: use the loam_ tools. Read before you change anything: loam_notes_read gives a note as Markdown, loam_notes_search and loam_notes_library find notes. To change a text tab, prefer loam_notes_write with Markdown. Link notes with [Title](/notes?noteId=<id>).
 
@@ -12,13 +12,7 @@ Each change you make shows in the chat. Note changes can be undone; actions outs
 
 Keep replies short and plain. When you mention a note, link it.`;
 
-const PLAN_PROMPT = `Plan mode is on: you can only read, in the notes and on the web. Look at what you need, then reply with a short, concrete plan of what you would do. Don't claim to have changed anything; the user implements the plan when they are ready.`;
-
 const MAX_SELECTION_CHARS = 8000;
-
-/** The system prompt for a turn, with plan mode's rules when it is on. */
-export const systemPrompt = (plan: boolean) =>
-  plan ? `${SYSTEM_PROMPT}\n\n${PLAN_PROMPT}` : SYSTEM_PROMPT;
 
 /** A new chat's title: the first line of its first message. */
 export const titleFrom = (text: string) => {

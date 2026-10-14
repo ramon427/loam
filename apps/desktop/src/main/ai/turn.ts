@@ -13,7 +13,7 @@ import { StoreError } from "@loam/storage/storeError";
 import { toBridgeFailure } from "../requests/dispatch";
 import type { createAttachmentStore } from "./attachments";
 import type { ChatTool, ChatTools } from "./chatTools";
-import { systemPrompt, transcriptOf } from "./prompt";
+import { SYSTEM_PROMPT, transcriptOf } from "./prompt";
 import { contextWindowOf } from "./providers/catalog";
 import type { ProviderRegistry } from "./providers/registry";
 import { clip, type ProviderPermission, type ToolAnswer, type TurnIO } from "./providers/types";
@@ -71,7 +71,6 @@ export const createTurnRunner = ({
     let reply: Extract<AiChatItem, { kind: "assistant" }> | null = null;
     const tools = chatTools
       .all()
-      .filter((tool) => !thread.plan || tool.access === "read" || tool.access === "web")
       // Anthropic and the CLIs read pages with their own web tools.
       .filter((tool) => tool.name !== "loam_web_read" || thread.provider.startsWith("openai"));
     const byName = new Map<string, ChatTool>(tools.map((tool) => [tool.name, tool]));
@@ -123,9 +122,7 @@ export const createTurnRunner = ({
       const tool = byName.get(name);
       if (!tool)
         return {
-          content: thread.plan
-            ? "Plan mode is on, so nothing can be changed yet. Describe the change in your plan."
-            : `There is no tool named ${name}.`,
+          content: `There is no tool named ${name}.`,
           isError: true,
         };
       const parsed = tool.inputSchema.safeParse(rawInput);
@@ -254,13 +251,12 @@ export const createTurnRunner = ({
       );
       thread.history = await provider.runTurn({
         model: thread.model,
-        system: systemPrompt(thread.plan),
+        system: SYSTEM_PROMPT,
         prompt: earlier ? `Earlier in this chat:\n\n${earlier}\n\n---\n\n${prompt}` : prompt,
         attachments: turnFiles,
         effort: effort(),
         tools,
         mode: thread.mode,
-        plan: thread.plan,
         history: sameProvider ? thread.history : null,
         io,
       });

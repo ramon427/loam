@@ -24,8 +24,3 @@ export const ACCESS_MODES: Record<
     icon: LockOpenIcon,
   },
 };
-
-export const PLAN_MODE = {
-  label: "Plan",
-  description: "Read notes and the web and propose a plan; change nothing until you implement it.",
-};

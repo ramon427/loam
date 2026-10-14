@@ -23,8 +23,7 @@ import {
 const ASKED_TOOLS = ["Read", "Grep", "Glob", "WebFetch", "WebSearch"];
 
 /** Claude Code's permission mode for the chat's access mode. */
-const claudePermissionMode = (mode: AiAccessMode, plan: boolean) => {
-  if (plan) return "plan";
+const claudePermissionMode = (mode: AiAccessMode) => {
   if (mode === "full-access") return "bypassPermissions";
   return mode === "auto-accept-edits" ? "acceptEdits" : "manual";
 };
@@ -52,7 +51,6 @@ export const runClaudeTurn = async ({
   prompt,
   model,
   mode,
-  plan,
   sessionId: resumed,
   io,
 }: CliTurn) => {
@@ -94,7 +92,7 @@ export const runClaudeTurn = async ({
       "--allowedTools",
       "mcp__loam",
       "--permission-mode",
-      claudePermissionMode(mode, plan),
+      claudePermissionMode(mode),
       "--permission-prompt-tool",
       `mcp__loam__${PERMISSION_TOOL}`,
       "--settings",

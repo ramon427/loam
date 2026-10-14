@@ -303,7 +303,6 @@ window sends a message and shows what comes back as `ai.event`.
   runs each turn and checks every tool call against the chat's
   access mode: supervised asks before any change or web request, auto-accept
   edits asks before organizing or acting outside Loam, full access never asks.
-  Plan mode offers reading notes and the web only.
 - `providers/` reach the model: the Anthropic API (with its web search and
   fetch), OpenAI or a service with its API (with the user's key), or the
   user's own `claude` or `codex` CLI, run from the home folder with its own

@@ -1,5 +1,5 @@
 import type { SVGProps } from "react";
-import { ServerIcon, TerminalIcon } from "lucide-react";
+import { ServerIcon } from "lucide-react";
 
 import type { AiProviderId } from "@loam/shared/ai/aiChat";
 
@@ -101,24 +101,3 @@ export const shortModelName = (model: string) => {
   if (/^(opus|sonnet|haiku)$/.test(model)) return model.charAt(0).toUpperCase() + model.slice(1);
   return model.split("/").at(-1) ?? model;
 };
-
-/** A provider's mark in the picker's rail; a CLI on this computer wears a small terminal badge. */
-export function ProviderIcon({
-  provider,
-  className,
-}: {
-  provider: AiProviderId;
-  className?: string;
-}) {
-  const cli = provider === "claude-cli" || provider === "codex-cli";
-  return (
-    <span className="relative inline-grid place-items-center">
-      <ModelIcon provider={provider} model="" className={className} />
-      {cli ? (
-        <span className="absolute -right-1 -bottom-1 grid size-3.5 place-items-center rounded-full border border-(--app-border) bg-(--app-surface)">
-          <TerminalIcon className="size-2 text-(--app-muted)" aria-hidden />
-        </span>
-      ) : null}
-    </span>
-  );
-}

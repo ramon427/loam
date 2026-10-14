@@ -358,7 +358,6 @@ type LoamBridgeRequests = {
       text: string;
       context: AiChatContext | null;
       mode: AiAccessMode;
-      plan: boolean;
       /** Files sent with the message; a message may be only files. */
       attachments?: AiAttachmentUpload[];
     },
@@ -376,7 +375,7 @@ type LoamBridgeRequests = {
   /** Undoes the assistant's changes, newest first. */
   "ai.undo": Request<{ threadId: string; actionIds: string[] }, null>;
   /** Changes how much the assistant may do in a chat, from its next step on. */
-  "ai.setMode": Request<{ threadId: string; mode: AiAccessMode; plan: boolean }, null>;
+  "ai.setMode": Request<{ threadId: string; mode: AiAccessMode }, null>;
   "ai.renameThread": Request<{ threadId: string; title: string }, null>;
   "ai.deleteThread": Request<{ threadId: string }, null>;
   /** Asks for a folder and writes the notes there as Markdown; "canceled" if none is picked. */

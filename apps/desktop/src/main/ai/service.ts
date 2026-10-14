@@ -98,7 +98,6 @@ export const createAiService = async ({
     updatedAt: thread.updatedAt,
     running: running.has(thread.id),
     mode: thread.mode,
-    plan: thread.plan,
     ...(thread.context ? { context: thread.context } : {}),
   });
   const publicThread = (thread: StoredThread): AiThread => {
@@ -173,14 +172,12 @@ export const createAiService = async ({
       text,
       context,
       mode,
-      plan,
       attachments: uploads = [],
     }: {
       threadId: string | null;
       text: string;
       context: AiChatContext | null;
       mode: AiAccessMode;
-      plan: boolean;
       attachments?: AiAttachmentUpload[];
     }) {
       requireEnabled();
@@ -192,7 +189,6 @@ export const createAiService = async ({
         : await threads.create({
             id: randomUUID(),
             mode,
-            plan,
             provider: current.provider,
             model: settings.model(),
           });
@@ -202,7 +198,6 @@ export const createAiService = async ({
       thread.provider = current.provider;
       thread.model = settings.model();
       thread.mode = mode;
-      thread.plan = plan;
       const files = await attachments.add(thread.id, uploads);
       if (thread.items.length === 0)
         thread.title = titleFrom(text || files.map((file) => file.name).join(", "));
@@ -214,7 +209,6 @@ export const createAiService = async ({
         text,
         context,
         ...(files.length > 0 ? { attachments: files } : {}),
-        plan,
         at: Date.now(),
       });
       const turn: RunningTurn = { controller: new AbortController(), approvals: new Map() };
@@ -248,10 +242,9 @@ export const createAiService = async ({
         await threads.save(thread);
       }
     },
-    async setMode(id: string, mode: AiAccessMode, plan: boolean) {
+    async setMode(id: string, mode: AiAccessMode) {
       const thread = await threads.get(id);
       thread.mode = mode;
-      thread.plan = plan;
       // Choosing a stricter mode takes back what was approved for the chat.
       if (mode === "supervised") thread.approved = [];
       await threads.save(thread);

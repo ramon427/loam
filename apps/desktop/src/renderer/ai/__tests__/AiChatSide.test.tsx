@@ -72,7 +72,6 @@ const thread = (items: AiChatItem[], running = false): AiThread => ({
   createdAt: 1,
   running,
   mode: "supervised",
-  plan: false,
   provider: "anthropic",
   model: "claude-sonnet",
   items,
@@ -119,7 +118,6 @@ const user = (overrides: Partial<Extract<AiChatItem, { kind: "user" }>> = {}): A
   turnId: "t1",
   text: "Tidy my review",
   context: null,
-  plan: false,
   at: 1,
   ...overrides,
 });
@@ -165,7 +163,6 @@ describe("AiChatSide", () => {
         text: "Summarize this note",
         context: { noteId: "note-1", noteTitle: "Weekly review", selection: null },
         mode: "supervised",
-        plan: false,
       }),
     );
 
@@ -197,7 +194,6 @@ describe("AiChatSide", () => {
       title: "Review help",
       updatedAt: 2,
       mode: "supervised" as const,
-      plan: false,
     };
     act(() => {
       emit("ai.event", { type: "thread", thread: { ...thread, running: true } });
@@ -330,17 +326,18 @@ describe("AiChatSide", () => {
     await waitFor(() => expect(invoke).toHaveBeenCalledWith("ai.stop", { threadId: "thread-1" }));
   });
 
-  it("chooses how hard the model thinks beside the message", async () => {
+  it("chooses how hard the model thinks from the model menu", async () => {
     const { invoke } = renderShell();
     await openChat();
-    const reasoning = await screen.findByRole("button", { name: "Reasoning: Default" });
-    fireEvent.pointerDown(reasoning, { button: 0, ctrlKey: false });
+    const picker = await screen.findByRole("button", { name: /^Model: / });
+    fireEvent.pointerDown(picker, { button: 0, ctrlKey: false });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Effort, Default" }));
     fireEvent.click(await screen.findByRole("menuitemradio", { name: "Extra High" }));
     await waitFor(() => expect(invoke).toHaveBeenCalledWith("ai.configure", { effort: "xhigh" }));
-    expect(await screen.findByRole("button", { name: "Reasoning: Extra High" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: /^Model: .*, Extra High$/ })).toBeTruthy();
   });
 
-  it("picks a model of another provider that is set up, from its rail or by searching", async () => {
+  it("picks a model of another provider that is set up, grouped by provider", async () => {
     const { invoke } = renderShell({
       status: {
         ...STATUS,
@@ -369,27 +366,24 @@ describe("AiChatSide", () => {
       },
     });
     await openChat();
-    // Opening the chat puts the focus in the message a frame later; the picker opens after.
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Message")));
-    fireEvent.click(await screen.findByRole("button", { name: "Model: Opus 5.5" }));
-    const providers = await screen.findByRole("tablist", { name: "Providers" });
+    const picker = await screen.findByRole("button", { name: "Model: Opus 5.5" });
+    fireEvent.pointerDown(picker, { button: 0, ctrlKey: false });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Model, Opus 5.5" }));
+    // The submenu is named by the row that opened it.
+    const models = await screen.findByRole("menu", { name: "Model, Opus 5.5" });
     // Only providers that are set up can be picked.
     expect(
-      within(providers)
-        .getAllByRole("tab")
-        .map((tab) => tab.getAttribute("aria-label")),
+      within(models)
+        .getAllByRole("group")
+        .map((group) => group.getAttribute("aria-label")),
     ).toEqual(["Anthropic", "OpenAI API"]);
-    const models = screen.getByRole("listbox", { name: "Models" });
     expect(
       within(models)
-        .getByRole("option", { name: /Opus 5\.5/ })
-        .getAttribute("aria-selected"),
+        .getByRole("menuitemradio", { name: /Opus 5\.5/ })
+        .getAttribute("aria-checked"),
     ).toBe("true");
 
-    fireEvent.change(screen.getByRole("textbox", { name: "Search models" }), {
-      target: { value: "gpt" },
-    });
-    fireEvent.click(within(models).getByRole("option", { name: /GPT-5\.1/ }));
+    fireEvent.click(within(models).getByRole("menuitemradio", { name: /GPT-5\.1/ }));
     await waitFor(() =>
       expect(invoke).toHaveBeenCalledWith("ai.configure", { provider: "openai", model: "gpt-5.1" }),
     );
@@ -416,7 +410,6 @@ describe("AiChatSide", () => {
           updatedAt: 2,
           running: false,
           mode: "supervised",
-          plan: false,
         },
       }),
     );
@@ -442,7 +435,6 @@ describe("AiChatSide", () => {
           updatedAt: 2,
           running: false,
           mode: "supervised",
-          plan: false,
           context: { tokens: 850_000, window: 1_000_000 },
         },
       }),
@@ -586,33 +578,5 @@ describe("AiChatSide", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Edited Weekly review" }));
     expect(openNote).toHaveBeenCalledWith("note-1");
-  });
-
-  it("implements a finished plan", async () => {
-    const { invoke } = renderShell({
-      threads: [
-        {
-          ...thread([
-            user({ plan: true }),
-            { kind: "assistant", id: "a1", turnId: "t1", text: "1. Merge notes", streaming: false },
-          ]),
-          plan: true,
-        },
-      ],
-    });
-    await openSavedChat();
-    const implement = await screen.findByRole("button", { name: "Implement plan" });
-    expect(screen.getByRole("button", { name: "Plan", pressed: true })).toBeTruthy();
-    fireEvent.click(implement);
-    await waitFor(() =>
-      expect(invoke).toHaveBeenCalledWith("ai.send", {
-        threadId: "thread-1",
-        text: "Implement the plan.",
-        context: null,
-        mode: "supervised",
-        plan: false,
-      }),
-    );
-    expect(screen.getByRole("button", { name: "Plan", pressed: false })).toBeTruthy();
   });
 });

@@ -20,7 +20,6 @@ export type ChatThread = {
   title: string;
   running: boolean;
   mode: AiAccessMode;
-  plan: boolean;
   items: AiChatItem[];
   /** How long each turn that finished while the window watched took, by turn id. */
   durations: Record<string, number>;
@@ -78,7 +77,6 @@ const applyEvent = (threads: Threads, event: AiChatEvent, fallbackMode: AiAccess
     title: NEW_CHAT_TITLE,
     running: true,
     mode: fallbackMode,
-    plan: false,
     items: [],
     durations: {},
     complete: false,
@@ -102,7 +100,7 @@ const applyEvent = (threads: Threads, event: AiChatEvent, fallbackMode: AiAccess
       return { ...threads, [thread.id]: { ...thread, items } };
     }
     case "thread": {
-      const { id, title, running, mode, plan, context } = event.thread;
+      const { id, title, running, mode, context } = event.thread;
       const thread = threads[id] ?? placeholder(id);
       const durations =
         thread.running && !running ? withFinishedTurn(thread, Date.now()) : thread.durations;
@@ -113,7 +111,6 @@ const applyEvent = (threads: Threads, event: AiChatEvent, fallbackMode: AiAccess
           title,
           running,
           mode,
-          plan,
           durations,
           context: context ?? thread.context,
         },
@@ -136,7 +133,7 @@ export function useAiChat(defaultMode: AiAccessMode) {
   const [summaries, setSummaries] = useState<AiThreadSummary[] | null>(null);
   const [threads, setThreads] = useState<Threads>({});
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [draftMode, setDraftMode] = useState<{ mode: AiAccessMode; plan: boolean } | null>(null);
+  const [draftMode, setDraftMode] = useState<AiAccessMode | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const defaultModeRef = useRef(defaultMode);
@@ -183,7 +180,6 @@ export function useAiChat(defaultMode: AiAccessMode) {
             title: stored.title,
             running: stored.running,
             mode: stored.mode,
-            plan: stored.plan,
             items: mergeItems(stored.items, all[stored.id]?.items ?? []),
             durations: all[stored.id]?.durations ?? {},
             context: all[stored.id]?.context ?? stored.context,
@@ -206,8 +202,7 @@ export function useAiChat(defaultMode: AiAccessMode) {
     }
   }, []);
 
-  const mode = active?.mode ?? draftMode?.mode ?? defaultMode;
-  const plan = active?.plan ?? draftMode?.plan ?? false;
+  const mode = active?.mode ?? draftMode ?? defaultMode;
 
   const selectThread = useCallback((threadId: string | null) => {
     setError(null);
@@ -219,23 +214,15 @@ export function useAiChat(defaultMode: AiAccessMode) {
     async (
       text: string,
       context: AiChatContext | null,
-      options?: { plan?: boolean; attachments?: AiAttachmentUpload[] },
+      options?: { attachments?: AiAttachmentUpload[] },
     ) => {
-      const sendPlan = options?.plan ?? plan;
       setSending(true);
-      // The chat continues in the plan setting the message went with.
-      if (activeId)
-        setThreads((all) => {
-          const thread = all[activeId];
-          return thread ? { ...all, [activeId]: { ...thread, plan: sendPlan } } : all;
-        });
       await run(async () => {
         const { threadId } = await callBridge("ai.send", {
           threadId: activeId,
           text,
           context,
           mode,
-          plan: sendPlan,
           ...(options?.attachments?.length ? { attachments: options.attachments } : {}),
         });
         if (activeId) return;
@@ -251,7 +238,6 @@ export function useAiChat(defaultMode: AiAccessMode) {
               durations: {},
             }),
             mode,
-            plan: sendPlan,
             complete: true,
           },
         }));
@@ -259,20 +245,20 @@ export function useAiChat(defaultMode: AiAccessMode) {
       });
       setSending(false);
     },
-    [activeId, mode, plan, run],
+    [activeId, mode, run],
   );
 
   const changeMode = useCallback(
-    (next: { mode: AiAccessMode; plan: boolean }) => {
+    (next: AiAccessMode) => {
       if (!activeId) {
         setDraftMode(next);
         return;
       }
       setThreads((all) => {
         const thread = all[activeId];
-        return thread ? { ...all, [activeId]: { ...thread, ...next } } : all;
+        return thread ? { ...all, [activeId]: { ...thread, mode: next } } : all;
       });
-      void run(() => callBridge("ai.setMode", { threadId: activeId, ...next }));
+      void run(() => callBridge("ai.setMode", { threadId: activeId, mode: next }));
     },
     [activeId, run],
   );
@@ -291,7 +277,6 @@ export function useAiChat(defaultMode: AiAccessMode) {
     loading: needsLoad,
     running: Boolean(active?.running) || sending,
     mode,
-    plan,
     error,
     selectThread,
     send,

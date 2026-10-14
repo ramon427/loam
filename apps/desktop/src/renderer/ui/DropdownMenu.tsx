@@ -1,5 +1,5 @@
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
-import { CheckIcon } from "lucide-react";
+import { CheckIcon, ChevronRightIcon } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "./cn";
@@ -113,6 +113,61 @@ function DropdownMenuSeparator({
   );
 }
 
+function DropdownMenuSub(props: React.ComponentProps<typeof DropdownMenuPrimitive.Sub>) {
+  return <DropdownMenuPrimitive.Sub {...props} />;
+}
+
+function DropdownMenuSubTrigger({
+  className,
+  children,
+  onPointerLeave,
+  ...props
+}: React.ComponentProps<typeof DropdownMenuPrimitive.SubTrigger>) {
+  return (
+    <DropdownMenuPrimitive.SubTrigger
+      data-slot="dropdown-menu-sub-trigger"
+      className={cn(dropdownItemClass, "data-[state=open]:bg-(--menu-item-hover-bg)", className)}
+      {...props}
+      onPointerLeave={(event) => {
+        onPointerLeave?.(event);
+        const submenuId = event.currentTarget.getAttribute("aria-controls");
+        const submenu = submenuId ? document.getElementById(submenuId) : null;
+        // A direct move has already reached the submenu. Radix's directional
+        // grace heuristic can otherwise focus the parent and close the submenu.
+        if (event.relatedTarget instanceof Node && submenu?.contains(event.relatedTarget)) {
+          event.preventDefault();
+        }
+      }}
+    >
+      {children}
+      <ChevronRightIcon className="size-3.5 shrink-0 text-(--app-placeholder)" />
+    </DropdownMenuPrimitive.SubTrigger>
+  );
+}
+
+function DropdownMenuSubContent({
+  className,
+  collisionPadding = 8,
+  sideOffset = 6,
+  ...props
+}: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
+  return (
+    <DropdownMenuPortal>
+      <DropdownMenuPrimitive.SubContent
+        data-slot="dropdown-menu-sub-content"
+        collisionPadding={collisionPadding}
+        sideOffset={sideOffset}
+        className={cn(
+          dropdownSurfaceClass,
+          "z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-32 origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto outline-none",
+          className,
+        )}
+        {...props}
+      />
+    </DropdownMenuPortal>
+  );
+}
+
 export {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -121,5 +176,8 @@ export {
   DropdownMenuLabel,
   DropdownMenuPortal,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 };

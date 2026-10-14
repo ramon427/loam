@@ -139,14 +139,11 @@ export function AiChatSide({
         key={thread.id}
         thread={thread}
         model={status.model}
-        onAskAgain={(message) =>
-          void chat.send(message.text, message.context, { plan: message.plan })
-        }
+        onAskAgain={(message) => void chat.send(message.text, message.context)}
         threadId={thread.id}
         onOpenNote={onOpenNote}
         onRespond={chat.respond}
         onUndo={chat.undo}
-        onImplementPlan={() => void chat.send("Implement the plan.", null, { plan: false })}
       />
     );
   else
@@ -228,6 +225,7 @@ export function AiChatSide({
           attachments={attachments}
           status={status}
           notes={notes}
+          onOpenSettings={onOpenSettings}
         />
       </aside>
     </>
