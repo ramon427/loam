@@ -38,7 +38,7 @@ const EFFORT_LABELS: Record<AiEffort, string> = {
 
 /** The composer's own controls: small, label-weight, shaded while open. */
 const controlClass =
-  "inline-flex h-7 min-w-0 shrink items-center gap-1.5 rounded-(--radius-control) px-2 text-xs font-medium text-(--app-muted) outline-none hover:bg-(--app-surface-2) hover:text-(--app-text) focus-visible:ring-2 focus-visible:ring-(--app-focus-ring) disabled:pointer-events-none disabled:opacity-50 data-[state=open]:bg-(--app-surface-2) data-[state=open]:text-(--app-text)";
+  "inline-flex h-[30px] min-w-0 shrink items-center gap-1.5 rounded-[9px] px-1.5 text-[12.5px] font-medium text-(--app-secondary-label) outline-none hover:bg-(--app-control-hover) hover:text-(--app-text) focus-visible:ring-2 focus-visible:ring-(--app-focus-ring) disabled:pointer-events-none disabled:opacity-50 data-[state=open]:bg-(--app-control-hover) data-[state=open]:text-(--app-text)";
 
 /** Changes the side chat's setting and shows it at once, as Settings does. */
 function useConfigure() {
@@ -110,13 +110,17 @@ export function AiChatModelPicker({
       }}
     >
       <PopoverPrimitive.Trigger
-        className={controlClass}
+        className={cn(controlClass, "text-(--app-text)")}
         aria-label={`Model: ${label}`}
         disabled={disabled}
       >
         <ModelIcon provider={status.provider} model={status.model} className="size-4" />
         <span className="max-w-28 truncate">{label}</span>
-        <ChevronDownIcon className="size-3.5 shrink-0 opacity-70" strokeWidth={2.25} aria-hidden />
+        <ChevronDownIcon
+          className="size-3 shrink-0 text-(--app-placeholder)"
+          strokeWidth={2.25}
+          aria-hidden
+        />
       </PopoverPrimitive.Trigger>
       <PopoverPrimitive.Portal>
         <PopoverContent
@@ -232,7 +236,11 @@ export function AiChatEffortPicker({
       >
         <BrainIcon className="size-3.5 shrink-0" aria-hidden />
         <span className="truncate">{label}</span>
-        <ChevronDownIcon className="size-3.5 shrink-0 opacity-70" strokeWidth={2.25} aria-hidden />
+        <ChevronDownIcon
+          className="size-3 shrink-0 text-(--app-placeholder)"
+          strokeWidth={2.25}
+          aria-hidden
+        />
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="end" className="w-52">
         <DropdownMenuLabel>Reasoning</DropdownMenuLabel>

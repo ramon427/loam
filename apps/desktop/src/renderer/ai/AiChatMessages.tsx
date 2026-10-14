@@ -71,10 +71,10 @@ export function AiChatMessages({
     <div className="relative flex min-h-0 flex-1 flex-col">
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 [overflow-anchor:none]"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-[18px] pb-2 [overflow-anchor:none]"
         onScroll={onScroll}
       >
-        <ol ref={contentRef} className="flex flex-col gap-3" aria-label="Messages">
+        <ol ref={contentRef} className="flex flex-col gap-4" aria-label="Messages">
           {turns.map((turn, index) => {
             const latest = index === turns.length - 1;
             return (
@@ -307,7 +307,7 @@ function WorkedFor({
       <Button
         variant="ghost-muted"
         size="sm"
-        className="-ml-1 min-w-0 px-1"
+        className="-ml-1 min-w-0 px-1 text-[12.5px] font-normal text-(--app-placeholder)"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
@@ -316,7 +316,12 @@ function WorkedFor({
         {failed > 0 ? <span className="text-(--status-danger)">· {failed} failed</span> : null}
       </Button>
       {open ? (
-        <ol className={cn("ml-2 border-l border-(--app-border-subtle) pl-2", styles.softIn)}>
+        <ol
+          className={cn(
+            "ml-1.5 flex flex-col gap-1.5 border-l border-(--app-border) pl-3 text-[12.5px] text-(--app-secondary-label)",
+            styles.softIn,
+          )}
+        >
           {groupReads(steps).map((step) =>
             Array.isArray(step) ? (
               <li key={step[0]!.id}>
@@ -381,7 +386,7 @@ function UserMessage({ item, threadId }: { item: UserItem; threadId: string }) {
         <SentAttachmentChips threadId={threadId} attachments={item.attachments} />
       ) : null}
       {item.text ? (
-        <div className="rounded-(--radius-control) bg-(--app-surface-2) px-3 py-2 text-[13px] leading-relaxed whitespace-pre-wrap text-(--app-text)">
+        <div className="rounded-[16px_16px_4px_16px] border border-(--app-border) bg-(--chat-bubble-bg) px-[13px] py-[9px] text-[13px] leading-relaxed whitespace-pre-wrap text-(--app-text)">
           {item.text}
         </div>
       ) : null}
@@ -390,7 +395,7 @@ function UserMessage({ item, threadId }: { item: UserItem; threadId: string }) {
           {chips.map((chip) => (
             <span
               key={chip}
-              className="max-w-48 truncate rounded-full border border-(--app-border-subtle) px-2 text-[11px] text-(--app-muted)"
+              className="max-w-48 truncate rounded-full border border-(--app-border) px-2 text-[11px] text-(--app-muted)"
             >
               {chip}
             </span>
@@ -595,7 +600,7 @@ function ApprovalCard({
   return (
     <section
       aria-label="Approval"
-      className="flex flex-col gap-2 rounded-(--radius-control) border border-(--app-border) p-3"
+      className="flex flex-col gap-2.5 rounded-[14px] border border-(--app-border-strong) bg-(--app-surface) p-3.5"
     >
       <p className="text-[13px] font-medium text-(--app-text)">{approval.label}</p>
       {approval.access === "outside" ? (
@@ -625,7 +630,9 @@ function ApprovalCard({
           <Button
             key={decision}
             size="sm"
-            variant={decision === "accept" ? "default" : "outline"}
+            variant={
+              decision === "accept" ? "default" : decision === "decline" ? "ghost" : "secondary"
+            }
             onClick={() => onRespond(approval.id, decision)}
           >
             {label}

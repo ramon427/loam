@@ -7,8 +7,20 @@
   grid-column: 3;
   grid-row: 1;
   overflow: hidden;
-  border-left: 1px solid var(--sidebar-border);
+  border-left: 1px solid var(--app-divider);
   background: var(--app-bg);
+  /* The composer box sits a step above the column; your messages are bubbles. */
+  --chat-composer-bg: var(--app-surface);
+  --chat-composer-shadow: 0 10px 30px -18px rgb(0 0 0 / 22%);
+  --chat-bubble-bg: #ececec;
+  --chat-preview-bg: var(--app-surface-2);
+}
+
+:global(.dark) .panel {
+  --chat-composer-bg: #212121;
+  --chat-composer-shadow: 0 10px 30px -18px rgb(0 0 0 / 80%);
+  --chat-bubble-bg: #262626;
+  --chat-preview-bg: #171717;
 }
 
 /* Files dragged over the chat land in the next message. */
@@ -60,7 +72,7 @@
 
 /* An answer, written in Markdown. */
 .markdown {
-  font-size: 13px;
+  font-size: 13.5px;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
@@ -299,12 +311,13 @@
   max-height: 240px;
   overflow: auto;
   margin: 0;
-  padding: 8px;
-  border-radius: var(--radius-control);
-  background: var(--app-code-bg);
+  padding: 10px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--chat-preview-bg);
   font-family: var(--font-code);
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.6;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
