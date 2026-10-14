@@ -1,5 +1,7 @@
 import {
+  Children,
   createContext,
+  isValidElement,
   useContext,
   useRef,
   useState,
@@ -12,30 +14,51 @@ import {
   type MouseEventHandler,
   type PointerEvent,
   type PointerEventHandler,
+  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
+import { Slot } from "@radix-ui/react-slot";
 import { blockTypeSelectItems, useBlockNoteEditor } from "@blocknote/react";
 import { ShadCNDefaultComponents, type ShadCNComponents } from "@blocknote/shadcn";
+import { ChevronRightIcon } from "lucide-react";
 
 import { cn } from "../../ui/cn";
 import { Button } from "../../ui/Button";
-import { DropdownMenuPortal } from "../../ui/DropdownMenu";
+import {
+  DropdownMenuCheckboxItem as AppDropdownMenuCheckboxItem,
+  DropdownMenuItem as AppDropdownMenuItem,
+  DropdownMenuLabel as AppDropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuSeparator as AppDropdownMenuSeparator,
+} from "../../ui/DropdownMenu";
 import { Input } from "../../ui/Input";
 import { PopoverContent } from "../../ui/Popover";
+import { SelectContent as AppSelectContent, SelectItem as AppSelectItem } from "../../ui/Select";
 import { dropdownItemClass, dropdownSurfaceClass } from "../../styles/dropdowns";
 import { BlockPreviewCard } from "./BlockPreviewCard";
 import { resolveBlockPreviewKind } from "./blockTypePreviewModel";
 
 /*
  * BlockNote draws its menus, popovers and inputs with the shadcn components in
- * `shadCNComponents` below. These overrides give them the app's look and fix
- * behavior BlockNote's defaults get wrong for this app; anything not listed
- * falls back to BlockNote's own component.
+ * `shadCNComponents` below. These overrides draw them with the app's own
+ * components, so the editor's menus look and behave like the rest of the
+ * window, and fix behavior BlockNote's defaults get wrong for this app;
+ * anything not listed falls back to BlockNote's own component.
  */
 
 const defaults = ShadCNDefaultComponents;
+
+/**
+ * Only BlockNote's own `bn-` class names, which name a menu or field. The
+ * spacing classes it asks for beside them would undo the app's.
+ */
+const blockNoteNames = (className: string | undefined) =>
+  className
+    ?.split(/\s+/)
+    .filter((name) => name.startsWith("bn-"))
+    .join(" ");
 
 // ---------------------------------------------------------------------------
 // Dropdown menus (block menu, color pickers)
@@ -72,9 +95,6 @@ function usePointerFirstAction<T extends HTMLElement>(
 const isColorPickerMenu = (className: unknown) =>
   typeof className === "string" && className.includes("bn-color-picker-dropdown");
 
-const colorPickerClass =
-  "[&>[data-slot='dropdown-menu-label']]:px-1.5 [&>[data-slot='dropdown-menu-label']]:py-1 [&>[data-slot='dropdown-menu-label']]:text-[11px] [&>[data-slot='dropdown-menu-label']]:leading-4 [&>[data-slot='dropdown-menu-label']]:font-medium [&>[data-slot='dropdown-menu-label']]:text-(--app-muted)";
-
 // Text and background colors side by side, ten rows each.
 const colorPickerStyle: CSSProperties = {
   columnGap: "0.5rem",
@@ -88,7 +108,13 @@ const colorPickerStyle: CSSProperties = {
   overflowY: "auto",
 };
 
-/** A top-level menu; the formatting toolbar's text color picker is one. */
+const menuContentClass =
+  "z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto outline-none";
+
+/**
+ * A top-level menu; the formatting toolbar's text color picker is one. It
+ * stays inside the editor, where BlockNote places it, rather than in a portal.
+ */
 function DropdownMenuContent({
   align,
   className,
@@ -97,16 +123,17 @@ function DropdownMenuContent({
   sideOffset,
   style,
   ...props
-}: ComponentProps<typeof defaults.DropdownMenu.DropdownMenuContent>) {
+}: ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   const isColorPicker = isColorPickerMenu(className);
   return (
-    <defaults.DropdownMenu.DropdownMenuContent
-      className={cn(dropdownSurfaceClass, isColorPicker && colorPickerClass, className)}
+    <DropdownMenuPrimitive.Content
+      data-slot="dropdown-menu-content"
+      className={cn(dropdownSurfaceClass, menuContentClass, blockNoteNames(className))}
       data-loam-color-menu={isColorPicker ? "true" : undefined}
       align={align ?? (isColorPicker ? "start" : undefined)}
       collisionPadding={collisionPadding ?? (isColorPicker ? 12 : undefined)}
       side={side ?? (isColorPicker ? "top" : undefined)}
-      sideOffset={sideOffset ?? (isColorPicker ? 10 : undefined)}
+      sideOffset={sideOffset ?? (isColorPicker ? 10 : 8)}
       style={isColorPicker ? { ...style, ...colorPickerStyle } : style}
       {...props}
     />
@@ -120,12 +147,13 @@ function DropdownMenuSubContent({
   sideOffset,
   style,
   ...props
-}: ComponentProps<typeof defaults.DropdownMenu.DropdownMenuSubContent>) {
+}: ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
   const isColorPicker = isColorPickerMenu(className);
   return (
     <DropdownMenuPortal>
-      <defaults.DropdownMenu.DropdownMenuSubContent
-        className={cn(dropdownSurfaceClass, "p-1.5", isColorPicker && colorPickerClass, className)}
+      <DropdownMenuPrimitive.SubContent
+        data-slot="dropdown-menu-sub-content"
+        className={cn(dropdownSurfaceClass, menuContentClass, blockNoteNames(className))}
         data-loam-block-color-menu={isColorPicker ? "true" : undefined}
         collisionPadding={collisionPadding ?? 12}
         sideOffset={sideOffset ?? 8}
@@ -141,11 +169,11 @@ function DropdownMenuItem({
   onClick,
   onPointerDown,
   ...props
-}: ComponentProps<typeof defaults.DropdownMenu.DropdownMenuItem>) {
+}: ComponentProps<typeof AppDropdownMenuItem>) {
   return (
-    <defaults.DropdownMenu.DropdownMenuItem
+    <AppDropdownMenuItem
       {...props}
-      className={cn(dropdownItemClass, className)}
+      className={blockNoteNames(className)}
       {...usePointerFirstAction(onClick, onPointerDown)}
     />
   );
@@ -156,12 +184,11 @@ function DropdownMenuCheckboxItem({
   onClick,
   onPointerDown,
   ...props
-}: ComponentProps<typeof defaults.DropdownMenu.DropdownMenuCheckboxItem>) {
+}: ComponentProps<typeof AppDropdownMenuCheckboxItem>) {
   return (
-    <defaults.DropdownMenu.DropdownMenuCheckboxItem
+    <AppDropdownMenuCheckboxItem
       {...props}
-      // BlockNote asks for its own row spacing; keep the app's menu rows instead.
-      className={cn(dropdownItemClass, className, "gap-1.5 pl-7 pr-1.5")}
+      className={blockNoteNames(className)}
       {...usePointerFirstAction(onClick, onPointerDown)}
     />
   );
@@ -170,20 +197,43 @@ function DropdownMenuCheckboxItem({
 /** Opening a submenu must not move focus or the selection out of the editor. */
 function DropdownMenuSubTrigger({
   className,
+  children,
   onPointerDown,
   ...props
-}: ComponentProps<typeof defaults.DropdownMenu.DropdownMenuSubTrigger>) {
+}: ComponentProps<typeof DropdownMenuPrimitive.SubTrigger>) {
   return (
-    <defaults.DropdownMenu.DropdownMenuSubTrigger
+    <DropdownMenuPrimitive.SubTrigger
+      data-slot="dropdown-menu-sub-trigger"
       {...props}
-      className={cn(dropdownItemClass, className)}
+      className={cn(
+        dropdownItemClass,
+        "data-[state=open]:bg-(--menu-item-hover-bg)",
+        blockNoteNames(className),
+      )}
       onPointerDown={(event) => {
         onPointerDown?.(event);
         if (!event.defaultPrevented && event.button === 0) event.preventDefault();
       }}
-    />
+    >
+      {children}
+      <ChevronRightIcon className="ml-auto size-3.5 shrink-0 text-(--muted-text)" />
+    </DropdownMenuPrimitive.SubTrigger>
   );
 }
+
+const DropdownMenuLabel = ({
+  className,
+  ...props
+}: ComponentProps<typeof AppDropdownMenuLabel>) => (
+  <AppDropdownMenuLabel className={blockNoteNames(className)} {...props} />
+);
+
+const DropdownMenuSeparator = ({
+  className,
+  ...props
+}: ComponentProps<typeof AppDropdownMenuSeparator>) => (
+  <AppDropdownMenuSeparator className={blockNoteNames(className)} {...props} />
+);
 
 // ---------------------------------------------------------------------------
 // Popovers (link editing, file panel)
@@ -215,56 +265,65 @@ function PopoverContentForEditor({
 // ---------------------------------------------------------------------------
 // Tooltips
 
-// BlockNote's Tooltip wraps every tooltip in its own zero-delay provider, which
-// would override this shared 200 ms delay; the plain Radix root uses this one.
-const TooltipProvider = ({
-  delayDuration = 200,
-  ...props
-}: ComponentProps<typeof TooltipPrimitive.Provider>) => (
-  <TooltipPrimitive.Provider
-    data-slot="tooltip-provider"
-    delayDuration={delayDuration}
-    {...props}
-  />
+/*
+ * BlockNote's tooltips show through the app's own tooltip layer
+ * (ui/Tooltips.tsx), so they look and time like every other tooltip: the
+ * trigger carries the text as `data-tooltip` and nothing else is drawn.
+ */
+
+const TooltipTextContext = createContext<string | undefined>(undefined);
+
+/** The text in a piece of tooltip content. */
+const textOf = (node: ReactNode): string =>
+  Children.toArray(node)
+    .map((child) => {
+      if (typeof child === "string" || typeof child === "number") return String(child);
+      if (isValidElement<{ children?: ReactNode }>(child)) return textOf(child.props.children);
+      return "";
+    })
+    .join("");
+
+/** BlockNote's own provider would set its own delay; the app's layer has one. */
+const TooltipProvider = ({ children }: ComponentProps<typeof defaults.Tooltip.TooltipProvider>) => (
+  <>{children}</>
 );
 
-const Tooltip = (props: ComponentProps<typeof TooltipPrimitive.Root>) => (
-  <TooltipPrimitive.Root data-slot="tooltip" {...props} />
-);
-
-// A control with a tooltip here shows only this one, not the app's (ui/Tooltips.tsx) as well.
-const TooltipTrigger = (props: ComponentProps<typeof TooltipPrimitive.Trigger>) => (
-  <TooltipPrimitive.Trigger data-slot="tooltip-trigger" data-no-tooltip="" {...props} />
-);
-
-function TooltipContent({
-  className,
-  sideOffset = 6,
-  children,
-  ...props
-}: ComponentPropsWithRef<typeof TooltipPrimitive.Content>) {
-  return (
-    <TooltipPrimitive.Portal>
-      <TooltipPrimitive.Content
-        data-slot="tooltip-content"
-        sideOffset={sideOffset}
-        className={cn(
-          "bn-tooltip-content z-[10080] max-w-[220px] rounded-md border border-(--app-border)/40 bg-(--app-text) px-2.5 py-1.5 text-xs font-medium text-(--app-page) shadow-(--shadow-elevated)",
-          className,
-        )}
-        {...props}
-      >
-        {children}
-        <TooltipPrimitive.Arrow className="bg-(--app-text) fill-(--app-text) size-2 -translate-y-[calc(50%_+_2px)] rotate-45 rounded-sm" />
-      </TooltipPrimitive.Content>
-    </TooltipPrimitive.Portal>
+/**
+ * BlockNote puts a control's name in the tooltip, then its shortcut if it has
+ * one; the app writes that as "Bold (Ctrl+B)".
+ */
+function Tooltip({ children }: ComponentProps<typeof defaults.Tooltip.Tooltip>) {
+  const content = Children.toArray(children).find(
+    (child) => isValidElement<{ children?: ReactNode }>(child) && child.type === TooltipContent,
   );
+  const [name, shortcut] = isValidElement<{ children?: ReactNode }>(content)
+    ? Children.toArray(content.props.children).map(textOf).filter(Boolean)
+    : [];
+  const text = name && shortcut ? `${name} (${shortcut})` : name;
+  return <TooltipTextContext value={text}>{children}</TooltipTextContext>;
+}
+
+/** BlockNote always passes `asChild`: the trigger is the control itself. */
+function TooltipTrigger({
+  asChild: _asChild,
+  ...props
+}: ComponentProps<typeof defaults.Tooltip.TooltipTrigger>) {
+  return <Slot data-tooltip={useContext(TooltipTextContext)} {...props} />;
+}
+
+/** Read by `Tooltip`; the app's tooltip layer draws it. */
+function TooltipContent(_props: ComponentProps<typeof defaults.Tooltip.TooltipContent>) {
+  return <></>;
 }
 
 // ---------------------------------------------------------------------------
 // Inputs
 
-/** BlockNote's forms leave these fields unlabeled; they get an accessible name. */
+/**
+ * BlockNote's forms leave these fields unlabeled; they get an accessible name.
+ * Its `bn-text-input` field draws its own frame around the input, so the
+ * input itself is drawn without one.
+ */
 function BlockNoteInput(props: ComponentPropsWithRef<typeof Input> & { "data-test"?: string }) {
   let fallbackLabel: string | undefined;
   if (props["data-test"] === "embed-input") fallbackLabel = "File URL";
@@ -272,6 +331,7 @@ function BlockNoteInput(props: ComponentPropsWithRef<typeof Input> & { "data-tes
   else if (props.name === "title") fallbackLabel = "Link text";
   else if (props.type === "file") fallbackLabel = props.placeholder;
   const label = props["aria-label"] ?? (props["aria-labelledby"] ? undefined : fallbackLabel);
+  const inField = props.className?.includes("bn-text-input") ?? false;
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget;
     try {
@@ -284,6 +344,8 @@ function BlockNoteInput(props: ComponentPropsWithRef<typeof Input> & { "data-tes
   return (
     <Input
       {...props}
+      className={inField ? cn("bn-text-input", "h-auto px-0 py-0") : props.className}
+      surface={inField ? "plain" : props.surface}
       aria-label={label}
       onChange={props.type === "file" ? handleFileChange : props.onChange}
     />
@@ -333,30 +395,28 @@ function BlockTypePreview({ highlighted }: { highlighted: HighlightedBlockType }
   );
 }
 
-/** Shows a sample of the highlighted block type beside the block-type menu. */
+/**
+ * The app's select menu, as wide as its longest item so no name wraps, with a
+ * sample of the highlighted block type beside it.
+ */
 function SelectContent({
   align,
   className,
   collisionBoundary,
   collisionPadding,
-  position,
   side,
   sideOffset,
   style,
   ...props
-}: ComponentProps<typeof defaults.Select.SelectContent>) {
+}: ComponentProps<typeof AppSelectContent>) {
   const isBlockTypeMenu = isBlockTypeSelectMenu(className);
   const [highlighted, setHighlighted] = useState<HighlightedBlockType | null>(null);
   return (
     <HighlightBlockTypeContext value={isBlockTypeMenu ? setHighlighted : () => {}}>
-      <defaults.Select.SelectContent
+      <AppSelectContent
         className={cn(
-          dropdownSurfaceClass,
-          // BlockNote merges with an older tailwind-merge that keeps its own
-          // rounded-md and shadow-md beside these.
-          "rounded-(--radius-menu)! shadow-(--raised-panel-shadow)!",
-          "max-h-[min(420px,calc(100vh-24px))] w-(--radix-select-trigger-width) min-w-0",
-          className,
+          "max-h-[min(420px,calc(100vh-24px))] w-max min-w-(--radix-select-trigger-width)",
+          blockNoteNames(className),
         )}
         data-loam-block-type-menu={isBlockTypeMenu ? "true" : undefined}
         align={align ?? (isBlockTypeMenu ? "start" : undefined)}
@@ -365,7 +425,6 @@ function SelectContent({
           (isBlockTypeMenu ? (document.querySelector("main") ?? undefined) : undefined)
         }
         collisionPadding={collisionPadding ?? (isBlockTypeMenu ? 12 : undefined)}
-        position={isBlockTypeMenu ? "popper" : position}
         side={side ?? (isBlockTypeMenu ? "left" : undefined)}
         sideOffset={sideOffset ?? (isBlockTypeMenu ? 8 : undefined)}
         style={isBlockTypeMenu ? { ...style, zIndex: 10090 } : style}
@@ -377,21 +436,17 @@ function SelectContent({
   );
 }
 
-function SelectItem({
-  className,
-  value,
-  ...props
-}: ComponentProps<typeof defaults.Select.SelectItem>) {
+/** The current block type is marked by its highlight, as in the app's other selects. */
+function SelectItem({ className, value, ...props }: ComponentProps<typeof AppSelectItem>) {
   const highlight = useContext(HighlightBlockTypeContext);
   // Radix focuses the highlighted item for both pointer and keyboard navigation.
   const handleFocus = (event: FocusEvent<HTMLDivElement>) =>
     highlight(placePreview(event.currentTarget, value));
   return (
-    <defaults.Select.SelectItem
+    <AppSelectItem
       className={cn(
-        dropdownItemClass,
-        "aria-selected:bg-(--menu-item-hover-bg) [&_svg:not([class*='text-'])]:text-current *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
-        className,
+        "whitespace-nowrap *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        blockNoteNames(className),
       )}
       value={value}
       onFocus={handleFocus}
@@ -410,6 +465,8 @@ export const blockNoteComponents = {
     DropdownMenuItem,
     DropdownMenuCheckboxItem,
     DropdownMenuSubTrigger,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
   },
   Input: { Input: BlockNoteInput },
   Popover: {
@@ -418,5 +475,5 @@ export const blockNoteComponents = {
     PopoverContent: PopoverContentForEditor,
   },
   Select: { ...defaults.Select, SelectContent, SelectItem },
-  Tooltip: { ...defaults.Tooltip, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger },
+  Tooltip: { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger },
 } satisfies Partial<ShadCNComponents>;

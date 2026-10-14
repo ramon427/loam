@@ -1,3 +1,5 @@
+import type { Locator } from "@playwright/test";
+
 import { DESKTOP, expect, test } from "./app";
 import { appendToBody, createNote, expectSaved, noteBody, noteRow, storedNote } from "./notes";
 
@@ -91,4 +93,63 @@ test("a note link's right-click menu replaces the native one and opens the note"
   await menu.getByRole("menuitem", { name: "Open note" }).click();
   await expect(window.getByRole("main").getByRole("heading", { name: "Target" })).toBeVisible();
   expect(await nativeMenus()).toEqual([]);
+});
+
+/** How a menu, menu row or tooltip looks, apart from its size. */
+const lookOf = (locator: Locator) =>
+  locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      background: style.backgroundColor,
+      border: `${style.borderTopWidth} ${style.borderTopColor}`,
+      radius: style.borderRadius,
+      font: `${style.fontSize} ${style.fontWeight}`,
+      padding: `${style.paddingTop} ${style.paddingRight} ${style.paddingBottom}`,
+    };
+  });
+const heightOf = async (locator: Locator) => Math.round((await locator.boundingBox())!.height);
+
+test("the editor's menus and tooltips look like the app's", async ({ loam }) => {
+  const { window } = loam;
+  await createNote(window, { title: "Look", body: "Words to format." });
+
+  await window.getByRole("button", { name: "New note" }).first().hover();
+  const appTooltip = await lookOf(window.getByRole("tooltip"));
+  await noteRow(window, "Look").click({ button: "right" });
+  const appMenu = window.getByRole("menu");
+  const menu = await lookOf(appMenu);
+  const row = await lookOf(appMenu.getByRole("menuitem").first());
+  const rowHeight = await heightOf(appMenu.getByRole("menuitem").first());
+  await window.keyboard.press("Escape");
+  const asMenu = (look: typeof menu) => ({ ...look, font: menu.font });
+  const asRow = (look: typeof row) => ({ ...look, background: row.background });
+
+  // A formatting button names its shortcut in the app's own tooltip.
+  await noteBody(window).getByText("Words to format.").dblclick();
+  await window.locator(".bn-formatting-toolbar").getByRole("button").nth(1).hover();
+  const tooltip = window.getByRole("tooltip");
+  await expect(tooltip).toHaveText(/^\w[\w ]* \(.+\)$/);
+  expect(await lookOf(tooltip)).toEqual(appTooltip);
+
+  // Every block type fits on one row, with nothing drawn over its name.
+  await window.locator(".bn-formatting-toolbar").getByRole("combobox").click();
+  const blockTypes = window.getByRole("listbox");
+  expect(asMenu(await lookOf(blockTypes))).toEqual(menu);
+  for (const option of await blockTypes.getByRole("option").all()) {
+    expect(asRow(await lookOf(option))).toEqual(row);
+    expect(await heightOf(option)).toBe(rowHeight);
+  }
+  await window.keyboard.press("Escape");
+
+  // The block menu's handle shows once the formatting toolbar has gone.
+  await noteBody(window).getByText("Words to format.").click();
+  await expect(window.locator(".bn-formatting-toolbar")).toHaveCount(0);
+  await window.getByRole("button", { name: "Open block menu" }).click();
+  const blockMenu = window.getByRole("menu");
+  expect(asMenu(await lookOf(blockMenu))).toEqual(menu);
+  expect(await lookOf(blockMenu.getByRole("menuitem", { name: "Delete" }))).toEqual(row);
+  await blockMenu.getByRole("menuitem", { name: "Colors" }).hover();
+  const colors = window.locator("[data-loam-block-color-menu]");
+  expect(asMenu(await lookOf(colors))).toEqual(menu);
+  expect(asRow(await lookOf(colors.getByRole("menuitemcheckbox").first()))).toEqual(row);
 });
