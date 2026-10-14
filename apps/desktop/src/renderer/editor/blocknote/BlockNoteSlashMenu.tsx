@@ -12,6 +12,8 @@ import {
   useState,
 } from "react";
 
+import { cn } from "../../ui/cn";
+import { dropdownItemClass, dropdownLabelClass } from "../../styles/dropdowns";
 import type { SlashMenuItem } from "../slashMenuModel";
 import { setSlashMenuCloseGuard } from "../slashMenuModel";
 import { BlockPreviewCard } from "./BlockPreviewCard";
@@ -61,7 +63,7 @@ export function BlockNoteSlashMenu({
         elements.push(
           <div
             key={`section-${currentSection}`}
-            className={styles.slashMenuSection}
+            className={dropdownLabelClass}
             role="presentation"
             aria-hidden="true"
           >
@@ -81,7 +83,7 @@ export function BlockNoteSlashMenu({
           role="option"
           aria-selected={isActive}
           tabIndex={-1}
-          className={`${styles.slashMenuItem} ${isActive ? styles.slashMenuItemActive : ""}`}
+          className={cn(dropdownItemClass, "text-left aria-selected:bg-(--menu-item-hover-bg)")}
           onMouseDown={(event) => event.preventDefault()}
           onPointerEnter={() => showPreviewAfterPointerEnter(item)}
           onPointerMove={() => showPreviewAfterPointerMove(item)}
@@ -90,15 +92,11 @@ export function BlockNoteSlashMenu({
             onItemClick?.(item);
           }}
         >
-          <span className={styles.slashMenuIcon} aria-hidden="true">
+          <span className="flex shrink-0" aria-hidden="true">
             {item.icon}
           </span>
-          <span className={styles.slashMenuItemBody}>
-            <span className={styles.slashMenuItemTitle}>{item.title}</span>
-          </span>
-          <span className={styles.slashMenuMeta}>
-            <span className={styles.slashMenuShortcut}>{hint}</span>
-          </span>
+          <span className="min-w-0 flex-1 truncate">{item.title}</span>
+          <span className="ml-auto shrink-0 pl-3 text-[12px] text-(--app-muted)">{hint}</span>
         </button>,
       );
     });
