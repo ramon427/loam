@@ -8,7 +8,7 @@ import { ContextMenu, ContextMenuTrigger } from "../ui/ContextMenu";
 import { cn } from "../ui/cn";
 import { useMarkWhileScrolling } from "./useMarkWhileScrolling";
 import page from "./notePage.module.css";
-import { CanvasDotBackground } from "../ui/CanvasDotBackground";
+import { CanvasGridBackground } from "../ui/CanvasGridBackground";
 import { useNotesPaperSize } from "./useNotesPaperSize";
 
 type NoteDocumentFrameMode = "paper" | "immersive" | "graph";
@@ -128,7 +128,7 @@ export const NoteDocumentFrame = ({
       style={isPaper ? paperStyle : undefined}
       className={isGraph ? page.graphCanvas : page.canvas}
     >
-      {!isGraph ? <CanvasDotBackground style={{ zIndex: -1 }} /> : null}
+      {!isGraph ? <CanvasGridBackground style={{ zIndex: -1 }} /> : null}
       <div className={page.sheet}>
         {tabs ? <div className={page.tabs}>{tabs}</div> : null}
         <div

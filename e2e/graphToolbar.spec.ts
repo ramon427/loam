@@ -66,7 +66,7 @@ test("drag shapes, edit the selection, and find nodes with the compact toolbar",
   await window.getByRole("button", { name: "Canvas", exact: true }).click();
   await window.getByRole("menuitemcheckbox", { name: "Lines", exact: true }).click();
   await window.getByRole("button", { name: "Canvas", exact: true }).click();
-  await window.getByRole("menuitemcheckbox", { name: "Dots", exact: true }).click();
+  await window.getByRole("menuitemcheckbox", { name: "Graph paper", exact: true }).click();
   await window.keyboard.press("Escape");
   await pane.click({ position: { x: 800, y: 480 } });
   await expect(selection).toHaveCount(0);

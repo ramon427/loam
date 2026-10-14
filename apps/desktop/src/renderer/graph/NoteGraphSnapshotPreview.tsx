@@ -140,16 +140,12 @@ export function NoteGraphSnapshotPreview({
       </desc>
       <defs>
         <pattern id={`${id}-grid`} width={gridGap} height={gridGap} patternUnits="userSpaceOnUse">
-          {grid === "lines" ? (
-            <path
-              d={`M ${gridGap} 0 H 0 V ${gridGap}`}
-              fill="none"
-              stroke="var(--app-border)"
-              strokeWidth="0.5"
-            />
-          ) : (
-            <circle cx="1" cy="1" r="1" fill="var(--app-border)" />
-          )}
+          <path
+            d={`M ${gridGap} 0 H 0 V ${gridGap}`}
+            fill="none"
+            stroke={grid === "lines" ? "var(--app-border)" : "var(--canvas-grid-line)"}
+            strokeWidth={grid === "lines" ? 0.5 : 1}
+          />
         </pattern>
         {scene.edges.map(({ edge }) => {
           const color = resolveNoteGraphEdgePaint(edge).stroke;

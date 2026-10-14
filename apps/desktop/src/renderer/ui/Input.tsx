@@ -62,12 +62,12 @@ function Input({
       type={type}
       data-slot="input"
       className={cn(
-        "flex h-8 w-full min-w-0 px-3 py-2 text-xs tracking-[0] outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-xs file:font-medium",
+        "flex h-8 w-full min-w-0 px-2.5 py-2 text-[13px] tracking-[0] outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-xs file:font-medium",
         HIT_TARGET_CLASS,
         surface === "raised" ? controlSurfaceClass : "border-0 bg-transparent shadow-none",
         NESTED_FOCUS_RESET_CLASS,
         DISABLED_CONTROL_CLASS,
-        "placeholder:text-(--app-muted)/70",
+        "placeholder:text-(--app-placeholder)",
         "focus-visible:outline-none",
         CONTROL_TRANSITION_TIMING_CLASS,
         isFileInput &&

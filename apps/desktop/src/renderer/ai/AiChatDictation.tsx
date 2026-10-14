@@ -10,6 +10,10 @@ import { toastError } from "../ui/toast";
 
 import styles from "./aiChat.module.css";
 
+/** The composer's attach and dictate buttons: outlined squares. */
+export const composerSquareClass =
+  "size-[30px] min-h-[30px] min-w-[30px] rounded-[9px] border-(--app-border-strong) text-(--app-secondary-label) hover:text-(--app-text)";
+
 /** The longest recording, which stays under what transcription takes in one go. */
 const MAX_RECORDING_MS = 10 * 60 * 1000;
 const BARS = 5;
@@ -157,8 +161,9 @@ export function AiChatDictation({
 
   return (
     <Button
-      variant="ghost-muted"
+      variant="outlineMuted"
       size="icon-sm"
+      className={composerSquareClass}
       aria-label="Dictate"
       disabled={disabled}
       onClick={() => void start()}

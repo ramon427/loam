@@ -9,7 +9,7 @@ import {
 } from "../styles/controlInteraction";
 
 const panelTabItemClass = cn(
-  "inline-flex h-7 shrink-0 touch-manipulation cursor-pointer items-center justify-center rounded-[var(--raised-control-radius)] px-3 py-1.5 text-[12px] font-medium transition-[color,background-color,border-color,box-shadow,opacity] motion-reduce:transition-none",
+  "inline-flex h-7 shrink-0 touch-manipulation cursor-pointer items-center justify-center rounded-[var(--raised-control-radius)] px-3 py-1.5 text-[13px] font-medium transition-[color,background-color,border-color,box-shadow,opacity] motion-reduce:transition-none",
   CONTROL_TRANSITION_TIMING_CLASS,
   HIT_TARGET_MIN_CLASS,
   FOCUS_RING_CLASS,

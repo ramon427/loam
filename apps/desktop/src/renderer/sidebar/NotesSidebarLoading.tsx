@@ -23,7 +23,7 @@ export function NotesSidebarLoading() {
           <div
             key={row.id}
             className={cn(
-              "flex h-7 items-center gap-2 pr-2",
+              "flex h-[34px] items-center gap-2 pr-2",
               row.kind === "folder" ? "pl-1" : "pl-[26px]",
               "indent" in row && row.indent && "pl-[38px]",
             )}

@@ -12,7 +12,7 @@ import {
 } from "@xyflow/react";
 import type { CSSProperties } from "react";
 
-import { CanvasDotBackground } from "../ui/CanvasDotBackground";
+import { CanvasGridBackground } from "../ui/CanvasGridBackground";
 import { resolveNoteGraphNodeHex } from "@loam/shared/notes/noteGraphColors";
 
 import { NoteGraphConnectionLine, NoteGraphNewNodePreviewContext } from "./NoteGraphConnectionLine";
@@ -41,9 +41,9 @@ const flowTheme = {
 const flowClassName =
   "note-graph-flow min-h-0 w-full flex-1 [&_.react-flow__minimap]:overflow-hidden [&_.react-flow__minimap]:rounded-md [&_.react-flow__minimap]:border [&_.react-flow__minimap]:border-(--app-border) [&_.react-flow__minimap]:shadow-sm [&_.react-flow__handle.connectionindicator]:!cursor-pointer [&_.react-flow__handle.connectingfrom]:!cursor-pointer [&_.react-flow__pane.connection]:!cursor-pointer [&_.react-flow__resize-control.handle]:!cursor-nwse-resize [&_.react-flow__resize-control.handle.top.right]:!cursor-nesw-resize [&_.react-flow__resize-control.handle.bottom.left]:!cursor-nesw-resize";
 
-function NoteGraphDotGrid({ gap }: { gap: number }) {
+function NoteGraphPaperGrid({ gap }: { gap: number }) {
   const viewport = useViewport();
-  return <CanvasDotBackground {...viewport} gap={gap} style={{ zIndex: -1 }} />;
+  return <CanvasGridBackground {...viewport} gap={gap} style={{ zIndex: -1 }} />;
 }
 
 /** React Flow, configured for note graphs. All graph state arrives through props. */
@@ -121,7 +121,7 @@ export function NoteGraphFlow({
         {...flowProps}
         onInit={onInit}
       >
-        {grid === "dots" ? <NoteGraphDotGrid gap={gridGap} /> : null}
+        {grid === "dots" ? <NoteGraphPaperGrid gap={gridGap} /> : null}
         {grid === "lines" ? (
           <Background
             color="var(--note-graph-grid-color, var(--app-border))"

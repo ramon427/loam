@@ -212,7 +212,7 @@ export function AppearanceSettings() {
                 type="color"
                 aria-label="Accent colour"
                 className="h-8 w-10 cursor-pointer rounded-(--radius-control) border border-(--control-border) bg-transparent p-0.5"
-                value={appearance.accent ?? "#808080"}
+                value={appearance.accent ?? "#0a84ff"}
                 onChange={(event) => updateAppearance({ accent: event.target.value })}
               />
               {appearance.accent ? (
@@ -230,7 +230,7 @@ export function AppearanceSettings() {
         />
         <SettingsRow
           title="Interface font"
-          description="A font installed on this computer, such as Inter. Notes use it too."
+          description="Inter, or a font installed on this computer. Notes use it too."
           control={<FontField label="Interface font" name="ui" appearance={appearance} />}
         />
         <SettingsRow

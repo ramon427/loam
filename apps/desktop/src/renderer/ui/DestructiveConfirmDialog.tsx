@@ -13,8 +13,8 @@ import {
 function ConfirmDetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="grid gap-0.5 sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:gap-3">
-      <dt className="text-[11px] font-medium text-(--app-muted)">{label}</dt>
-      <dd className="min-w-0 text-xs text-(--app-text)">{value}</dd>
+      <dt className="text-[12px] text-(--app-muted)">{label}</dt>
+      <dd className="min-w-0 text-[13px] text-(--app-text)">{value}</dd>
     </div>
   );
 }
@@ -59,7 +59,7 @@ export function DestructiveConfirmDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <dl className="space-y-2 text-xs">
+        <dl className="space-y-2 rounded-[9px] border border-(--app-border) bg-(--app-control) px-3 py-2.5">
           <ConfirmDetailRow label="What" value={target} />
           <ConfirmDetailRow label="Now" value={currentState} />
           <ConfirmDetailRow label="After" value={nextState} />
@@ -69,7 +69,6 @@ export function DestructiveConfirmDialog({
         <DialogFooter>
           <Button
             variant="secondary"
-            size="sm"
             onClick={() => handleOpenChange(false)}
             disabled={confirmPending}
           >
@@ -77,7 +76,6 @@ export function DestructiveConfirmDialog({
           </Button>
           <Button
             variant="destructive"
-            size="sm"
             onClick={onConfirm}
             disabled={confirmPending}
             aria-busy={confirmPending || undefined}

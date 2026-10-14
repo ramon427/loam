@@ -10,7 +10,7 @@ function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
       data-slot="textarea"
       className={cn(
         raisedControlClass,
-        "flex max-h-100 min-h-20 w-full min-w-0 resize-y px-3 py-2 text-xs text-(--app-text) outline-none placeholder:text-(--app-muted)/70",
+        "flex max-h-100 min-h-20 w-full min-w-0 resize-y px-2.5 py-2 text-[13px] text-(--app-text) outline-none placeholder:text-(--app-placeholder)",
         DISABLED_CONTROL_CLASS,
         className,
       )}

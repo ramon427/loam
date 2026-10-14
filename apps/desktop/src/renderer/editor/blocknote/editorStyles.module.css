@@ -25,22 +25,22 @@
   --editor-table-border: var(--app-border);
   --editor-table-header-bg: var(--app-page-2);
   --editor-check-size: 16px;
-  --editor-check-radius: 0.35rem;
+  --editor-check-radius: 5px;
   --editor-font-family: var(--font-body), "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   --editor-paragraph-font-size: 14px;
   --editor-paragraph-line-height: 1.45;
   --editor-inline-control-hit-size: 20px;
   --editor-inline-control-icon-size: 14px;
   --editor-popup-surface: var(--app-surface-overlay, var(--raised-control-bg));
-  --editor-popup-border: color-mix(in srgb, var(--control-border) 78%, var(--raised-control-bg));
-  --editor-popup-radius: var(--raised-control-radius);
-  --editor-popup-shadow: var(--raised-control-shadow);
+  --editor-popup-border: var(--raised-panel-border);
+  --editor-popup-radius: var(--radius-menu);
+  --editor-popup-shadow: var(--raised-panel-shadow);
   --editor-popup-padding: var(--control-menu-padding);
   --editor-popup-width: min(414px, calc(100vw - 24px));
   --editor-popup-max-width: min(520px, calc(100vw - 24px));
   --editor-popup-max-height: min(360px, calc(100vh - 24px));
   --editor-popup-row-gap: 2px;
-  --editor-popup-item-radius: var(--raised-control-radius);
+  --editor-popup-item-radius: 7px;
   --editor-popup-item-min-height: 36px;
   /* Clean Utility button sizing */
   --editor-btn-size: 22px;
@@ -619,8 +619,8 @@
   height: var(--editor-check-size);
   margin: 0;
   border-radius: var(--editor-check-radius);
-  border: 1px solid color-mix(in srgb, var(--app-border-strong) 85%, var(--editor-text-muted));
-  background-color: var(--app-page);
+  border: 1.5px solid var(--app-input);
+  background-color: transparent;
   background-position: center;
   background-repeat: no-repeat;
   background-size: 10px 8px;
@@ -650,13 +650,6 @@
   background-color: var(--app-accent);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8' viewBox='0 0 10 8' fill='none'%3E%3Cpath d='M1 4.25L3.55 6.75L9 1.25' stroke='%23ffffff' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   box-shadow: none;
-}
-
-/* The check takes the accent's foreground: dark on the light dark-mode accent. */
-:global(html.dark)
-  .editorRoot
-  :global(.bn-block-content[data-content-type="checkListItem"] > div > input:checked) {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8' viewBox='0 0 10 8' fill='none'%3E%3Cpath d='M1 4.25L3.55 6.75L9 1.25' stroke='%23262626' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .editorRoot :global(.bn-block-content[data-content-type="checkListItem"] > div > input:active) {

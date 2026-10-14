@@ -3,6 +3,13 @@
   --raised-control-bg: var(--app-control);
   --raised-control-shadow: none;
   --raised-control-hover-bg: var(--app-control-hover);
+  /* Menus, popovers and dialogs float over the page on this edge and shadow. */
+  --raised-panel-border: var(--app-border);
+  --raised-panel-shadow: var(--app-shadow-elevated);
+  /* A bordered secondary button. */
+  --button-secondary-bg: var(--app-surface);
+  --button-secondary-hover-bg: var(--app-surface-2);
+  --button-secondary-border: var(--app-border-strong);
   --control-transition-duration: 120ms;
   --control-transition-easing: cubic-bezier(0, 0, 0.2, 1);
   --control-selected-bg: color-mix(in srgb, var(--app-surface) 95%, var(--app-text));
@@ -14,7 +21,9 @@
 }
 
 .dark {
-  --raised-control-shadow: 0 1px 1px rgba(0, 0, 0, 0.14);
+  --raised-panel-border: var(--app-border-strong);
+  --button-secondary-bg: #262626;
+  --button-secondary-hover-bg: #2e2e2e;
   --control-selected-bg: var(--app-accent-muted);
   --control-selected-hover-bg: color-mix(in srgb, var(--app-accent-muted) 92%, var(--app-text));
   --control-selected-border: var(--app-input);

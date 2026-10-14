@@ -361,7 +361,7 @@ function ScrollButton({
  * paper and covers its edge; the others stand behind it.
  */
 export const folderTabClass = cn(
-  "relative inline-flex h-8 min-w-[108px] max-w-[180px] shrink-0 touch-manipulation items-center justify-start rounded-t-lg border border-(--note-tab-edge) px-3 text-left text-[12px] font-medium transition-[color,background-color] motion-reduce:transition-none",
+  "relative inline-flex h-8 min-w-[108px] max-w-[180px] shrink-0 touch-manipulation items-center justify-start rounded-t-[10px] border border-(--note-tab-edge) px-3.5 text-left text-[13px] font-medium transition-[color,background-color] motion-reduce:transition-none",
   CONTROL_TRANSITION_TIMING_CLASS,
   FOCUS_RING_CLASS,
 );
