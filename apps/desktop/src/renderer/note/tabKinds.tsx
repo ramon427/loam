@@ -1,7 +1,7 @@
 import {
   AppWindowIcon,
+  BookOpenTextIcon,
   FileCodeIcon,
-  FileTextIcon,
   FileTypeIcon,
   GitBranchIcon,
   LayoutGridIcon,
@@ -76,7 +76,7 @@ export const TAB_KINDS: Record<NoteTabKind, TabKindInfo> = {
   pdf: {
     label: "PDF",
     description: "A PDF to read beside your notes",
-    icon: FileTextIcon,
+    icon: BookOpenTextIcon,
     group: "Reference",
     loadingLabel: "Loading PDF",
   },
