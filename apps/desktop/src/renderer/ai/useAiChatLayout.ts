@@ -182,7 +182,7 @@ export function useAiChatLayout(besideWidth: number) {
       "aria-valuemax": maximumWidth,
       "aria-valuenow": width,
       "aria-valuetext": `${width} pixels`,
-      title: "Drag to resize the side chat. Double-click to reset its width.",
+      "aria-description": "Drag to resize the side chat. Double-click to reset its width.",
       onKeyDown: onResizeKeyDown,
       onDoubleClick: () => {
         finishResize();
