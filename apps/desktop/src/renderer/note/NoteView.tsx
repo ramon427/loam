@@ -46,10 +46,12 @@ import { VideoLinkForm } from "../video/VideoLinkForm";
 import { VideoPane } from "../video/VideoPane";
 import { useNotesWorkspace, type NoteContentPatch } from "../workspace/NotesWorkspace";
 import { PluginSlot } from "../plugins/PluginSlot";
+import { NoteBreadcrumbs } from "./NoteBreadcrumbs";
 import { NoteHeader } from "./NoteHeader";
 import { NoteLayout } from "./NoteLayout";
 import { NoteTitleField } from "./NoteTitleField";
 import { NoteToolbar } from "./NoteToolbar";
+import { notePathOf } from "./notePath";
 import { activeTabOf } from "./noteTabs";
 import { NoteViewTabs } from "./NoteViewTabs";
 import { StoredTable } from "./StoredTable";
@@ -84,7 +86,7 @@ export function NoteView({
   /** The open note, read in full. */
   note: NoteDocument;
 }) {
-  const { updateNote, openNote, openRequest, notes, folders } = useNotesWorkspace();
+  const { updateNote, openNote, openRequest, notes, folders, projects } = useNotesWorkspace();
   const theme = useEditorTheme();
   const update = useCallback(
     (change: NoteContentPatch | ((latest: NoteDocument) => NoteContentPatch)) =>
@@ -121,6 +123,10 @@ export function NoteView({
         (tab) => tab.id === besideTabId && tab.id !== activeTab.id && isFileTabKind(tabKindOf(tab)),
       );
   const besideOpen = pane.isOpen || besideTab !== undefined;
+  const path = useMemo(
+    () => notePathOf(note, { notes, folders, projects }),
+    [note, notes, folders, projects],
+  );
   const headingOptions = useMemo(() => listNoteHeadingConnectionOptions(note), [note]);
   const listLinkableNotes = useCallback(() => {
     const folderNames = new Map(folders.map((folder) => [folder.id, folder.name]));
@@ -378,11 +384,14 @@ export function NoteView({
   const header = (
     <NoteHeader
       title={
-        <NoteTitleField
-          value={note.title}
-          onChange={(title) => update({ title })}
-          focusRequest={titleFocusRequest}
-        />
+        <>
+          <NoteBreadcrumbs path={path} onOpenNote={openNote} />
+          <NoteTitleField
+            value={note.title}
+            onChange={(title) => update({ title })}
+            focusRequest={titleFocusRequest}
+          />
+        </>
       }
       actions={
         <>

@@ -140,7 +140,6 @@
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
-  border-right: 1px solid var(--app-divider);
   background: var(--sidebar-bg);
 }
 
