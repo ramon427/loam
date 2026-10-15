@@ -40,7 +40,7 @@ test("the sidebar filters folders and creates from its header", async ({ loam })
   await expect(noteRow(window, "Past work")).toHaveCount(0);
 
   // Search can still find every note and reveals its place in the library.
-  await sidebar(window).getByRole("searchbox", { name: "Search notes" }).fill("Loose ideas");
+  await window.getByRole("searchbox", { name: "Search notes" }).fill("Loose ideas");
   await expect(window.getByRole("list", { name: "Search results" })).toContainText("Scratchpad");
   await window.keyboard.press("Enter");
   await expect(noteRow(window, "Scratchpad")).toBeVisible();
@@ -151,12 +151,14 @@ test("the sidebar resizes with the pointer and keyboard and remembers its width"
   await expect.poll(sidebarWidth).toBe(480);
   await loam.window.keyboard.press("Home");
   await expect.poll(sidebarWidth).toBe(220);
-  await sidebar(loam.window).getByRole("searchbox", { name: "Search notes" }).fill("resizing");
+  await loam.window.getByRole("searchbox", { name: "Search notes" }).fill("resizing");
   const results = loam.window.getByRole("list", { name: "Search results" });
   await expect(results).toContainText("Resizing check");
   const resultsBox = (await results.boundingBox())!;
-  const sidebarBox = (await loam.window.locator("#notes-sidebar").boundingBox())!;
-  expect(resultsBox.x + resultsBox.width).toBeLessThanOrEqual(sidebarBox.x + sidebarBox.width);
+  // Search sits over the main column, clear of the sidebar at any width.
+  const mainBox = (await loam.window.locator("#main-content").boundingBox())!;
+  expect(resultsBox.x).toBeGreaterThanOrEqual(mainBox.x);
+  expect(resultsBox.x + resultsBox.width).toBeLessThanOrEqual(mainBox.x + mainBox.width);
   await results.getByRole("button", { name: /Resizing check/ }).click();
   await handle().dblclick();
   await expect.poll(sidebarWidth).toBe(280);

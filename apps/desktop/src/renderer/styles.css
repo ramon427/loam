@@ -249,12 +249,12 @@
   gap: 4px;
 }
 
-.loam-sidebar-header {
+/* The filter and create buttons, at the right end of the sidebar's first row. */
+.loam-sidebar-actions {
   display: flex;
   min-width: 0;
-  flex: none;
   align-items: center;
-  gap: 4px;
+  margin-left: auto;
 }
 
 /* The main column doesn't scroll; each screen's page under its header does. */
@@ -268,19 +268,95 @@
   overflow: hidden;
 }
 
-.loam-main-header {
-  position: relative;
-  padding-right: calc(var(--loam-window-controls-width) + 12px);
-  padding-left: 8px;
+.loam-main {
+  --loam-main-header-left: 8px;
+  --loam-main-header-right: calc(var(--loam-window-controls-width) + 12px);
+  container: main-column / inline-size;
 }
 
-.loam-shell[data-sidebar-collapsed="true"] .loam-main-header {
-  padding-left: var(--loam-toggle-inset);
+.loam-shell[data-sidebar-collapsed="true"] .loam-main {
+  --loam-main-header-left: var(--loam-toggle-inset);
 }
 
 /* The side chat's header takes the window's right end, with its buttons. */
-.loam-shell[data-chat-open="true"] .loam-main-header {
-  padding-right: 12px;
+.loam-shell[data-chat-open="true"] .loam-main {
+  --loam-main-header-right: 12px;
+}
+
+.loam-main-header {
+  position: relative;
+  padding-right: var(--loam-main-header-right);
+  padding-left: var(--loam-main-header-left);
+}
+
+/*
+ * Search across the notes, tucked above the header's centre with only its lower edge showing.
+ * The pointer at that edge, or focus, slides it down over the header; it is placed after the
+ * screens, so its no-drag area wins over the header's drag area.
+ */
+.loam-header-search {
+  --loam-header-search-peek: 5px;
+  position: absolute;
+  z-index: 25;
+  top: 0;
+  left: calc(
+    var(--loam-main-header-left) +
+      (100% - var(--loam-main-header-left) - var(--loam-main-header-right)) / 2
+  );
+  width: min(420px, 100cqi - 32px);
+  /* Only a strip along the top edge reaches for the search, so the title under it stays clickable. */
+  height: 14px;
+  transform: translateX(-50%);
+  -webkit-app-region: no-drag;
+}
+
+.loam-header-search:is(:hover, :focus-within) {
+  height: var(--loam-titlebar-height);
+}
+
+.loam-header-search-field {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 32px;
+  padding-inline: 10px;
+  color: var(--app-placeholder);
+  border: 1px solid var(--app-border);
+  border-radius: 0 0 10px 10px;
+  background: var(--app-control);
+  opacity: 0.7;
+  transform: translateY(calc(var(--loam-header-search-peek) - 100%));
+  transition:
+    transform var(--duration-enter-fast) var(--ease-out) 120ms,
+    opacity 160ms ease 120ms,
+    border-radius var(--duration-enter-fast) var(--ease-out) 120ms,
+    box-shadow 160ms ease 120ms;
+}
+
+.loam-header-search:is(:hover, :focus-within) .loam-header-search-field {
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  opacity: 1;
+  transform: translateY(calc((var(--loam-titlebar-height) - 100%) / 2));
+  transition-delay: 0s;
+}
+
+.loam-header-search:focus-within .loam-header-search-field {
+  border-color: var(--control-border-strong);
+}
+
+.loam-header-search-results {
+  position: absolute;
+  top: calc((var(--loam-titlebar-height) + 32px) / 2 + 4px);
+  right: 0;
+  left: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loam-header-search-field {
+    transition: none;
+  }
 }
 ::highlight(note-find) {
   color: var(--app-search-match-foreground);

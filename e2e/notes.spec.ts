@@ -104,7 +104,7 @@ test("search finds a note by a word in its body and opens it", async ({ loam }) 
   const { window } = loam;
   await createNote(window, { title: "Trip", body: "Pack the zephyrine charger" });
   await createNote(window, { title: "Other", body: "Nothing here" });
-  await sidebar(window).getByRole("searchbox", { name: "Search notes" }).fill("zephyrine");
+  await window.getByRole("searchbox", { name: "Search notes" }).fill("zephyrine");
   const results = window.getByRole("list", { name: "Search results" });
   await expect(results).toContainText("Trip");
   await expect(results).not.toContainText("Other");

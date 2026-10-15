@@ -62,13 +62,11 @@ test("encrypts the notes, asks for the passphrase at launch, and resets it with 
   expect(dataFolderContains(loam, SECRET)).toBe(false);
 
   // Search and editing carry on while unlocked.
-  await sidebar(loam.window)
-    .getByRole("searchbox", { name: "Search notes" })
-    .fill("tangerine noon");
+  await loam.window.getByRole("searchbox", { name: "Search notes" }).fill("tangerine noon");
   await expect(loam.window.getByRole("list", { name: "Search results" })).toContainText(
     `${SECRET} plans`,
   );
-  await sidebar(loam.window).getByRole("searchbox", { name: "Search notes" }).fill("");
+  await loam.window.getByRole("searchbox", { name: "Search notes" }).fill("");
 
   // Next launch: locked until the right passphrase.
   await loam.restart();

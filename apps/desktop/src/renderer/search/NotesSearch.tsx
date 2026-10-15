@@ -5,7 +5,6 @@ import { callBridge } from "../bridge";
 import { useNotesWorkspace } from "../workspace/NotesWorkspace";
 import { cn } from "../ui/cn";
 import { SearchField } from "../ui/SearchField";
-import { sidebarSearchClassName, sidebarSearchInputClassName } from "../ui/SidebarRow";
 import type { NoteContentSearchResult } from "@loam/shared/notes/noteModel";
 
 const SEARCH_PAGE_SIZE = 20;
@@ -30,7 +29,11 @@ function SearchSnippet({ snippet }: { snippet: NoteContentSearchResult["snippet"
   );
 }
 
-/** Search stays available after opening a result, so comparing matches takes no retyping. */
+/**
+ * Search across every note, centred in the main column's header. It rests faint and comes forward
+ * as the pointer nears it. It stays available after opening a result, so comparing matches takes
+ * no retyping.
+ */
 export function NotesSearch({
   onOpen,
   onFind,
@@ -84,7 +87,7 @@ export function NotesSearch({
 
   return (
     <div
-      className="relative min-w-0 flex-1"
+      className="loam-header-search"
       role="search"
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null))
@@ -93,12 +96,12 @@ export function NotesSearch({
     >
       <SearchField
         surface="plain"
-        className={sidebarSearchClassName}
-        inputClassName={sidebarSearchInputClassName}
+        className="loam-header-search-field"
+        inputClassName="text-[13px] text-(--app-text) placeholder:text-[var(--app-placeholder,var(--app-muted))]"
         id="notes-search-input"
         ref={inputRef}
         value={query}
-        placeholder="Search"
+        placeholder="Search notes"
         label="Search notes"
         clearLabel="Clear search"
         exitOnCommitKeys={false}
@@ -139,7 +142,7 @@ export function NotesSearch({
         <ul
           id={listId}
           ref={resultsRef}
-          className="absolute inset-x-0 top-[calc(100%+4px)] z-30 m-0 flex max-h-[min(60vh,480px)] w-[calc(var(--loam-sidebar-width,280px)-17px)] max-w-[calc(100vw-32px)] list-none flex-col gap-0.5 overflow-auto rounded-(--radius-control) border border-(--app-border) bg-(--app-surface) p-1 shadow-[0_12px_32px_rgb(0_0_0/18%)]"
+          className="loam-header-search-results z-30 m-0 flex max-h-[min(60vh,480px)] list-none flex-col gap-0.5 overflow-auto rounded-(--radius-control) border border-(--app-border) bg-(--app-surface) p-1 shadow-[0_12px_32px_rgb(0_0_0/18%)]"
           aria-label="Search results"
         >
           {ready
