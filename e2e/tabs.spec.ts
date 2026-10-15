@@ -85,6 +85,12 @@ test("a board's cards are saved as the rows of its table", async ({ loam }) => {
   const main = loam.window.getByRole("main");
   await main.getByRole("button", { name: "Add tab" }).click();
   await loam.window.getByRole("menuitem", { name: "Board tab" }).click();
+  // A board fills the window on the canvas, with no paper to resize.
+  await expect(loam.window.getByTestId("notes-document-canvas")).toHaveAttribute(
+    "data-notes-document-mode",
+    "full",
+  );
+  await expect(main.getByRole("separator", { name: "Resize paper width" })).toHaveCount(0);
   const doing = main.getByRole("region", { name: "Doing" });
   await doing.getByRole("button", { name: "Add card" }).click();
   await doing.getByRole("textbox", { name: "New card in Doing" }).fill("Draft the essay");

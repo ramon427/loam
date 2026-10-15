@@ -47,7 +47,7 @@ function InlineInput({
       aria-label={label}
       autoFocus
       value={value}
-      className="w-full rounded-md border border-(--app-border) bg-(--app-page) px-2 py-1 text-sm text-(--app-text) outline-none focus:border-(--focus-ring)"
+      className="w-full rounded-md border border-(--app-border) bg-(--app-surface) px-2 py-1 text-sm text-(--app-text) outline-none focus:border-(--focus-ring)"
       onChange={(event) => setValue(event.target.value)}
       onBlur={() => (value.trim() ? onCommit(value.trim()) : onCancel())}
       onKeyDown={(event) => {
@@ -80,7 +80,7 @@ function BoardCard({
         event.dataTransfer.setData(CARD_TYPE, row.id);
         event.dataTransfer.effectAllowed = "move";
       }}
-      className="group/card cursor-grab rounded-lg border border-(--app-border) bg-(--app-page) p-2.5 shadow-xs active:cursor-grabbing"
+      className="group/card cursor-grab rounded-[10px] border border-(--app-border) bg-(--app-surface) px-3 py-2.5 transition-colors hover:border-(--control-border-strong) active:cursor-grabbing"
     >
       <div className="flex items-start gap-1">
         {editing ? (
@@ -178,7 +178,7 @@ export function NoteBoardPanel({
 
   return (
     <div
-      className="flex min-h-[34rem] w-full items-start gap-3 overflow-x-auto p-4"
+      className="flex h-full min-h-0 w-full items-start gap-4 overflow-x-auto px-6 pt-5 pb-4"
       aria-label="Board"
     >
       {groups.map((group) => (
@@ -195,16 +195,22 @@ export function NoteBoardPanel({
               setDropTarget(null);
           }}
           onDrop={(event) => dropOn(event, group.id)}
+          // An open lane on the canvas; it tints while a card is dragged over it.
           className={cn(
-            "flex w-56 shrink-0 flex-col gap-2 rounded-xl bg-(--app-page-2) p-2 transition-colors",
-            dropTarget === group.id && "ring-2 ring-(--focus-ring)",
+            "flex max-h-full w-64 shrink-0 flex-col gap-2 rounded-xl p-1.5 transition-colors",
+            dropTarget === group.id && "bg-(--app-accent)/8 ring-1 ring-(--app-accent)/40",
           )}
         >
-          <h2 className="flex items-center justify-between px-1 text-xs font-medium text-(--app-muted)">
+          <h2 className="flex h-7 shrink-0 items-center gap-2 px-1.5 text-[13px] font-medium text-(--app-secondary-label)">
+            <span
+              aria-hidden="true"
+              className="size-2 shrink-0 rounded-full"
+              style={{ backgroundColor: group.color }}
+            />
             <span className="truncate">{group.label}</span>
-            <span className="tabular-nums">{group.rows.length}</span>
+            <span className="text-(--app-muted) tabular-nums">{group.rows.length}</span>
           </h2>
-          <ul className="flex min-h-8 flex-col gap-2">
+          <ul className="flex min-h-8 flex-col gap-2 overflow-y-auto [scrollbar-gutter:stable] [scrollbar-color:var(--scrollbar-thumb-idle)_transparent] [scrollbar-width:thin]">
             {group.rows.map((row) => (
               <BoardCard key={row.id} table={table} row={row} groups={groups} onCommit={commit} />
             ))}
@@ -223,7 +229,7 @@ export function NoteBoardPanel({
               type="button"
               variant="ghost-muted"
               size="sm"
-              className="justify-start text-(--app-muted)"
+              className="shrink-0 justify-start text-(--app-muted)"
               onClick={() => setAdding(group.id)}
             >
               <PlusIcon className="size-3.5" />
@@ -232,7 +238,7 @@ export function NoteBoardPanel({
           )}
         </section>
       ))}
-      <div className="shrink-0 pr-2">
+      <div className="w-56 shrink-0 p-1.5 pr-6">
         {addingGroup ? (
           <InlineInput
             label="New column"
@@ -247,7 +253,7 @@ export function NoteBoardPanel({
             type="button"
             variant="ghost-muted"
             size="sm"
-            className="text-(--app-muted)"
+            className="h-7 w-full rounded-lg border border-dashed border-(--control-border-strong) text-(--app-muted)"
             onClick={() => setAddingGroup(true)}
           >
             <PlusIcon className="size-3.5" />

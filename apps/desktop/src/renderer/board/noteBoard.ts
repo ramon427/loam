@@ -1,4 +1,5 @@
 import type { NoteTable, NoteTableColumn, NoteTableRow } from "@loam/shared/notes/noteModel";
+import { noteGraphColorHex } from "@loam/shared/notes/noteGraphColors";
 import { createUuid } from "@loam/shared/utils/uuid";
 
 import { createNoteTableColumn, createNoteTableRow, noteTableCellText } from "../table/noteTable";
@@ -14,7 +15,16 @@ const DEFAULT_GROUPS = ["To do", "Doing", "Done"];
 /** The id of the group cards with no choice go in. */
 const UNGROUPED = "";
 
-export type BoardGroup = { id: string; label: string; rows: NoteTableRow[] };
+/** A column of cards; `color` marks it with a dot. */
+export type BoardGroup = { id: string; label: string; color: string; rows: NoteTableRow[] };
+
+/*
+ * Columns take their dot's color from their place, so the default to do, doing and done read
+ * gray, blue and green, and the choices store nothing extra.
+ */
+const GROUP_COLORS = (
+  ["gray", "blue", "green", "purple", "orange", "pink", "red", "yellow"] as const
+).map((color) => noteGraphColorHex[color]);
 
 /** The column a board groups by, if the table has it. */
 const groupColumnOf = (table: NoteTable): NoteTableColumn | undefined =>
@@ -65,14 +75,18 @@ export const boardGroups = (table: NoteTable): BoardGroup[] => {
     const value = column ? row.cells[column.id] : undefined;
     return typeof value === "string" && known.has(value) ? value : UNGROUPED;
   };
-  const groups = options.map((option) => ({
+  const groups = options.map((option, index) => ({
     id: option.id,
     label: option.label,
+    color: GROUP_COLORS[index % GROUP_COLORS.length]!,
     rows: table.rows.filter((row) => groupOf(row) === option.id),
   }));
   const ungrouped = table.rows.filter((row) => groupOf(row) === UNGROUPED);
   return ungrouped.length || groups.length === 0
-    ? [...groups, { id: UNGROUPED, label: "No group", rows: ungrouped }]
+    ? [
+        ...groups,
+        { id: UNGROUPED, label: "No group", color: noteGraphColorHex.gray, rows: ungrouped },
+      ]
     : groups;
 };
 

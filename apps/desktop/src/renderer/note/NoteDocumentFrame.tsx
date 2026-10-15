@@ -16,7 +16,8 @@ import {
   type CanvasBackground,
 } from "./useCanvasBackground";
 
-type NoteDocumentFrameMode = "paper" | "immersive" | "graph";
+/** "full" fills the window with the tab itself, with no paper, for graphs and boards. */
+type NoteDocumentFrameMode = "paper" | "immersive" | "full";
 
 type PaperSizeActions = ReturnType<typeof useNotesPaperSize>["sizeActions"];
 
@@ -93,6 +94,8 @@ type NoteDocumentFrameProps = {
   side?: ReactNode;
   /** The side column fills the paper; the note stays mounted, hidden. */
   sideFills?: boolean;
+  /** Shows the chosen canvas background; a full tab that draws its own, as a graph does, turns it off. */
+  backdrop?: boolean;
   children: ReactNode;
 };
 
@@ -103,9 +106,10 @@ export const NoteDocumentFrame = ({
   resizable = false,
   side,
   sideFills = false,
+  backdrop = true,
   children,
 }: NoteDocumentFrameProps) => {
-  const isGraph = mode === "graph";
+  const isFull = mode === "full";
   const isPaper = mode === "paper";
   const paperId = useId();
   const resizeHintId = useId();
@@ -118,12 +122,12 @@ export const NoteDocumentFrame = ({
     widthHandleProps,
     cornerHandleProps,
   } = useNotesPaperSize(isPaper);
-  const markWhileScrolling = useMarkWhileScrolling<HTMLDivElement>(!isGraph);
+  const markWhileScrolling = useMarkWhileScrolling<HTMLDivElement>(!isFull);
   const bindCanvas = useCallback(
     (canvas: HTMLDivElement | null) => {
       const releaseScrollPaint = markWhileScrolling(canvas);
       const releaseSize = bindSizeCanvas(canvas);
-      if (!canvas || !isGraph)
+      if (!canvas || !isFull)
         return () => {
           releaseScrollPaint?.();
           releaseSize?.();
@@ -131,7 +135,7 @@ export const NoteDocumentFrame = ({
       const measureTop = () => {
         if (canvas.getBoundingClientRect().width === 0) return;
         canvas.style.setProperty(
-          "--notes-graph-top",
+          "--notes-full-top",
           `${Math.max(0, canvas.getBoundingClientRect().top)}px`,
         );
       };
@@ -152,7 +156,7 @@ export const NoteDocumentFrame = ({
         releaseSize?.();
       };
     },
-    [markWhileScrolling, bindSizeCanvas, isGraph],
+    [markWhileScrolling, bindSizeCanvas, isFull],
   );
 
   return (
@@ -162,9 +166,9 @@ export const NoteDocumentFrame = ({
       data-notes-document-mode={mode}
       data-paper-resize-axis={resizeAxis ?? undefined}
       style={isPaper ? paperStyle : undefined}
-      className={isGraph ? page.graphCanvas : page.canvas}
+      className={isFull ? page.fullCanvas : page.canvas}
     >
-      {!isGraph ? <CanvasBackdrop /> : null}
+      {backdrop ? <CanvasBackdrop /> : null}
       <div className={page.sheet}>
         {tabs ? <div className={page.tabs}>{tabs}</div> : null}
         <div
@@ -172,9 +176,9 @@ export const NoteDocumentFrame = ({
           ref={paperRef}
           data-testid="notes-document-paper"
           className={cn(
-            isGraph ? page.graphPaper : page.paper,
+            isFull ? page.fullPaper : page.paper,
             paperClassName,
-            isGraph && "min-h-0 flex-1",
+            isFull && "min-h-0 flex-1",
             side && page.paperWithSide,
           )}
         >

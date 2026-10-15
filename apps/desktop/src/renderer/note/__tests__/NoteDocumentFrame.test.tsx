@@ -35,12 +35,12 @@ describe("NoteDocumentFrame", () => {
         disconnect = disconnect;
       },
     );
-    const { unmount } = render(<NoteDocumentFrame mode="graph">Graph body</NoteDocumentFrame>);
+    const { unmount } = render(<NoteDocumentFrame mode="full">Graph body</NoteDocumentFrame>);
     const canvas = screen.getByTestId("notes-document-canvas");
-    expect(canvas.style.getPropertyValue("--notes-graph-top")).toBe("147px");
+    expect(canvas.style.getPropertyValue("--notes-full-top")).toBe("147px");
     top = 180;
     measure();
-    expect(canvas.style.getPropertyValue("--notes-graph-top")).toBe("180px");
+    expect(canvas.style.getPropertyValue("--notes-full-top")).toBe("180px");
     unmount();
     expect(disconnect).toHaveBeenCalledOnce();
   });
@@ -62,10 +62,10 @@ describe("NoteDocumentFrame", () => {
     expect(canvas.getAttribute(SCROLLING)).toBe("true");
   });
 
-  it("keeps graph canvases off the document scroll-paint path", () => {
+  it("keeps full canvases off the document scroll-paint path", () => {
     render(
       <div data-slot="sidebar-inset">
-        <NoteDocumentFrame mode="graph" resizable>
+        <NoteDocumentFrame mode="full" resizable>
           Graph body
         </NoteDocumentFrame>
       </div>,
@@ -74,7 +74,7 @@ describe("NoteDocumentFrame", () => {
     const canvas = screen.getByTestId("notes-document-canvas");
     const inset = canvas.closest('[data-slot="sidebar-inset"]');
 
-    expect(canvas.getAttribute("data-notes-document-mode")).toBe("graph");
+    expect(canvas.getAttribute("data-notes-document-mode")).toBe("full");
     expect(canvas.style.getPropertyValue("--notes-document-width")).toBe("");
     expect(screen.queryByRole("separator", { name: "Resize paper width" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Resize paper" })).toBeNull();
