@@ -26,8 +26,11 @@ import { useOpenNote } from "./useOpenNote";
 import { useProjectCommands } from "./useProjectCommands";
 import { useSyncedChanges } from "./useSyncedChanges";
 
-/** Where a new note goes: a folder, else a project's own notes, else the top level. */
-export type NewNotePlace = { folderId?: string; projectId?: string };
+/**
+ * Where a new note goes: a folder, else inside another note as its sub-note, else a
+ * project's own notes, else the top level.
+ */
+export type NewNotePlace = { folderId?: string; projectId?: string; parentNoteId?: string };
 
 /** What a project shows: its name and its icon (a default one when it has none). */
 export type NoteProjectDetails = { name: string; icon?: NoteProjectIcon };
@@ -62,7 +65,10 @@ export type NotesWorkspace = {
     noteId: string,
     change: NoteContentPatch | ((note: NoteDocument) => NoteContentPatch),
   ) => void;
-  /** Adds a note, empty or holding `draft`'s content, and opens it. */
+  /**
+   * Adds a note, empty or holding `draft`'s content, and opens it. A sub-note is linked from
+   * the end of its parent's page.
+   */
   createNote: (place?: NewNotePlace, draft?: NoteDocument) => Promise<NoteDocument | null>;
   /** Copies a note with all its tabs and its video, right after it, and opens the copy. */
   duplicateNote: (noteId: string, title: string) => Promise<NoteDocument | null>;

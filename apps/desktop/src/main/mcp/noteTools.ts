@@ -28,15 +28,16 @@ export const noteTools = ({
   ),
   define(
     "loam_notes_new",
-    "Create a text note with generated IDs, optionally from Markdown or native blocks. A folder decides the note's project; projectId places it outside folders in a project.",
+    "Create a text note with generated IDs, optionally from Markdown or native blocks. A folder decides the note's project; projectId places it outside folders in a project; parentNoteId makes it a sub-note of another note.",
     {
       title: z.string(),
       folderId: uuidSchema.nullable().optional(),
       projectId: uuidSchema.nullable().optional(),
+      parentNoteId: uuidSchema.nullable().optional(),
       markdown: z.string().optional(),
       blocks: blocksSchema.optional(),
     },
-    async ({ title, folderId, projectId, markdown, blocks }) => {
+    async ({ title, folderId, projectId, parentNoteId, markdown, blocks }) => {
       if (markdown !== undefined && blocks !== undefined)
         throw new StoreError("Use Markdown or blocks, not both.", "VALIDATION_ERROR", 400);
       const tabId = randomUUID();
@@ -53,6 +54,7 @@ export const noteTools = ({
           title,
           folderId,
           projectId,
+          parentNoteId,
           tabs: [{ id: tabId, title: "Notes", kind: "page" }],
           activeTabId: tabId,
           blocksByTab: { [tabId]: body },

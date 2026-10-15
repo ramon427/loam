@@ -1,4 +1,5 @@
 import type { NoteFolder, NoteProject } from "@loam/shared/notes/noteModel";
+import { resolveNoteParents } from "@loam/shared/notes/noteParents";
 import { isRecord } from "@loam/shared/utils/isRecord";
 
 import type { StorageWrite } from "./adapter";
@@ -7,6 +8,7 @@ import {
   placeRow,
   readFolderId,
   readId,
+  readParentNoteId,
   readProjectId,
   samePlace,
   type NotePlace,
@@ -51,8 +53,10 @@ type StoredLayout = {
 /**
  * Checks a layout the window sends: every project (or none, to keep them),
  * every folder in order, and where notes go. Ids are unique, and folders and
- * notes go only into projects and folders it names. An item that leaves out
- * its project keeps the one it is in, while that one is kept.
+ * notes go only into projects and folders it names, and notes only into
+ * notes that exist and aren't inside them. An item that leaves out its
+ * project keeps the one it is in, while that one is kept; a note that leaves
+ * out its parent keeps it unless it goes into a folder.
  */
 export const readLayout = (input: unknown, stored: StoredLayout) => {
   if (!isRecord(input) || !Array.isArray(input.folders) || !Array.isArray(input.notes))
@@ -81,24 +85,56 @@ export const readLayout = (input: unknown, stored: StoredLayout) => {
   // A folder decides its notes' project.
   const currentProject = (row: NoteRow | undefined) =>
     row?.folderId ? storedFolders.get(row.folderId)?.projectId : row?.projectId;
+  /** Notes the layout itself puts inside another note. */
+  const nested = new Set<string>();
   const placements = input.notes.map((entry): Placement => {
     if (!isRecord(entry)) throw invalidRequest("note placement");
     const id = readId(entry.id, "note");
     const folderId = readFolderId(entry.folderId);
     if (folderId && !folderIds.has(folderId)) throw invalidRequest("unknown folder");
     if (folderId) return { id, folderId };
+    const requested = readParentNoteId(entry.parentNoteId);
+    if (requested) {
+      if (requested === id || !stored.rows.has(requested)) throw invalidRequest("unknown note");
+      nested.add(id);
+      return { id, folderId, parentNoteId: requested };
+    }
+    const kept = requested === undefined ? stored.rows.get(id)?.parentNoteId : undefined;
+    if (kept && stored.rows.has(kept)) return { id, folderId, parentNoteId: kept };
     return {
       id,
       folderId,
       projectId: projectFor(entry.projectId, currentProject(stored.rows.get(id))),
     };
   });
-  /** A note the layout leaves out stays in its folder, or moves to its project's or the top level. */
-  const unlistedPlace = (row: NoteRow): NotePlace =>
-    row.folderId && folderIds.has(row.folderId)
-      ? { folderId: row.folderId }
-      : { folderId: null, projectId: projectFor(undefined, currentProject(row)) };
-  return { projects, folders, placements, unlistedPlace };
+  const listed = new Map(placements.map((placement) => [placement.id, placement]));
+  const parents = resolveNoteParents(
+    [...stored.rows.values()].map((row) => listed.get(row.id) ?? row),
+  );
+  for (const id of nested)
+    if (!parents.has(id)) throw invalidRequest("a note can't go inside itself");
+  /** A note kept in a parent that is now inside it goes to the top level instead. */
+  const outsideParent = (place: NotePlace, id: string): NotePlace =>
+    place.parentNoteId && !parents.has(id) ? { folderId: null } : place;
+  /**
+   * A note the layout leaves out stays in its folder or note, or moves to its
+   * project's or the top level.
+   */
+  const unlistedPlace = (row: NoteRow): NotePlace => {
+    if (row.folderId && folderIds.has(row.folderId)) return { folderId: row.folderId };
+    const parentNoteId = row.folderId ? undefined : parents.get(row.id);
+    if (parentNoteId) return { folderId: null, parentNoteId };
+    return { folderId: null, projectId: projectFor(undefined, currentProject(row)) };
+  };
+  return {
+    projects,
+    folders,
+    placements: placements.map((placement) => ({
+      ...outsideParent(placement, placement.id),
+      id: placement.id,
+    })),
+    unlistedPlace,
+  };
 };
 
 /**

@@ -95,8 +95,14 @@ link to a note opens it through the workspace.
 ## A note
 
 A note is stored as two records. Its **row** holds what the library list,
-search and backlinks read: title, folder, position, the notes it links to and
-its plain text. Its **content** holds the rest:
+search and backlinks read: title, place, position, the notes it links to and
+its plain text. Its place is a folder, a project, the top level, or another
+note (`parentNoteId`), which makes it a sub-note shown under that note.
+`resolveNoteParents` in `shared/notes/noteParents.ts` ignores parents that are
+gone or would put a note inside itself, so every note still shows somewhere.
+A sub-note made from the sidebar is linked from its parent's page with an
+ordinary note link, which stays when the sub-note moves out. Its **content**
+holds the rest:
 
 - **Tabs.** A page tab holds BlockNote blocks (`blocksByTab`). A graph tab
   holds a diagram (`graphsByTab`): nodes, edges and frames. A table tab holds

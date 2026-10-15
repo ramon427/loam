@@ -24,7 +24,7 @@ import {
 
 type SortableList = ReturnType<typeof useNativeSortableList>;
 type SortableItemProps = ReturnType<SortableList["itemProps"]>;
-type DropMarker = "before" | "after" | undefined;
+type DropMarker = "before" | "after" | "inside" | undefined;
 
 /**
  * Each level in steps in 12px. A note's icon lines up with the folder and project icons of
@@ -144,9 +144,16 @@ type EditProps = {
   onCancelEdit: () => void;
 };
 
+/**
+ * A note: opens on click, and shows or hides its sub-notes from the chevron beside it, which
+ * sits in the indent so the row's own button stays one control.
+ */
 export function NoteRow({
   note,
   depth,
+  hasSubNotes,
+  isOpen,
+  onToggle,
   isActive,
   isSelected,
   animateEntry,
@@ -158,7 +165,10 @@ export function NoteRow({
   onCancelEdit,
 }: EditProps & {
   note: NoteDocument;
-  depth: 0 | 1 | 2;
+  depth: number;
+  hasSubNotes: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
   isActive: boolean;
   isSelected: boolean;
   animateEntry: boolean;
@@ -175,37 +185,51 @@ export function NoteRow({
 
   return (
     <TreeRowEntry fadeIn={animateEntry}>
-      {isEditing ? (
-        <SidebarRow asChild isActive={isActive} {...rowProps}>
-          <div>
+      <div className="relative">
+        {hasSubNotes ? (
+          <button
+            type="button"
+            aria-label={isOpen ? `Hide sub-notes of ${title}` : `Show sub-notes of ${title}`}
+            aria-expanded={isOpen}
+            className="absolute top-1/2 z-10 flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-(--app-muted) hover:bg-(--app-page-2) hover:text-(--app-text)"
+            style={{ left: `${2 + 12 * depth}px` }}
+            onClick={onToggle}
+          >
+            <Chevron isOpen={isOpen} />
+          </button>
+        ) : null}
+        {isEditing ? (
+          <SidebarRow asChild isActive={isActive} {...rowProps}>
+            <div>
+              <NoteRouteGlyph className="size-4 shrink-0" />
+              <TreeNameInput
+                label="Rename note"
+                autoSelect
+                initialValue={note.title}
+                maxLength={MAX_NOTE_TITLE_LENGTH}
+                onCommit={onCommitEdit}
+                onCancel={onCancelEdit}
+              />
+            </div>
+          </SidebarRow>
+        ) : (
+          <SidebarRow
+            type="button"
+            isActive={isActive || isSelected}
+            onClick={onClick}
+            aria-current={isActive ? "page" : undefined}
+            aria-pressed={isSelected}
+            className={cn(isSelected && !isActive && "bg-(--app-page-2)/55")}
+            {...rowProps}
+            {...dragProps(sortable, dropMarker)}
+          >
             <NoteRouteGlyph className="size-4 shrink-0" />
-            <TreeNameInput
-              label="Rename note"
-              autoSelect
-              initialValue={note.title}
-              maxLength={MAX_NOTE_TITLE_LENGTH}
-              onCommit={onCommitEdit}
-              onCancel={onCancelEdit}
-            />
-          </div>
-        </SidebarRow>
-      ) : (
-        <SidebarRow
-          type="button"
-          isActive={isActive || isSelected}
-          onClick={onClick}
-          aria-current={isActive ? "page" : undefined}
-          aria-pressed={isSelected}
-          className={cn(isSelected && !isActive && "bg-(--app-page-2)/55")}
-          {...rowProps}
-          {...dragProps(sortable, dropMarker)}
-        >
-          <NoteRouteGlyph className="size-4 shrink-0" />
-          <span className="min-w-0 truncate" title={title}>
-            {title}
-          </span>
-        </SidebarRow>
-      )}
+            <span className="min-w-0 truncate" title={title}>
+              {title}
+            </span>
+          </SidebarRow>
+        )}
+      </div>
     </TreeRowEntry>
   );
 }

@@ -9,6 +9,7 @@ import type {
   NoteVersion,
   SavedNote,
 } from "@loam/shared/notes/noteModel";
+import { resolveNoteParents } from "@loam/shared/notes/noteParents";
 import { isRecord } from "@loam/shared/utils/isRecord";
 import { stableJsonStringify } from "@loam/shared/utils/stableJson";
 
@@ -30,6 +31,7 @@ import {
   readId,
   readNoteContent,
   readNotePatch,
+  readParentNoteId,
   readProjectId,
   readStoredContent,
   sameContent,
@@ -277,8 +279,9 @@ export class NotesStore {
   // ------------------------------------------------------------------- writes
 
   /**
-   * Adds notes, each at the end of its folder (or of its project's or the
-   * library's top level), in one commit. Ids come from the caller and must be new.
+   * Adds notes, each at the end of its folder, of the note it goes inside, or
+   * of its project's or the library's top level, in one commit. Ids come from
+   * the caller and must be new.
    */
   createNotes(
     inputs: readonly unknown[],
@@ -304,12 +307,16 @@ export class NotesStore {
           throw invalidRequest("a note with that id already exists");
         const folderId = readFolderId(input.folderId);
         if (folderId && !folderIds.has(folderId)) throw invalidRequest("unknown folder");
-        // A folder decides its notes' project.
-        const projectId = folderId ? undefined : readProjectId(input.projectId);
+        const parentNoteId = (!folderId && readParentNoteId(input.parentNoteId)) || undefined;
+        if (parentNoteId && !rows.has(parentNoteId) && !created.some((n) => n.id === parentNoteId))
+          throw invalidRequest("unknown note");
+        // A folder or a parent note decides the note's project.
+        const projectId = folderId || parentNoteId ? undefined : readProjectId(input.projectId);
         if (projectId && !projectIds.has(projectId)) throw invalidRequest("unknown project");
         const note = readNoteContent(input);
-        const position = nextPosition(placed, { folderId, projectId });
-        const row = buildNoteRow(id, note, { folderId, projectId, position }, updatedAt);
+        const place = { folderId, projectId, parentNoteId };
+        const position = nextPosition(placed, place);
+        const row = buildNoteRow(id, note, { ...place, position }, updatedAt);
         placed.push(row);
         writes.push(...noteWrites(row, note));
         changed.push(syncKey("note", id), syncKey("place", id));
@@ -391,14 +398,28 @@ export class NotesStore {
     });
   }
 
-  /** Moves a note to persistent Trash and keeps its version history. */
+  /**
+   * Moves a note to persistent Trash and keeps its version history. Its
+   * sub-notes stay, as normal notes at the end of the place it was in.
+   */
   deleteNote(noteId: string, { external = false }: WriteOptions = {}): Promise<NoteDocument> {
     return this.serialize(async () => {
       const previous = await this.readNote(noteId);
+      const rows = await this.readRows();
       const writes: StorageWrite[] = [];
+      const changed: SyncDocKey[] = [syncKey("note", noteId)];
       await this.keepVersion(writes, noteId, previous, true);
+      const children = [...rows.values()]
+        .filter((row) => !row.folderId && row.parentNoteId === noteId)
+        .sort((left, right) => left.position - right.position);
+      let position = nextPosition(rows.values(), previous.row);
+      for (const child of children) {
+        const value = placeRow(child, { ...previous.row, position: position++ });
+        writes.push({ type: "put", collection: "notes", id: child.id, value });
+        changed.push(syncKey("place", child.id));
+      }
       writes.push(...trashWrites(previous, this.now()));
-      await this.commit(writes, [syncKey("note", noteId)], {
+      await this.commit(writes, changed, {
         ...noChange(),
         deletedNoteIds: [noteId],
         layoutChanged: true,
@@ -410,7 +431,8 @@ export class NotesStore {
 
   /**
    * Puts a deleted note back where it was (undo), moving later siblings down.
-   * A note whose folder or project is gone goes to the library's top level.
+   * A note whose folder, project or parent note is gone goes to the library's
+   * top level.
    */
   restoreNote(input: unknown, options: WriteOptions = {}): Promise<NoteDocument> {
     return this.serialize(() => this.restoreNoteContent(input, options));
@@ -431,10 +453,12 @@ export class NotesStore {
     const requested = readFolderId(input.folderId);
     const folderId =
       requested && folders.some((folder) => folder.id === requested) ? requested : null;
-    // Only a note outside folders has a project of its own.
-    const requestedProject = requested ? undefined : readProjectId(input.projectId);
+    const requestedParent = requested ? undefined : readParentNoteId(input.parentNoteId);
+    const parentNoteId = requestedParent && rows.has(requestedParent) ? requestedParent : undefined;
+    // Only a note outside folders and other notes has a project of its own.
+    const requestedProject = requested || parentNoteId ? undefined : readProjectId(input.projectId);
     const project = projects.find((entry) => entry.id === requestedProject);
-    const place = { folderId, projectId: project?.id };
+    const place = { folderId, projectId: project?.id, parentNoteId };
     const end = nextPosition(rows.values(), place);
     const position =
       typeof input.position === "number" && Number.isInteger(input.position)
@@ -558,8 +582,9 @@ export class NotesStore {
         this.readFolders(),
         this.readRows(),
       ]);
-      // A folder or note filed into a project or folder another device
-      // deleted shows at the top level.
+      // A folder or note filed into a project, folder or note another device
+      // deleted shows at the top level, and so do notes two devices nested
+      // inside each other.
       const projectIds = new Set(projects.map((project) => project.id));
       const known = (projectId: string | undefined) =>
         projectId && projectIds.has(projectId) ? projectId : undefined;
@@ -567,15 +592,16 @@ export class NotesStore {
         toFolder(folder.id, { ...folder, projectId: known(folder.projectId) }),
       );
       const folderIds = new Set(folders.map((folder) => folder.id));
-      const notes = [...rows.values()].map((row) =>
-        row.folderId && folderIds.has(row.folderId)
-          ? row
-          : placeRow(row, {
-              folderId: null,
-              projectId: known(row.projectId),
-              position: row.position,
-            }),
-      );
+      const parents = resolveNoteParents(rows.values());
+      const notes = [...rows.values()].map((row) => {
+        if (row.folderId && folderIds.has(row.folderId)) return placeRow(row, row);
+        if (parents.has(row.id)) return row;
+        return placeRow(row, {
+          folderId: null,
+          projectId: known(row.projectId),
+          position: row.position,
+        });
+      });
       return { projects, folders, notes: sortNoteSummaries(notes.map(toNoteSummary)) };
     });
   }

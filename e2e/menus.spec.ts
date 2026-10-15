@@ -138,8 +138,13 @@ test("the editor's menus and tooltips look like the app's", async ({ loam }) => 
 
   // A formatting button names its shortcut in the app's own tooltip.
   await noteBody(window).getByText("Words to format.").dblclick();
-  await window.locator(".bn-formatting-toolbar").getByRole("button").nth(1).hover();
+  // The toolbar is still settling in as it opens, so a first hover can miss its button.
   const tooltip = window.getByRole("tooltip");
+  await hoverUntilVisible(
+    window,
+    window.locator(".bn-formatting-toolbar").getByRole("button").nth(1),
+    tooltip,
+  );
   await expect(tooltip).toHaveText(/^\w[\w ]* \(.+\)$/);
   expect(await lookOf(tooltip)).toEqual(appTooltip);
 

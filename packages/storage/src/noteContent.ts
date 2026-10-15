@@ -31,6 +31,8 @@ export type NoteRow = StorageNoteSearchFields & {
   folderId: string | null;
   /** Set only on notes outside folders; rows saved before projects have none. */
   projectId?: string;
+  /** Set only on sub-notes, which have no folder or project of their own. */
+  parentNoteId?: string;
   position: number;
   updatedAt: string;
   activeTabId: string;
@@ -56,6 +58,10 @@ export const readFolderId = (value: unknown) => (value == null ? null : readId(v
 
 export const readProjectId = (value: unknown) =>
   value == null ? undefined : readId(value, "project");
+
+/** A sub-note's parent as a request names it: an id, null for none, undefined when left out. */
+export const readParentNoteId = (value: unknown) =>
+  value === undefined ? undefined : value === null ? null : readId(value, "parent note");
 
 const invalidNote = (detail: string) =>
   new StoreError(`Invalid note: ${detail}.`, "VALIDATION_ERROR", 400);
@@ -189,23 +195,39 @@ const extractNoteText = (content: NoteContent) =>
     .join("\n");
 
 /**
- * Where a note sits: in a folder, or outside folders in a project or at the
- * library's top level. A folder decides its notes' project.
+ * Where a note sits: in a folder, inside another note, or outside folders in
+ * a project or at the library's top level. A folder decides its notes'
+ * project; a sub-note is wherever its parent is.
  */
-export type NotePlace = { folderId: string | null; projectId?: string };
+export type NotePlace = { folderId: string | null; projectId?: string; parentNoteId?: string };
 
 /** A note's place and its position there. */
 export type NotePlacement = NotePlace & { position: number };
 
-/** Notes are numbered within a folder, or outside folders within a project or the top level. */
-export const placeKey = ({ folderId, projectId }: NotePlace) =>
-  folderId ? `folder:${folderId}` : `project:${projectId ?? ""}`;
+/**
+ * Notes are numbered within a folder, within the note they sit inside, or
+ * outside both within a project or the top level.
+ */
+export const placeKey = ({ folderId, projectId, parentNoteId }: NotePlace) =>
+  folderId
+    ? `folder:${folderId}`
+    : parentNoteId
+      ? `note:${parentNoteId}`
+      : `project:${projectId ?? ""}`;
 
 export const samePlace = (left: NotePlace, right: NotePlace) => placeKey(left) === placeKey(right);
 
-/** A place as stored: a note in a folder has no project of its own. */
-export const toPlacement = ({ folderId, projectId, position }: NotePlacement): NotePlacement =>
-  !folderId && projectId ? { folderId, projectId, position } : { folderId, position };
+/** A place as stored: a note in a folder or inside another note has no project of its own. */
+export const toPlacement = ({
+  folderId,
+  projectId,
+  parentNoteId,
+  position,
+}: NotePlacement): NotePlacement => {
+  if (folderId) return { folderId, position };
+  if (parentNoteId) return { folderId, parentNoteId, position };
+  return projectId ? { folderId, projectId, position } : { folderId, position };
+};
 
 export const buildNoteRow = (
   id: string,
@@ -225,7 +247,7 @@ export const buildNoteRow = (
 
 /** A row moved to `placement`. */
 export const placeRow = (
-  { projectId: _former, ...row }: NoteRow,
+  { projectId: _former, parentNoteId: _formerParent, ...row }: NoteRow,
   placement: NotePlacement,
 ): NoteRow => ({
   ...row,
@@ -246,6 +268,7 @@ export const toNoteSummary = (row: NoteRow): NoteDocument => ({
   tablesByTab: {},
   folderId: row.folderId ?? undefined,
   projectId: row.projectId,
+  parentNoteId: row.parentNoteId,
   position: row.position,
 });
 
@@ -286,6 +309,7 @@ export const toFullNote = (row: NoteRow, content: StoredContent): NoteDocument =
     tablesByTab: content.tablesByTab ?? {},
     folderId: row.folderId ?? undefined,
     projectId: row.projectId,
+    parentNoteId: row.parentNoteId,
     position: row.position,
   };
   return removeBrokenHeadingConnections(note);
@@ -297,6 +321,8 @@ export const sortNoteSummaries = (notes: NoteDocument[]) =>
     if (folderOrder !== 0) return folderOrder;
     const projectOrder = (left.projectId ?? "").localeCompare(right.projectId ?? "");
     if (projectOrder !== 0) return projectOrder;
+    const parentOrder = (left.parentNoteId ?? "").localeCompare(right.parentNoteId ?? "");
+    if (parentOrder !== 0) return parentOrder;
     const positionOrder = (left.position ?? 0) - (right.position ?? 0);
     if (positionOrder !== 0) return positionOrder;
     return right.updatedAt.localeCompare(left.updatedAt) || left.id.localeCompare(right.id);
