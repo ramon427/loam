@@ -1,7 +1,15 @@
 import type { Locator } from "@playwright/test";
 
 import { expect, test } from "./app";
-import { createNote, holdDragOver, noteRow, sidebar, storedLibrary, storedText } from "./notes";
+import {
+  createFolder,
+  createNote,
+  holdDragOver,
+  noteRow,
+  sidebar,
+  storedLibrary,
+  storedText,
+} from "./notes";
 
 /** Drags `source` onto `target` and drops it there. */
 async function dragOnto(source: Locator, target: Locator, half: "after" | "inside") {
@@ -40,4 +48,23 @@ test("a sub-note sits inside its note, and dragged out stays linked from it", as
   await dragOnto(noteRow(window, "Packing list"), noteRow(window, "Trip"), "inside");
   await expect.poll(() => parentOf("Packing list")).toBe("Trip");
   await expect(noteRow(window, "Packing list")).toBeVisible();
+});
+
+test("the header shows where a note sits, and opens its parent note", async ({ loam }) => {
+  const { window } = loam;
+  await createFolder(window, "Travel");
+  await createNote(window, { title: "Trip", body: "Plans for the trip.", folder: "Travel" });
+  await noteRow(window, "Trip").click({ button: "right" });
+  await window.getByRole("menuitem", { name: "New sub-note", exact: true }).click();
+  const main = window.getByRole("main");
+  await main.getByRole("heading", { level: 1 }).getByRole("textbox").fill("Packing list");
+
+  const location = main.getByRole("navigation", { name: "Note location" });
+  await expect(location.getByRole("listitem")).toHaveText(["Travel", "Trip"]);
+  // The folder only says where the note is; the parent note opens.
+  await expect(location.getByRole("button")).toHaveText(["Trip"]);
+  await location.getByRole("button", { name: "Trip" }).click();
+  await expect(main.getByRole("heading", { name: "Trip" })).toBeVisible();
+  await expect(location.getByRole("listitem")).toHaveText(["Travel"]);
+  await expect(location.getByRole("button")).toHaveCount(0);
 });
