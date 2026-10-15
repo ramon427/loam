@@ -500,7 +500,6 @@ export function NoteView({
               ) : undefined
             }
             sideFills={pane.isMaximized}
-            backdrop={!isGraph}
           >
             <EditorShell
               isActive

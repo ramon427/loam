@@ -16,7 +16,7 @@ import {
   type CanvasBackground,
 } from "./useCanvasBackground";
 
-/** "full" fills the window with the tab itself, with no paper, for graphs and boards. */
+/** "full" fills the window with the tab itself on a solid canvas, with no paper, for graphs and boards. */
 type NoteDocumentFrameMode = "paper" | "immersive" | "full";
 
 type PaperSizeActions = ReturnType<typeof useNotesPaperSize>["sizeActions"];
@@ -94,8 +94,6 @@ type NoteDocumentFrameProps = {
   side?: ReactNode;
   /** The side column fills the paper; the note stays mounted, hidden. */
   sideFills?: boolean;
-  /** Shows the chosen canvas background; a full tab that draws its own, as a graph does, turns it off. */
-  backdrop?: boolean;
   children: ReactNode;
 };
 
@@ -106,7 +104,6 @@ export const NoteDocumentFrame = ({
   resizable = false,
   side,
   sideFills = false,
-  backdrop = true,
   children,
 }: NoteDocumentFrameProps) => {
   const isFull = mode === "full";
@@ -168,7 +165,7 @@ export const NoteDocumentFrame = ({
       style={isPaper ? paperStyle : undefined}
       className={isFull ? page.fullCanvas : page.canvas}
     >
-      {backdrop ? <CanvasBackdrop /> : null}
+      {!isFull ? <CanvasBackdrop /> : null}
       <div className={page.sheet}>
         {tabs ? <div className={page.tabs}>{tabs}</div> : null}
         <div
