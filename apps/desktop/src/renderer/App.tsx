@@ -127,10 +127,7 @@ function Workspace() {
   const openedFiles = useOpenedFiles({ enabled: !libraryUnavailable });
   const { pick: pickFile } = openedFiles;
   const shortcuts = useMemo(() => {
-    const focusSearch = () => {
-      if (sidebarCollapsed) toggleSidebar();
-      requestAnimationFrame(() => document.getElementById("notes-search-input")?.focus());
-    };
+    const focusSearch = () => document.getElementById("notes-search-input")?.focus();
     return [
       { id: "app.settings", allowInEditable: true, run: openSettings },
       { id: "app.sidebar.toggle", enabled: !settingsOpen, run: toggleSidebar },
@@ -180,7 +177,6 @@ function Workspace() {
     openSettings,
     pickFile,
     settingsOpen,
-    sidebarCollapsed,
     toggleSidebar,
     workspace.activeNoteId,
   ]);
@@ -224,13 +220,7 @@ function Workspace() {
             <div className="loam-chrome-row loam-sidebar-titlebar">
               <SidebarToggleSlot />
               <span className="loam-app-name">Loam</span>
-            </div>
-            <div className="loam-sidebar-body">
-              <div className="loam-sidebar-header">
-                <NotesSearch
-                  onOpen={showEverything}
-                  onFind={(noteId, query) => findBarRef.current?.find({ noteId, query })}
-                />
+              <div className="loam-sidebar-actions">
                 <NotesSidebarFilter
                   projects={workspace.projects}
                   folders={workspace.folders}
@@ -251,6 +241,8 @@ function Workspace() {
                   }}
                 />
               </div>
+            </div>
+            <div className="loam-sidebar-body">
               <div className="loam-sidebar-tree">
                 <NotesSidebar
                   folderScopeId={folderScopeId}
@@ -289,6 +281,10 @@ function Workspace() {
                 />
               ) : null}
               <PluginPanes />
+              <NotesSearch
+                onOpen={showEverything}
+                onFind={(noteId, query) => findBarRef.current?.find({ noteId, query })}
+              />
             </main>
           </AiChatToggleProvider>
           {chatStatus?.enabled ? (

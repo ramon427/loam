@@ -1,5 +1,5 @@
 import { expect, test } from "./app";
-import { createNote, noteBody, sidebar } from "./notes";
+import { createNote, noteBody } from "./notes";
 
 const seedNotes = async (window: import("@playwright/test").Page, count: number) => {
   await window.evaluate(async (count) => {
@@ -28,7 +28,7 @@ const seedNotes = async (window: import("@playwright/test").Page, count: number)
     }
   }, count);
   await window.reload();
-  await expect(sidebar(window).getByRole("searchbox", { name: "Search notes" })).toBeVisible();
+  await expect(window.getByRole("searchbox", { name: "Search notes" })).toBeVisible();
 };
 
 test("search opens the matching inactive tab, highlights it, and preserves the query", async ({
@@ -62,7 +62,7 @@ test("search opens the matching inactive tab, highlights it, and preserves the q
     });
   });
   await window.reload();
-  const search = sidebar(window).getByRole("searchbox", { name: "Search notes" });
+  const search = window.getByRole("searchbox", { name: "Search notes" });
   await search.fill("Field deepuniquemarker");
   await window
     .getByRole("list", { name: "Search results" })
@@ -89,7 +89,7 @@ test("search opens the matching inactive tab, highlights it, and preserves the q
 test("search pages past 50 matches and arrow keys open a chosen result", async ({ loam }) => {
   const { window } = loam;
   await seedNotes(window, 63);
-  const search = sidebar(window).getByRole("searchbox", { name: "Search notes" });
+  const search = window.getByRole("searchbox", { name: "Search notes" });
   await search.fill("paginationmarker");
   const list = window.getByRole("list", { name: "Search results" });
   const matches = list.locator("[data-search-result]");
