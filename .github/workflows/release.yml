@@ -57,16 +57,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Auto release runs from a pull_request_target event, which electron-builder
+      # otherwise takes for a pull request build and skips uploading.
       - name: Package and upload to a draft release
         working-directory: apps/desktop
         run: npx electron-builder --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLISH_FOR_PULL_REQUEST: "true"
 
       # Published only once every file is up, so installed copies never see a
       # release without its installer.
       - name: Publish the release
         shell: bash
-        run: gh release edit "$TAG" --draft=false --latest
+        run: |
+          if ! gh release view "$TAG" --json assets -q '.assets[].name' | grep -qx latest.yml; then
+            echo "The $TAG draft has no latest.yml, so installed copies could not update from it"
+            exit 1
+          fi
+          gh release edit "$TAG" --draft=false --latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
