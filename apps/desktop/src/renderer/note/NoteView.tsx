@@ -96,6 +96,8 @@ export function NoteView({
   const activeTab = activeTabOf(note);
   const activeKind = tabKindOf(activeTab);
   const isGraph = activeKind === "graph";
+  // A graph and a board fill the window, not a sheet of paper.
+  const isFull = isGraph || activeKind === "board";
 
   // What the tab in view selects, and what it was asked to show.
   const [graphSelection, setGraphSelection] = useState<GraphSelection>({
@@ -329,10 +331,7 @@ export function NoteView({
       ? graphSelection.edgeId
       : null;
     body = (
-      <div
-        key={activeTab.id}
-        className={cn("w-full", isGraph ? "h-full min-h-0" : "min-h-[34rem]")}
-      >
+      <div key={activeTab.id} className={cn("w-full", isFull ? "h-full min-h-0" : "min-h-[34rem]")}>
         {isGraph ? (
           <NoteGraphPanel
             tabId={activeTab.id}
@@ -444,17 +443,12 @@ export function NoteView({
       />
     );
 
-  let documentMode: "graph" | "immersive" | "paper" = "paper";
-  if (isGraph) documentMode = "graph";
+  let documentMode: "full" | "immersive" | "paper" = "paper";
+  if (isFull) documentMode = "full";
   else if (besideOpen) documentMode = "immersive";
   let paperClassName: string | undefined;
-  if (isGraph) paperClassName = "h-full min-h-0 max-w-none p-0";
-  else if (
-    activeKind === "table" ||
-    activeKind === "board" ||
-    activeKind === "embed" ||
-    isFileTabKind(activeKind)
-  )
+  if (isFull) paperClassName = "h-full min-h-0 max-w-none p-0";
+  else if (activeKind === "table" || activeKind === "embed" || isFileTabKind(activeKind))
     paperClassName = "min-h-[34rem] max-w-none p-0";
 
   return (
@@ -516,7 +510,7 @@ export function NoteView({
                 headingConnectionStyles.root,
                 theme === "dark" && styles.dark,
               )}
-              containerClassName={isGraph ? "h-full min-h-0 flex-1" : undefined}
+              containerClassName={isFull ? "h-full min-h-0 flex-1" : undefined}
             >
               <Suspense
                 fallback={<NoteEditorSwitchLoading label={TAB_KINDS[activeKind].loadingLabel} />}
