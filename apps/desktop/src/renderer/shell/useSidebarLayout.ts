@@ -183,7 +183,6 @@ export function useSidebarLayout() {
       "aria-valuemax": maximumWidth(viewportWidth),
       "aria-valuenow": width,
       "aria-valuetext": `${width} pixels`,
-      title: "Drag to resize the sidebar. Double-click to reset its width.",
       onKeyDown: onResizeKeyDown,
       onDoubleClick: resetWidth,
       onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => {

@@ -4,7 +4,7 @@ import { cn } from "../ui/cn";
 import { Input } from "../ui/Input";
 
 const titleClass =
-  "box-border h-7 min-h-7 w-full min-w-0 border-0 bg-transparent px-[13px] py-0 text-[15px] font-medium leading-7 tracking-normal text-(--app-text) shadow-none md:text-[16px]";
+  "box-border h-7 min-h-7 w-full min-w-0 border-0 bg-transparent px-[13px] py-0 text-[14px] font-medium leading-7 tracking-normal text-(--app-text) shadow-none md:text-[14px]";
 
 /**
  * The note's title, typed in place. `focusRequest` focuses it once per new

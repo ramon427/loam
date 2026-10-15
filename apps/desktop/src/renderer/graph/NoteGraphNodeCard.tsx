@@ -378,7 +378,7 @@ function NoteGraphNodeResizeHandles({
         >
           <div
             className="size-full"
-            title="Drag to resize. Hold Shift to keep the aspect ratio. Double-click to fit content."
+            aria-description="Drag to resize. Hold Shift to keep the aspect ratio. Double-click to fit content."
           />
         </NodeResizeControl>
       ))}

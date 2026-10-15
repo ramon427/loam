@@ -272,14 +272,14 @@ export function useNotesPaperSize(enabled: boolean) {
       "aria-valuemax": maximumWidth,
       "aria-valuenow": width,
       "aria-valuetext": `${width} pixels`,
-      title: "Drag to resize paper width. Double-click to restore A4 size.",
+      "aria-description": "Drag to resize paper width. Double-click to restore A4 size.",
     },
     cornerHandleProps: {
       ...sharedHandleProps,
       onKeyDown: (event: KeyboardEvent<HTMLElement>) => onKeyDown(event, "both"),
       onPointerDown: (event: PointerEvent<HTMLElement>) => startResize(event, "both"),
       "aria-label": "Resize paper",
-      title: "Drag to resize paper width and height. Double-click to restore A4 size.",
+      "aria-description": "Drag to resize paper width and height. Double-click to restore A4 size.",
     },
   };
 }
