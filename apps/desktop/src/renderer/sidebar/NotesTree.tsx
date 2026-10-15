@@ -28,6 +28,7 @@ import { NotesTreeMenu } from "./NotesTreeMenu";
 import {
   applyNotesTreeMove,
   canAcceptNotesTreeTarget,
+  canNestNotesTreeTarget,
   containerFromDragId,
   deleteCandidateFromKeys,
   folderDragId,
@@ -109,10 +110,13 @@ export function NotesTree({ folderScopeId, projectScope, onOpenHistory }: NotesT
     instanceId: "notes-tree",
     canAcceptTarget: (sourceId, targetId) =>
       canAcceptNotesTreeTarget({ ...placed, sourceId, targetId }),
-    onMove: ({ sourceId, targetId, half }) => {
-      const move = applyNotesTreeMove({ ...placed, sourceId, targetId, half });
+    canNest: (sourceId, targetId) => canNestNotesTreeTarget({ ...placed, sourceId, targetId }),
+    onMove: ({ sourceId, targetId, half, inside }) => {
+      const move = applyNotesTreeMove({ ...placed, sourceId, targetId, half, inside });
       if (!move) return false;
-      // What is dropped into a folder or project shows there.
+      // What is dropped into a folder, project or note shows there.
+      const parent = inside ? tree.rows.find((row) => dragIdOf(row) === targetId) : undefined;
+      if (parent?.kind === "note") tree.openNote(parent.id);
       const container = containerFromDragId(targetId);
       if (container?.kind === "folder" && move.kind === "notes") tree.openFolder(container.id);
       if (container?.kind === "project" && move.kind !== "projects") tree.openProject(container.id);
@@ -149,19 +153,21 @@ export function NotesTree({ folderScopeId, projectScope, onOpenHistory }: NotesT
     commands.requestDelete(candidate);
   };
 
-  // A drop after an open folder or project lands after what it holds, so the line is drawn
-  // under its last row.
+  // A drop after an open folder, project or note lands after what it holds, so the line is
+  // drawn under its last row.
   const marker = sortable.marker;
   const dropAfterKey =
-    marker?.half === "after"
+    marker?.half === "after" && !marker.inside
       ? tree.rows.find(
-          (row): row is Extract<NotesTreeRow, { kind: "folder" | "project" }> =>
-            (row.kind === "folder" || row.kind === "project") && dragIdOf(row) === marker.targetId,
+          (row): row is Extract<NotesTreeRow, { kind: "folder" | "project" | "note" }> =>
+            "lastChildKey" in row && dragIdOf(row) === marker.targetId,
         )?.lastChildKey
       : null;
-  const dropMarkerOf = (row: NotesTreeRow, marked: "before" | "after" | undefined) => {
+  const dropMarkerOf = (row: NotesTreeRow, marked: "before" | "after" | "inside" | undefined) => {
     if (row.key === dropAfterKey) return "after";
-    return "lastChildKey" in row && row.lastChildKey ? undefined : marked;
+    if (!("lastChildKey" in row) || !row.lastChildKey) return marked;
+    // Before or inside an open note still marks the note; folders and projects take drops whole.
+    return row.kind === "note" && marked !== "after" ? marked : undefined;
   };
 
   const editProps = (item: NotesTreeItem) => ({
@@ -225,6 +231,9 @@ export function NotesTree({ folderScopeId, projectScope, onOpenHistory }: NotesT
       <NoteRow
         note={row.note}
         depth={row.depth}
+        hasSubNotes={row.hasSubNotes}
+        isOpen={row.isOpen}
+        onToggle={() => tree.toggleNote(row.id)}
         isActive={row.id === activeNoteId}
         isSelected={selection.selected.has(row.key)}
         animateEntry={animateEntry}
@@ -336,6 +345,7 @@ export function NotesTree({ folderScopeId, projectScope, onOpenHistory }: NotesT
               deleteCandidate,
               openFolder: tree.openFolder,
               openProject: tree.openProject,
+              openSubNotes: tree.openNote,
               selectAll: selection.selectAll,
               openHistory: onOpenHistory,
               exportNote: (noteId) => void exportNotes({ kind: "note", noteId }),

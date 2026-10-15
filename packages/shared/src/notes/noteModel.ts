@@ -252,6 +252,8 @@ export type NewNote = NoteContent & {
   id: string;
   folderId?: string | null;
   projectId?: string | null;
+  /** Makes the note a sub-note of this one; it then has no folder or project of its own. */
+  parentNoteId?: string | null;
 };
 
 export type NoteDocument = NoteContent & {
@@ -262,6 +264,8 @@ export type NoteDocument = NoteContent & {
   folderId?: string;
   /** Set only on notes outside folders; a note in a folder is in that folder's project. */
   projectId?: string;
+  /** Set only on sub-notes: the note this one sits inside, whose place it shares. */
+  parentNoteId?: string;
   position?: number;
 };
 
@@ -292,12 +296,19 @@ export type NoteProject = {
  * Positions come from the order. Leaving out `projects` keeps the stored ones; a project left
  * out of the list is removed, and what it held moves to the library's top level. Leaving out
  * an item's `projectId` keeps its project (none for a new folder). A note's `projectId` counts
- * only outside folders: a folder decides its notes' project.
+ * only outside folders: a folder decides its notes' project. A note's `parentNoteId` makes it
+ * a sub-note of that note, outside folders and projects; leaving it out keeps the note's
+ * parent unless the note goes into a folder, and null takes the note out of its parent.
  */
 export type NotesLayout = {
   projects?: Array<{ id: string; name: string; icon?: NoteProjectIcon }>;
   folders: Array<{ id: string; name: string; projectId?: string | null }>;
-  notes: Array<{ id: string; folderId: string | null; projectId?: string | null }>;
+  notes: Array<{
+    id: string;
+    folderId: string | null;
+    projectId?: string | null;
+    parentNoteId?: string | null;
+  }>;
 };
 
 export type NotesBootstrap = {

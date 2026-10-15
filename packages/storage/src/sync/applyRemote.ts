@@ -81,9 +81,8 @@ export const addConflictCopy = async (
   if (rows.has(id) || (await store.ledger.read(syncKey("note", id)))) return null;
   const title = `${loser.content.title || "Untitled"} (conflict copy)`;
   const content = { ...loser.content, title };
-  const { folderId, projectId } = loser.place;
   const position = nextPosition(rows.values(), loser.place);
-  const row = buildNoteRow(id, content, { folderId, projectId, position }, loser.updatedAt);
+  const row = buildNoteRow(id, content, { ...loser.place, position }, loser.updatedAt);
   writes.push(...noteWrites(row, content));
   changed.push(syncKey("note", id), syncKey("place", id));
   return { id, title };

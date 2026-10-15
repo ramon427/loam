@@ -12,10 +12,12 @@ import {
   noteRead,
   recordNoteEdit,
   saveNoteEdits,
+  withUnsavedEdits,
   type NoteField,
 } from "./noteSaves";
 import { dropNoteQuery, LIBRARY_KEY, noteKey, readLibrary } from "./notesLibrary";
 import type { NewNotePlace, NoteContentPatch, NotesWorkspace } from "./NotesWorkspace";
+import { withRenamedSubNoteLinks, withSubNoteLink } from "./subNoteLinks";
 import type { NoteDocument } from "./types";
 import type { LibraryLayout } from "./useLibraryLayout";
 
@@ -40,31 +42,92 @@ export function useNoteCommands({
     [setLibrary],
   );
 
+  const readFullNote = useCallback(
+    (noteId: string) => {
+      const note = queryClient.getQueryData<NoteDocument | null>(noteKey(noteId));
+      return note?.contentState === "full" ? note : null;
+    },
+    [queryClient],
+  );
+
+  /** Changes a note read in full and records the fields changed for saving. */
+  const applyPatch = useCallback(
+    (current: NoteDocument, patch: NoteContentPatch) => {
+      const next = { ...current, ...patch };
+      queryClient.setQueryData(noteKey(current.id), next);
+      recordNoteEdit(next, Object.keys(patch) as NoteField[]);
+      return next;
+    },
+    [queryClient],
+  );
+
+  /**
+   * Shows a new title in the library, and in the links to the note its parent holds, while
+   * the parent is read in full.
+   */
+  const retitle = useCallback(
+    (noteId: string, previous: string, title: string) => {
+      showTitleInLibrary(noteId, title);
+      const { parentNoteId } =
+        readLibrary(queryClient).notes.find((note) => note.id === noteId) ?? {};
+      const parent = parentNoteId ? readFullNote(parentNoteId) : null;
+      const blocksByTab = parent && withRenamedSubNoteLinks(parent, noteId, previous, title);
+      if (parent && blocksByTab) applyPatch(parent, { blocksByTab });
+    },
+    [applyPatch, queryClient, readFullNote, showTitleInLibrary],
+  );
+
   const updateNote = useCallback(
     (noteId: string, change: NoteContentPatch | ((note: NoteDocument) => NoteContentPatch)) => {
-      const current = queryClient.getQueryData<NoteDocument | null>(noteKey(noteId));
+      const current = readFullNote(noteId);
       // The library lists summaries; only a note read in full can be changed.
-      if (current?.contentState !== "full") return;
+      if (!current) return;
       const patch = typeof change === "function" ? change(current) : change;
-      const fields = Object.keys(patch) as NoteField[];
-      if (fields.length === 0) return;
-      const next = { ...current, ...patch };
-      queryClient.setQueryData(noteKey(noteId), next);
-      if ("title" in patch) showTitleInLibrary(noteId, next.title);
-      recordNoteEdit(next, fields);
+      if (Object.keys(patch).length === 0) return;
+      const next = applyPatch(current, patch);
+      if ("title" in patch) retitle(noteId, current.title, next.title);
     },
-    [queryClient, showTitleInLibrary],
+    [applyPatch, readFullNote, retitle],
+  );
+
+  /** Links a new sub-note from the end of its parent's page, reading the parent first. */
+  const linkFromParent = useCallback(
+    async (parentNoteId: string, subNote: NoteDocument) => {
+      if (!readFullNote(parentNoteId)) {
+        await saveNoteEdits(parentNoteId).catch(() => undefined);
+        const parent = (await callBridge("notes.get", { noteId: parentNoteId })) as NoteDocument;
+        noteRead(parent);
+        // Read while it loaded, the editor's copy wins.
+        if (!readFullNote(parentNoteId))
+          queryClient.setQueryData(noteKey(parentNoteId), withUnsavedEdits(parent));
+      }
+      updateNote(parentNoteId, (parent) => {
+        const blocksByTab = withSubNoteLink(parent, subNote);
+        return blocksByTab ? { blocksByTab } : {};
+      });
+    },
+    [queryClient, readFullNote, updateNote],
   );
 
   const createNote = useCallback(
-    async ({ folderId, projectId }: NewNotePlace = {}, draft = createNoteDocument("")) => {
+    async (
+      { folderId, projectId, parentNoteId }: NewNotePlace = {},
+      draft = createNoteDocument(""),
+    ) => {
       try {
         const created = (await callBridge("notes.create", {
-          note: { ...draft, folderId: folderId ?? null, projectId: projectId ?? null },
+          note: {
+            ...draft,
+            folderId: folderId ?? null,
+            projectId: projectId ?? null,
+            parentNoteId: parentNoteId ?? null,
+          },
         })) as NoteDocument;
         noteRead(created);
         queryClient.setQueryData(noteKey(created.id), created);
         setLibrary((current) => ({ ...current, notes: [...current.notes, created] }));
+        if (created.parentNoteId)
+          await linkFromParent(created.parentNoteId, created).catch(() => undefined);
         // A new empty note is named first; one made from something already has its name.
         openNote(created.id, { focusTitle: !created.title });
         return created;
@@ -73,7 +136,7 @@ export function useNoteCommands({
         return null;
       }
     },
-    [openNote, queryClient, recover, setLibrary],
+    [linkFromParent, openNote, queryClient, recover, setLibrary],
   );
 
   const duplicateNote = useCallback(
@@ -90,6 +153,7 @@ export function useNoteCommands({
           id,
           folderId,
           projectId,
+          parentNoteId,
           updatedAt: _updatedAt,
           contentState: _contentState,
           position: _position,
@@ -102,6 +166,7 @@ export function useNoteCommands({
             title,
             folderId: folderId ?? null,
             projectId: projectId ?? null,
+            parentNoteId: parentNoteId ?? null,
           },
         })) as NoteDocument;
         noteRead(created);
@@ -129,20 +194,32 @@ export function useNoteCommands({
       }
       const listed = readLibrary(queryClient).notes.find((entry) => entry.id === noteId);
       if (!listed) return;
-      showTitleInLibrary(noteId, title);
+      retitle(noteId, listed.title, title);
       // Only the title is saved from this summary; the body it lacks is never written.
       recordNoteEdit({ ...listed, title }, ["title"]);
     },
-    [queryClient, showTitleInLibrary, updateNote],
+    [queryClient, retitle, updateNote],
   );
 
   const deleteNotes = useCallback(
     async (noteIds: readonly string[]) => {
       const ids = new Set(noteIds);
       leaveDeletedNotes(ids);
+      // Sub-notes of a deleted note stay, in the place it was in.
+      const listed = new Map(readLibrary(queryClient).notes.map((note) => [note.id, note]));
+      const placeAfterDelete = (note: NoteDocument) => {
+        let place: NoteDocument | undefined = note;
+        while (place?.parentNoteId && ids.has(place.parentNoteId))
+          place = listed.get(place.parentNoteId);
+        const { folderId, projectId, parentNoteId } = place ?? {};
+        return place === note ? note : { ...note, folderId, projectId, parentNoteId };
+      };
+      const movesSubNotes = [...listed.values()].some(
+        (note) => note.parentNoteId && ids.has(note.parentNoteId) && !ids.has(note.id),
+      );
       setLibrary((current) => ({
         ...current,
-        notes: current.notes.filter((note) => !ids.has(note.id)),
+        notes: current.notes.filter((note) => !ids.has(note.id)).map(placeAfterDelete),
       }));
       const deleted: NoteDocument[] = [];
       for (const noteId of ids) {
@@ -159,6 +236,8 @@ export function useNoteCommands({
           recover("Note not deleted", error);
         }
       }
+      // The store numbers the sub-notes it moved; the library reads their places again.
+      if (movesSubNotes) await queryClient.invalidateQueries({ queryKey: LIBRARY_KEY });
       return deleted;
     },
     [leaveDeletedNotes, queryClient, recover, setLibrary],

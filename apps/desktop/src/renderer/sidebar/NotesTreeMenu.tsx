@@ -1,5 +1,7 @@
 import {
   CopyPlusIcon,
+  CornerLeftUpIcon,
+  FilePlusIcon,
   FileOutputIcon,
   FolderIcon,
   FolderInputIcon,
@@ -55,6 +57,8 @@ export type NotesTreeMenuContext = {
   deleteCandidate: (keys: Iterable<string>) => NotesDeleteCandidate | null;
   openFolder: (folderId: string) => void;
   openProject: (projectId: string) => void;
+  /** Shows a note's sub-notes in the tree. */
+  openSubNotes: (noteId: string) => void;
   selectAll: () => void;
   openHistory: (note: NoteDocument) => void;
   exportNote: (noteId: string) => void;
@@ -286,8 +290,18 @@ export function NotesTreeMenu({
   }
 
   if (note) {
+    const parent = note.parentNoteId ? context.notesById.get(note.parentNoteId) : undefined;
     return (
       <>
+        <ActionMenuItem
+          icon={<FilePlusIcon aria-hidden="true" />}
+          onSelect={() => {
+            context.openSubNotes(note.id);
+            void commands.createNote({ parentNoteId: note.id });
+          }}
+        >
+          New sub-note
+        </ActionMenuItem>
         <ActionMenuItem
           icon={<PencilIcon aria-hidden="true" />}
           onSelect={() => commands.startRename({ kind: "note", id: note.id }, note.title)}
@@ -306,6 +320,14 @@ export function NotesTreeMenu({
         >
           Copy link
         </ActionMenuItem>
+        {parent ? (
+          <ActionMenuItem
+            icon={<CornerLeftUpIcon aria-hidden="true" />}
+            onSelect={() => void commands.moveOutOfParent(note.id)}
+          >
+            {`Move out of “${getNoteTitle(parent)}”`}
+          </ActionMenuItem>
+        ) : null}
         <MoveToFolderMenu notes={[note]} context={context} />
         <MoveToProjectMenu items={[{ kind: "note", id: note.id }]} context={context} />
         <ContextMenuSeparator />

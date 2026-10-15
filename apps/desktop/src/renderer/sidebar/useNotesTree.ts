@@ -9,6 +9,8 @@ import type { NoteDocument } from "../workspace/types";
 
 import {
   buildNotesTreeRows,
+  noteAncestorIds,
+  notePlaceOf,
   notesHaveSameTreeShape,
   serializeIds,
   type NotesProjectScope,
@@ -35,10 +37,11 @@ function useEnteringKeys(keys: readonly string[]) {
 }
 
 /**
- * The sidebar folders left open, and the projects closed (projects start open): preferences
- * of this computer, not part of the notes.
+ * The sidebar folders and notes left open, and the projects closed (projects start open):
+ * preferences of this computer, not part of the notes.
  */
 const OPEN_FOLDER_IDS_KEY = "notes.sidebar.open-folder-ids";
+const OPEN_NOTE_IDS_KEY = "notes.sidebar.open-note-ids";
 const CLOSED_PROJECT_IDS_KEY = "notes.sidebar.closed-project-ids";
 
 const readIds = (value: unknown) =>
@@ -69,6 +72,24 @@ function useOpenFolders({
     if (activeFolderId && seen.activeFolderId !== activeFolderId) next.add(activeFolderId);
     if (scopeFolderId && seen.scopeFolderId !== scopeFolderId) next.add(scopeFolderId);
     setOpen(next);
+  }
+  return [open, setOpen] as const;
+}
+
+/**
+ * Which notes show their sub-notes: the stored ones, plus the notes the active note is
+ * inside, opened when it changes (and then free to close).
+ */
+function useOpenNotes(activeAncestorIds: readonly string[]) {
+  const [open, setOpen] = useState<ReadonlySet<string>>(
+    () => new Set([...(readPreference(OPEN_NOTE_IDS_KEY, readIds) ?? []), ...activeAncestorIds]),
+  );
+  const shown = activeAncestorIds.join(" ");
+  const [seen, setSeen] = useState(shown);
+  if (seen !== shown) {
+    setSeen(shown);
+    if (activeAncestorIds.some((id) => !open.has(id)))
+      setOpen(new Set([...open, ...activeAncestorIds]));
   }
   return [open, setOpen] as const;
 }
@@ -129,10 +150,19 @@ export function useNotesTree({
     [projects],
   );
   const activeNote = notesById.get(activeNoteId ?? "");
-  const activeFolder = foldersById.get(activeNote?.folderId ?? "");
-  const activeProjectId = (activeFolder ? activeFolder.projectId : activeNote?.projectId) ?? null;
+  // A sub-note shows in the folder and project of the notes it is inside.
+  const activePlace = useMemo(
+    () => notePlaceOf({ notes, folders, projects }, activeNote),
+    [activeNote, folders, notes, projects],
+  );
+  const activeAncestorIds = useMemo(
+    () => (activeNoteId ? noteAncestorIds(notes, folders, activeNoteId) : []),
+    [activeNoteId, folders, notes],
+  );
+  const activeProjectId = activePlace.projectId;
+  const [openNotes, setOpenNotes] = useOpenNotes(activeAncestorIds);
   const [openFolders, setOpenFolders] = useOpenFolders({
-    activeFolderId: activeFolder?.id ?? null,
+    activeFolderId: activePlace.folderId,
     scopeFolderId: typeof folderScopeId === "string" ? folderScopeId : null,
   });
   const [closedProjects, setClosedProjects] = useClosedProjects(
@@ -155,6 +185,7 @@ export function useNotesTree({
         folderScopeId,
         projectScope,
         openFolderIds: openFolders,
+        openNoteIds: openNotes,
         closedProjectIds: closedProjects,
         creatingFolderIn,
       }),
@@ -163,6 +194,7 @@ export function useNotesTree({
       creatingFolderIn,
       folderScopeId,
       openFolders,
+      openNotes,
       projectScope,
       sortedFolders,
       sortedProjects,
@@ -179,6 +211,14 @@ export function useNotesTree({
     else next.delete(folderId);
     setOpenFolders(next);
     writePreference(OPEN_FOLDER_IDS_KEY, serializeIds(next, sortedFolders));
+  };
+  const setNoteOpen = (noteId: string, isOpen: boolean) => {
+    if (openNotes.has(noteId) === isOpen) return;
+    const next = new Set(openNotes);
+    if (isOpen) next.add(noteId);
+    else next.delete(noteId);
+    setOpenNotes(next);
+    writePreference(OPEN_NOTE_IDS_KEY, serializeIds(next, sortedNotes));
   };
   const setProjectOpen = (projectId: string, isOpen: boolean) => {
     if (closedProjects.has(projectId) !== isOpen) return;
@@ -200,6 +240,8 @@ export function useNotesTree({
     enteringKeys,
     openFolder: (folderId: string) => setFolderOpen(folderId, true),
     toggleFolder: (folderId: string) => setFolderOpen(folderId, !openFolders.has(folderId)),
+    openNote: (noteId: string) => setNoteOpen(noteId, true),
+    toggleNote: (noteId: string) => setNoteOpen(noteId, !openNotes.has(noteId)),
     openProject: (projectId: string) => setProjectOpen(projectId, true),
     toggleProject: (projectId: string) => setProjectOpen(projectId, closedProjects.has(projectId)),
   };

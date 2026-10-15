@@ -134,16 +134,23 @@ export async function expectSaved(window: Page, title: string, text: string) {
 }
 
 /**
- * Starts a native drag from `source` and holds it over the start ("before") or
- * end ("after") edge of `target`. Returns the drag's data, for a later drop.
+ * Starts a native drag from `source` and holds it over the start ("before"),
+ * end ("after") edge or middle ("inside") of `target`. Returns the drag's
+ * data, for a later drop.
  */
-export async function holdDragOver(source: Locator, target: Locator, half: "before" | "after") {
+export async function holdDragOver(
+  source: Locator,
+  target: Locator,
+  half: "before" | "after" | "inside",
+) {
   const box = await target.boundingBox();
   if (!box) throw new Error("The drop target is not visible");
-  const point =
-    half === "before"
-      ? { clientX: box.x + 2, clientY: box.y + 2 }
-      : { clientX: box.x + box.width - 2, clientY: box.y + box.height - 2 };
+  const points = {
+    before: { clientX: box.x + 2, clientY: box.y + 2 },
+    after: { clientX: box.x + box.width - 2, clientY: box.y + box.height - 2 },
+    inside: { clientX: box.x + box.width / 2, clientY: box.y + box.height / 2 },
+  };
+  const point = points[half];
   const dataTransfer = await source.page().evaluateHandle(() => new DataTransfer());
   await source.dispatchEvent("dragstart", { dataTransfer });
   await target.dispatchEvent("dragover", { dataTransfer, ...point });

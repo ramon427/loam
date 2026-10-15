@@ -1,4 +1,5 @@
 import type { NoteFolder, NoteProject } from "@loam/shared/notes/noteModel";
+import { isInsideNote, resolveNoteParents } from "@loam/shared/notes/noteParents";
 
 import { applySortableItemMove } from "../lib/moveItemBefore";
 import { sortByPosition } from "../lib/sortByPosition";
@@ -6,8 +7,9 @@ import type { NoteDocument } from "../workspace/types";
 
 /**
  * The notes tree as data: projects at the top, each holding folders and notes, then the
- * folders and notes outside every project. Folders hold notes, one level deep. Everything
- * here is pure; the sidebar's hooks call these to group, list, select, and move.
+ * folders and notes outside every project. Folders hold notes, one level deep, and any note
+ * can hold sub-notes, as deep as they go. Everything here is pure; the sidebar's hooks call
+ * these to group, list, select, and move.
  */
 
 export const MAX_FOLDER_NAME_LENGTH = 48;
@@ -82,31 +84,40 @@ export const containerFromDragId = (id: string) => {
 
 // Places: where each note and folder sits.
 
-type TreeNote = Pick<NoteDocument, "id" | "folderId" | "projectId" | "position">;
+type TreeNote = Pick<NoteDocument, "id" | "folderId" | "projectId" | "parentNoteId" | "position">;
 type TreeFolder = Pick<NoteFolder, "id" | "projectId" | "position">;
 type TreeProject = Pick<NoteProject, "id" | "position">;
 
-/** A group of notes: the top level's own, a project's own, or a folder's. */
+/** A group of notes: the top level's own, a project's own, a folder's, or a note's sub-notes. */
 type NoteGroup = string;
 const TOP_GROUP: NoteGroup = "top";
 const projectGroup = (projectId: string): NoteGroup => `project:${projectId}`;
 const folderGroup = (folderId: string): NoteGroup => `folder:${folderId}`;
+const subNoteGroup = (noteId: string): NoteGroup => `note:${noteId}`;
 
-/** The place a group gives its notes: a folder decides the project of the notes in it. */
+const groupId = (group: NoteGroup, kind: "folder" | "project" | "note") =>
+  group.startsWith(`${kind}:`) ? group.slice(kind.length + 1) : undefined;
+
+/**
+ * The place a group gives its notes: a folder decides the project of the notes in it, and a
+ * sub-note is wherever its parent is.
+ */
 const placeIn = <TNote extends TreeNote>(note: TNote, group: NoteGroup, position: number) => ({
   ...note,
-  folderId: group.startsWith("folder:") ? group.slice("folder:".length) : undefined,
-  projectId: group.startsWith("project:") ? group.slice("project:".length) : undefined,
+  folderId: groupId(group, "folder"),
+  projectId: groupId(group, "project"),
+  parentNoteId: groupId(group, "note"),
   position,
 });
 
 /**
- * Reads places against the folders and projects that exist: anything placed in one that is
- * gone counts as being at the top level.
+ * Reads places against the folders, projects and notes that exist: anything placed in one
+ * that is gone counts as being at the top level.
  */
 const placesOf = <TFolder extends TreeFolder, TProject extends TreeProject>(
   folders: readonly TFolder[],
   projects: readonly TProject[],
+  notes: readonly TreeNote[],
 ) => {
   const sortedFolders = sortByPosition(folders);
   const sortedProjects = sortByPosition(projects);
@@ -115,30 +126,76 @@ const placesOf = <TFolder extends TreeFolder, TProject extends TreeProject>(
   const projectOf = (projectId: string | null | undefined) =>
     projectId && projectIds.has(projectId) ? projectId : null;
   const foldersById = new Map(sortedFolders.map((folder) => [folder.id, folder]));
+  const notesById = new Map(notes.map((note) => [note.id, note]));
+  const parents = resolveNoteParents(
+    notes.map((note) =>
+      note.folderId && folderIds.has(note.folderId) ? note : { ...note, folderId: undefined },
+    ),
+  );
+  /** The note a sub-note is inside, at any depth; the note itself otherwise. */
+  const outermost = (note: TreeNote) => {
+    let current = note;
+    for (let parentId = parents.get(note.id); parentId; parentId = parents.get(current.id))
+      current = notesById.get(parentId) ?? current;
+    return current;
+  };
   return {
     sortedFolders,
     sortedProjects,
     folderIds,
     projectIds,
     projectOf,
+    parents,
     /** The group a note is in. */
     groupOf: (note: TreeNote): NoteGroup => {
       if (note.folderId && folderIds.has(note.folderId)) return folderGroup(note.folderId);
+      const parentId = parents.get(note.id);
+      if (parentId) return subNoteGroup(parentId);
       const projectId = projectOf(note.projectId);
       return projectId ? projectGroup(projectId) : TOP_GROUP;
     },
-    /** The project a note is in, through its folder or on its own; null at the top level. */
-    noteProject: (note: TreeNote) => {
-      const folder = note.folderId ? foldersById.get(note.folderId) : undefined;
-      return projectOf(folder ? folder.projectId : note.projectId);
+    /** The folder a note is in, through the notes it is inside; null outside folders. */
+    noteFolder: (note: TreeNote) => {
+      const { folderId } = outermost(note);
+      return folderId && folderIds.has(folderId) ? folderId : null;
     },
-    /** Every group, in the order the layout lists notes: top level, projects, folders. */
+    /** The project a note is in, through its folder, the notes it is inside, or on its own. */
+    noteProject: (note: TreeNote) => {
+      const root = outermost(note);
+      const folder = root.folderId ? foldersById.get(root.folderId) : undefined;
+      return projectOf(folder ? folder.projectId : root.projectId);
+    },
+    /** Every group, in the order the layout lists notes: top level, projects, folders, notes. */
     groupOrder: [
       TOP_GROUP,
       ...sortedProjects.map((project) => projectGroup(project.id)),
       ...sortedFolders.map((folder) => folderGroup(folder.id)),
+      ...notes.map((note) => subNoteGroup(note.id)),
     ],
   };
+};
+
+/** The notes a note is inside, nearest first. */
+export const noteAncestorIds = (
+  notes: readonly TreeNote[],
+  folders: readonly TreeFolder[],
+  noteId: string,
+) => {
+  const { parents } = placesOf(folders, [], notes);
+  const ancestors: string[] = [];
+  for (let parentId = parents.get(noteId); parentId; parentId = parents.get(parentId))
+    ancestors.push(parentId);
+  return ancestors;
+};
+
+/** The folder and project a note shows in, through the notes it is inside. */
+export const notePlaceOf = (
+  tree: Tree<TreeNote, TreeFolder, TreeProject>,
+  note: TreeNote | undefined,
+) => {
+  if (!note) return { folderId: null, projectId: null };
+  const places = placesOf(tree.folders, tree.projects, tree.notes);
+  return { folderId: places.noteFolder(note), projectId: places.noteProject(note) };
 };
 
 /** What grouping notes needs from their places. */
@@ -193,7 +250,18 @@ export type NotesTreeRow =
       /** The last note shown inside the open folder, where a drop "after" it is drawn. */
       lastChildKey: string | null;
     }
-  | { kind: "note"; key: string; id: string; note: NoteDocument; depth: 0 | 1 | 2 }
+  | {
+      kind: "note";
+      key: string;
+      id: string;
+      note: NoteDocument;
+      depth: number;
+      /** Whether the note holds sub-notes, and whether they show. */
+      hasSubNotes: boolean;
+      isOpen: boolean;
+      /** The last row shown inside the open note, where a drop "after" it is drawn. */
+      lastChildKey: string | null;
+    }
   | { kind: "root-drop"; key: string }
   | { kind: "creating-folder"; key: string; depth: 0 | 1 };
 
@@ -221,6 +289,7 @@ export const buildNotesTreeRows = ({
   folderScopeId,
   projectScope,
   openFolderIds,
+  openNoteIds,
   closedProjectIds,
   creatingFolderIn,
 }: {
@@ -230,11 +299,13 @@ export const buildNotesTreeRows = ({
   folderScopeId: string | null | undefined;
   projectScope: NotesProjectScope | undefined;
   openFolderIds: ReadonlySet<string>;
+  /** Notes whose sub-notes show. */
+  openNoteIds: ReadonlySet<string>;
   closedProjectIds: ReadonlySet<string>;
   /** The project a new folder is being named in, null at the top level, undefined for none. */
   creatingFolderIn: string | null | undefined;
 }) => {
-  const places = placesOf(folders, projects);
+  const places = placesOf(folders, projects, notes);
   const groups = groupNotes(notes, places);
   const foldersOf = (projectId: string | null) =>
     places.sortedFolders.filter((folder) => places.projectOf(folder.projectId) === projectId);
@@ -242,32 +313,50 @@ export const buildNotesTreeRows = ({
   const rows: NotesTreeRow[] = [];
   const keys: string[] = [];
   const scopeKeys = new Set<string>();
-  const addNote = (note: NoteDocument, depth: 0 | 1 | 2, shown: boolean) => {
+  const addNote = (note: NoteDocument, depth: number, shown: boolean) => {
     const key = noteSelectionKey(note.id);
+    const subNotes = groups.get(subNoteGroup(note.id)) ?? [];
+    const isOpen = subNotes.length > 0 && openNoteIds.has(note.id);
     scopeKeys.add(key);
-    if (!shown) return;
-    rows.push({ kind: "note", key, id: note.id, note, depth });
-    keys.push(key);
+    const row: Extract<NotesTreeRow, { kind: "note" }> = {
+      kind: "note",
+      key,
+      id: note.id,
+      note,
+      depth,
+      hasSubNotes: subNotes.length > 0,
+      isOpen,
+      lastChildKey: null,
+    };
+    if (shown) {
+      rows.push(row);
+      keys.push(key);
+    }
+    const first = rows.length;
+    for (const subNote of subNotes) addNote(subNote, depth + 1, shown && isOpen);
+    row.lastChildKey = shown && rows.length > first ? rows.at(-1)!.key : null;
   };
   const addFolder = (folder: NoteFolder, depth: 0 | 1, shown: boolean) => {
     const key = folderSelectionKey(folder.id);
     const children = groups.get(folderGroup(folder.id)) ?? [];
     const isOpen = openFolderIds.has(folder.id);
     scopeKeys.add(key);
+    const row: Extract<NotesTreeRow, { kind: "folder" }> = {
+      kind: "folder",
+      key,
+      id: folder.id,
+      folder,
+      depth,
+      isOpen,
+      lastChildKey: null,
+    };
     if (shown) {
-      const last = isOpen ? children.at(-1) : undefined;
-      rows.push({
-        kind: "folder",
-        key,
-        id: folder.id,
-        folder,
-        depth,
-        isOpen,
-        lastChildKey: last ? noteSelectionKey(last.id) : null,
-      });
+      rows.push(row);
       keys.push(key);
     }
-    for (const note of children) addNote(note, depth === 0 ? 1 : 2, shown && isOpen);
+    const first = rows.length;
+    for (const note of children) addNote(note, depth + 1, shown && isOpen);
+    row.lastChildKey = shown && rows.length > first ? rows.at(-1)!.key : null;
   };
   const addCreatingFolder = (projectId: string | null, depth: 0 | 1) => {
     if (creatingFolderIn === projectId)
@@ -331,7 +420,8 @@ export const notesHaveSameTreeShape = (
       other?.id === note.id &&
       other.title === note.title &&
       (other.folderId ?? null) === (note.folderId ?? null) &&
-      (other.projectId ?? null) === (note.projectId ?? null)
+      (other.projectId ?? null) === (note.projectId ?? null) &&
+      (other.parentNoteId ?? null) === (note.parentNoteId ?? null)
     );
   });
 
@@ -349,7 +439,8 @@ type Tree<TNote, TFolder, TProject> = {
 
 /**
  * Projects move among projects. Folders move among folders, into a project, or to the top
- * level. Notes move within their group, into a folder or a project, or to the top level.
+ * level. Notes move beside other notes, into a folder, a project, another note, or to the
+ * top level, but never into themselves or their own sub-notes.
  */
 export const canAcceptNotesTreeTarget = ({
   sourceId,
@@ -367,13 +458,21 @@ export const canAcceptNotesTreeTarget = ({
   if (source?.kind !== "note") return false;
   if (ontoContainer) return true;
   if (target?.kind !== "note") return false;
-  const places = placesOf(folders, projects);
-  const sourceNote = notes.find((note) => note.id === source.id);
-  const targetNote = notes.find((note) => note.id === target.id);
-  return Boolean(
-    sourceNote && targetNote && places.groupOf(sourceNote) === places.groupOf(targetNote),
+  const { parents } = placesOf(folders, projects, notes);
+  return (
+    notes.some((note) => note.id === source.id) &&
+    notes.some((note) => note.id === target.id) &&
+    !isInsideNote(parents, target.id, source.id)
   );
 };
+
+/** Whether a note dragged onto the middle of a note can go inside it. */
+export const canNestNotesTreeTarget = (
+  tree: Tree<TreeNote, TreeFolder, TreeProject> & { sourceId: string; targetId: string },
+) =>
+  parseDragId(tree.sourceId)?.kind === "note" &&
+  parseDragId(tree.targetId)?.kind === "note" &&
+  canAcceptNotesTreeTarget(tree);
 
 /** A drag changes the note order (and places), the folders, or the projects; one at a time. */
 export type NotesTreeMove<TNote, TFolder, TProject> =
@@ -394,14 +493,17 @@ export const applyNotesTreeMove = <
   folders,
   projects,
   half,
+  inside = false,
   sourceId,
   targetId,
 }: Tree<TNote, TFolder, TProject> & {
   half: "before" | "after";
+  /** Dropped onto a note's middle: the dragged note goes last inside it. */
+  inside?: boolean;
   sourceId: string;
   targetId: string;
 }): NotesTreeMove<TNote, TFolder, TProject> | null => {
-  const places = placesOf(folders, projects);
+  const places = placesOf(folders, projects, notes);
   const source = parseDragId(sourceId);
   const target = targetId === NOTES_TREE_ROOT_DROP_ID ? null : parseDragId(targetId);
   if (target?.kind === "project" && !places.projectIds.has(target.id)) return null;
@@ -464,9 +566,16 @@ export const applyNotesTreeMove = <
 
   if (target?.kind === "note") {
     const targetNote = notes.find((note) => note.id === target.id);
-    if (!targetNote || places.groupOf(targetNote) !== sourceGroup) return null;
-    const overIndex = without.findIndex((note) => note.id === target.id);
-    without.splice(half === "before" ? overIndex : overIndex + 1, 0, sourceNote);
+    if (!targetNote || isInsideNote(places.parents, target.id, source.id)) return null;
+    if (inside) {
+      if (sourceGroup === subNoteGroup(target.id)) return null;
+      groups.get(subNoteGroup(target.id))!.push(sourceNote);
+    } else {
+      // Beside a note in another group, the note moves into that group.
+      const siblings = groups.get(places.groupOf(targetNote))!;
+      const overIndex = siblings.findIndex((note) => note.id === target.id);
+      siblings.splice(half === "before" ? overIndex : overIndex + 1, 0, sourceNote);
+    }
   } else {
     // Onto a folder, a project or the top-level strip: the note goes last there.
     const targetGroup = !target
@@ -530,7 +639,7 @@ export const moveNotesToFolder = <TNote extends TreeNote>({
   noteIds: readonly string[];
   folderId: string | null;
 }) => {
-  const places = placesOf(folders, projects);
+  const places = placesOf(folders, projects, notes);
   if (folderId !== null && !places.folderIds.has(folderId)) return null;
   const targetOf = (note: TNote) => {
     if (folderId) return folderGroup(folderId);
@@ -538,6 +647,29 @@ export const moveNotesToFolder = <TNote extends TreeNote>({
     return projectId ? projectGroup(projectId) : TOP_GROUP;
   };
   return moveNotesTo({ notes, places, noteIds, targetOf });
+};
+
+/**
+ * Takes a sub-note out of the note it is inside, to just after that note. Returns every note
+ * in its new place, or null when the note is not a sub-note.
+ */
+export const moveOutOfParent = <TNote extends TreeNote>({
+  notes,
+  folders,
+  projects,
+  noteId,
+}: Tree<TNote, TreeFolder, TreeProject> & { noteId: string }) => {
+  const places = placesOf(folders, projects, notes);
+  const parentId = places.parents.get(noteId);
+  const parent = notes.find((note) => note.id === parentId);
+  const note = notes.find((entry) => entry.id === noteId);
+  if (!parent || !note) return null;
+  const groups = groupNotes(notes, places);
+  const siblings = groups.get(subNoteGroup(parent.id))!;
+  siblings.splice(siblings.indexOf(note), 1);
+  const outside = groups.get(places.groupOf(parent))!;
+  outside.splice(outside.indexOf(parent) + 1, 0, note);
+  return flattenGroups(groups, places);
 };
 
 /**
@@ -557,7 +689,7 @@ export const moveToProject = <TNote extends TreeNote, TFolder extends TreeFolder
   folderIds: readonly string[];
   projectId: string | null;
 }) => {
-  const places = placesOf(folders, projects);
+  const places = placesOf(folders, projects, notes);
   if (projectId !== null && !places.projectIds.has(projectId)) return null;
   const target = projectId ? projectGroup(projectId) : TOP_GROUP;
   const movedNotes = moveNotesTo({ notes, places, noteIds, targetOf: () => target });
@@ -643,12 +775,12 @@ export const returnToPlaces = <TNote extends TreeNote, TFolder extends TreeFolde
   }
   const nextFolders = numbered(placedFolders);
 
-  const places = placesOf(nextFolders, projects);
+  const places = placesOf(nextFolders, projects, notes);
   const groups = groupNotes(
     notes.filter((note) => !returningNotes.has(note.id)),
     places,
   );
-  const earlierGroups = groupNotes(before.notes, placesOf(before.folders, projects));
+  const earlierGroups = groupNotes(before.notes, placesOf(before.folders, projects, before.notes));
   const returning = [...earlierGroups].flatMap(([group, members]) =>
     members.flatMap((note, index) =>
       returningNotes.has(note.id)

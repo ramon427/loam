@@ -7,10 +7,14 @@ import {
   applyNotesTreeMove,
   buildNotesTreeRows,
   canAcceptNotesTreeTarget,
+  canNestNotesTreeTarget,
   deleteCandidateFromKeys,
   folderDragId,
   moveNotesToFolder,
+  moveOutOfParent,
   moveToProject,
+  noteAncestorIds,
+  notePlaceOf,
   noteDragId,
   NOTES_TREE_ROOT_DROP_ID,
   projectContents,
@@ -20,7 +24,7 @@ import {
 
 const note = (
   id: string,
-  place: { folderId?: string; projectId?: string } = {},
+  place: { folderId?: string; projectId?: string; parentNoteId?: string } = {},
   position = 0,
 ): NoteDocument => ({
   id,
@@ -82,6 +86,7 @@ describe("notes tree rows", () => {
       folderScopeId,
       projectScope,
       openFolderIds: new Set(open),
+      openNoteIds: new Set(),
       closedProjectIds: new Set(closedProjects),
       creatingFolderIn,
     });
@@ -217,18 +222,18 @@ describe("moving in the notes tree by drag and drop", () => {
     );
   });
 
-  it("reorders notes within their group, and not across groups", () => {
+  it("reorders notes, and moves a note dropped beside one in another group there", () => {
     expect(movedNotes(move(noteDragId("root-later"), noteDragId("root-first")))?.[0]).toBe(
       "root-later in top",
     );
-    expect(move(noteDragId("root-first"), noteDragId("folder-first"))).toBeNull();
-    expect(
-      canAcceptNotesTreeTarget({
-        ...tree,
-        sourceId: noteDragId("root-first"),
-        targetId: noteDragId("pitch"),
-      }),
-    ).toBe(false);
+    expect(movedNotes(move(noteDragId("root-first"), noteDragId("folder-second")))).toEqual([
+      "root-later in top",
+      "pitch in launch",
+      "folder-first in planning",
+      "root-first in planning",
+      "folder-second in planning",
+      "logo in assets",
+    ]);
   });
 
   it("moves folders among folders, into a project, or out to the top level", () => {
@@ -333,5 +338,122 @@ describe("moving in the notes tree from the menu", () => {
       ["assets", "launch"],
       ["archive", undefined],
     ]);
+  });
+});
+
+describe("sub-notes in the notes tree", () => {
+  // "pitch" in the Launch project holds "brief", which holds "draft".
+  const nested = {
+    notes: [
+      ...notes,
+      note("brief", { parentNoteId: "pitch" }, 0),
+      note("draft", { parentNoteId: "brief" }, 0),
+      note("notes", { parentNoteId: "pitch" }, 1),
+    ],
+    folders,
+    projects,
+  };
+  const subPlaces = (moved: readonly NoteDocument[] | null | undefined) =>
+    moved?.map(({ id, folderId, projectId, parentNoteId }) =>
+      [id, parentNoteId ?? folderId ?? projectId ?? "top"].join(" in "),
+    );
+  const move = (
+    sourceId: string,
+    targetId: string,
+    half: "before" | "after" = "before",
+    inside = false,
+  ) => {
+    const moved = applyNotesTreeMove({ ...nested, sourceId, targetId, half, inside });
+    return subPlaces(moved?.kind === "notes" ? moved.notes : null);
+  };
+  const rowsFor = (openNoteIds: string[]) =>
+    buildNotesTreeRows({
+      ...nested,
+      folderScopeId: undefined,
+      projectScope: new Set(["launch"]),
+      openFolderIds: new Set(),
+      openNoteIds: new Set(openNoteIds),
+      closedProjectIds: new Set(),
+      creatingFolderIn: undefined,
+    }).rows;
+
+  it("shows sub-notes under their note while it is open, one level deeper each", () => {
+    expect(rowsFor([]).map((row) => row.key)).toEqual([
+      "project:launch",
+      "note:pitch",
+      "folder:assets",
+    ]);
+    const rows = rowsFor(["pitch", "brief"]);
+    expect(rows.flatMap((row) => (row.kind === "note" ? [`${row.id}:${row.depth}`] : []))).toEqual([
+      "pitch:1",
+      "brief:2",
+      "draft:3",
+      "notes:2",
+    ]);
+    const pitch = rows.find((row) => row.key === "note:pitch");
+    expect(pitch).toMatchObject({ hasSubNotes: true, isOpen: true, lastChildKey: "note:notes" });
+  });
+
+  it("finds where a sub-note shows through the notes it is inside", () => {
+    expect(noteAncestorIds(nested.notes, folders, "draft")).toEqual(["brief", "pitch"]);
+    const draft = nested.notes.find((entry) => entry.id === "draft");
+    expect(notePlaceOf(nested, draft)).toEqual({ folderId: null, projectId: "launch" });
+  });
+
+  it("drops a note inside another, at the end of its sub-notes", () => {
+    expect(move(noteDragId("root-first"), noteDragId("pitch"), "before", true)).toContain(
+      "root-first in pitch",
+    );
+    expect(
+      canNestNotesTreeTarget({
+        ...nested,
+        sourceId: noteDragId("root-first"),
+        targetId: folderDragId("planning"),
+      }),
+    ).toBe(false);
+  });
+
+  it("never drops a note inside itself or its own sub-notes", () => {
+    const into = (targetId: string) =>
+      canAcceptNotesTreeTarget({ ...nested, sourceId: noteDragId("pitch"), targetId });
+    expect(into(noteDragId("draft"))).toBe(false);
+    expect(into(noteDragId("brief"))).toBe(false);
+    expect(into(noteDragId("root-first"))).toBe(true);
+    expect(move(noteDragId("pitch"), noteDragId("draft"), "before", true)).toBeUndefined();
+  });
+
+  it("takes a sub-note out by dropping it beside a note elsewhere, with its own sub-notes", () => {
+    const moved = move(noteDragId("brief"), noteDragId("root-first"), "after");
+    expect(moved).toContain("brief in top");
+    expect(moved).toContain("draft in brief");
+    expect(move(noteDragId("brief"), NOTES_TREE_ROOT_DROP_ID)).toContain("brief in top");
+    expect(move(noteDragId("brief"), folderDragId("planning"))).toContain("brief in planning");
+  });
+
+  it("moves a sub-note out to just after its parent from the menu", () => {
+    const moved = subPlaces(moveOutOfParent({ ...nested, noteId: "brief" }));
+    expect(moved?.slice(0, 3)).toEqual([
+      "root-first in top",
+      "root-later in top",
+      "pitch in launch",
+    ]);
+    expect(moved?.[3]).toBe("brief in launch");
+    expect(moveOutOfParent({ ...nested, noteId: "pitch" })).toBeNull();
+  });
+
+  it("shows notes nested inside each other, as two computers can leave them, at the top", () => {
+    const looped = [note("a", { parentNoteId: "b" }, 0), note("b", { parentNoteId: "a" }, 1)];
+    const { rows } = buildNotesTreeRows({
+      notes: looped,
+      folders: [],
+      projects: [],
+      folderScopeId: undefined,
+      projectScope: undefined,
+      openFolderIds: new Set(),
+      openNoteIds: new Set(),
+      closedProjectIds: new Set(),
+      creatingFolderIn: undefined,
+    });
+    expect(rows.map((row) => row.key)).toEqual(["note:a", "note:b", "root-drop"]);
   });
 });

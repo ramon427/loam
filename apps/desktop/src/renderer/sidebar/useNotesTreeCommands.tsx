@@ -11,6 +11,8 @@ import {
 
 import type { NoteFolder, NoteProject } from "@loam/shared/notes/noteModel";
 
+import { useQueryClient } from "@tanstack/react-query";
+
 import { incrementDuplicateName } from "../lib/duplicateName";
 import { toastMessage } from "../ui/toast";
 import {
@@ -18,11 +20,13 @@ import {
   type NewNotePlace,
   type NoteProjectDetails,
 } from "../workspace/NotesWorkspace";
+import { readLibrary } from "../workspace/notesLibrary";
 import type { NoteDocument } from "../workspace/types";
 
 import {
   getNoteTitle,
   moveNotesToFolder,
+  moveOutOfParent,
   moveToProject,
   normalizeFolderName,
   normalizeNoteTitle,
@@ -69,6 +73,7 @@ const describeMoved = (notes: number, folders: number) => {
  */
 function useNotesTreeCommandsState() {
   const library = useNotesWorkspace();
+  const queryClient = useQueryClient();
   const [editing, setEditing] = useState<NotesTreeEditing | null>(null);
   const [projectDialog, setProjectDialog] = useState<NotesProjectDialogState | null>(null);
   const [history, setHistory] = useState<History>({ undo: [], redo: [] });
@@ -230,7 +235,8 @@ function useNotesTreeCommandsState() {
     items: { noteIds: readonly string[]; folderIds?: readonly string[] },
     project?: NoteProject,
   ) => {
-    const { notes, folders, projects } = lib();
+    // The cache, not the last render: a note the step brought back may not be drawn yet.
+    const { notes, folders, projects } = readLibrary(queryClient);
     const nextProjects = [...projects].sort((left, right) => left.position - right.position);
     if (project && !nextProjects.some((entry) => entry.id === project.id))
       nextProjects.splice(Math.min(project.position, nextProjects.length), 0, project);
@@ -262,6 +268,22 @@ function useNotesTreeCommandsState() {
     push({
       label: describeMoved(noteIds.length, 0),
       undo: () => returnItems(before, { noteIds }),
+      redo: async () => void (await move()),
+    });
+  };
+
+  /** Takes a sub-note out of its parent, to just after it, as one step. */
+  const moveNoteOutOfParent = async (noteId: string) => {
+    const before = { notes: lib().notes, folders: lib().folders };
+    const move = async () => {
+      const moved = moveOutOfParent({ ...lib(), noteId });
+      if (moved) await lib().rearrange({ notes: moved }, "Note not moved");
+      return Boolean(moved);
+    };
+    if (!(await move())) return;
+    push({
+      label: "move note",
+      undo: () => returnItems(before, { noteIds: [noteId] }),
       redo: async () => void (await move()),
     });
   };
@@ -372,6 +394,15 @@ function useNotesTreeCommandsState() {
     setIsDeleting(true);
     // Read before the delete, which moves the workspace off a deleted open note.
     const activeNoteId = lib().activeNoteId;
+    const before = { notes: lib().notes, folders: lib().folders };
+    // Sub-notes of deleted notes stay; Undo puts them back inside.
+    const deletedIds = new Set(candidate.noteIds);
+    const subNoteIds = before.notes
+      .filter(
+        (note) =>
+          note.parentNoteId && deletedIds.has(note.parentNoteId) && !deletedIds.has(note.id),
+      )
+      .map((note) => note.id);
     try {
       const deleted = await deleteItems(candidate);
       if (!isMounted()) return;
@@ -389,6 +420,7 @@ function useNotesTreeCommandsState() {
               lib().restoreNote(note, { focus: note.id === activeNoteId }),
             ),
           );
+          if (subNoteIds.length > 0) await returnItems(before, { noteIds: subNoteIds });
         },
         redo: async () => {
           const again = await deleteItems({
@@ -425,6 +457,7 @@ function useNotesTreeCommandsState() {
     duplicateNote,
     moveNotes,
     moveItemsToProject,
+    moveOutOfParent: moveNoteOutOfParent,
     projectDialog,
     startProjectCreation: () => setProjectDialog({ mode: "create" }),
     startProjectEdit: (project: NoteProject) => setProjectDialog({ mode: "edit", project }),

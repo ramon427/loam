@@ -13,7 +13,8 @@ import { isClock, isVersionVector, type Clock, type VersionVector } from "./cloc
  * folder and each project are separate documents, so moving a note never
  * conflicts with an edit to it, and two devices filing notes into folders
  * don't either. Places and folders name their project; those from versions
- * before projects have none.
+ * before projects have none. A sub-note's place names its parent note;
+ * versions before sub-notes ignore it and show the note at the top level.
  */
 export type SyncDocKind = "note" | "place" | "folder" | "project";
 export type SyncDocKey = `${SyncDocKind}:${string}`;
@@ -91,7 +92,9 @@ const readValue: { [K in SyncDocKind]: (value: unknown) => SyncValues[K] | undef
     const { folderId } = value;
     const project = readProject(value.projectId);
     if ((folderId !== null && !isId(folderId)) || !project) return undefined;
-    return toPlacement({ folderId, ...project, position: value.position });
+    // A parent another device names may not have arrived yet; the library shows the note at the top level till then.
+    const parent = isId(value.parentNoteId) ? { parentNoteId: value.parentNoteId } : {};
+    return toPlacement({ folderId, ...project, ...parent, position: value.position });
   },
   folder: (value) => {
     if (!isRecord(value) || !isPosition(value.position) || typeof value.name !== "string")

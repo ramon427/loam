@@ -1,4 +1,4 @@
-import { toNoteContent } from "../noteContent";
+import { toNoteContent, toPlacement } from "../noteContent";
 import type { RemoteApplyStore } from "./applyRemote";
 import { parseSyncKey, syncKey, type SyncChange, type SyncDocKey } from "./syncDocs";
 
@@ -43,9 +43,7 @@ export const readUnpublishedChanges = async (store: PublishStore, limit: number)
       changes.push({ ...fields, key: syncKey(kind, id), savedAt, value });
     } else if (kind === "place") {
       const row = rows.get(id);
-      const value = row
-        ? { folderId: row.folderId, projectId: row.projectId, position: row.position }
-        : null;
+      const value = row ? toPlacement(row) : null;
       changes.push({ ...fields, key: syncKey(kind, id), value });
     } else if (kind === "folder") {
       const folder = folders.find((entry) => entry.id === id);

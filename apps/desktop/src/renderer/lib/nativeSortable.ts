@@ -8,6 +8,8 @@ const NATIVE_SORTABLE_MIME = "application/x-loam-sortable";
 export type NativeSortableMarker = {
   targetId: string;
   half: SortableInsertHalf;
+  /** Over the middle of an item that takes items inside it. */
+  inside?: boolean;
 };
 
 export type NativeSortableAxis = "vertical" | "horizontal";
@@ -16,6 +18,8 @@ export type NativeSortableMove = {
   sourceId: string;
   targetId: string;
   half: SortableInsertHalf;
+  /** Dropped onto the middle of an item that takes items inside it. */
+  inside: boolean;
 };
 
 const pointerHalf = (
@@ -29,6 +33,13 @@ const pointerHalf = (
   return event.clientY < rect.top + rect.height / 2 ? "before" : "after";
 };
 
+/** The middle half of an item, top to bottom, drops inside it. */
+const isPointerInside = (event: { clientY: number; currentTarget: HTMLElement }) => {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const offset = (event.clientY - rect.top) / rect.height;
+  return offset > 0.25 && offset < 0.75;
+};
+
 const readPayloadItemId = (dataTransfer: DataTransfer | null, instanceId: string) => {
   const typed = dataTransfer?.getData(NATIVE_SORTABLE_MIME) ?? "";
   const prefix = `${instanceId}:`;
@@ -38,24 +49,36 @@ const readPayloadItemId = (dataTransfer: DataTransfer | null, instanceId: string
 
 const nativeSortableMarkerClassName = (marker: NativeSortableMarker | null, itemId: string) => {
   if (!marker || marker.targetId !== itemId) return undefined;
+  if (marker.inside) return "native-sortable-drop-inside";
   return marker.half === "before" ? "native-sortable-drop-before" : "native-sortable-drop-after";
 };
 
+/** What `data-drop-marker` says over an item: the side a drop lands on, or inside it. */
+const markerAttribute = (
+  marker: NativeSortableMarker | null,
+  itemId: string,
+): SortableInsertHalf | "inside" | undefined =>
+  marker?.targetId === itemId ? (marker.inside ? "inside" : marker.half) : undefined;
+
 /**
  * Reordering a list with native HTML drag and drop. Spread `itemProps(id)` on each item and
- * `zoneProps(id)` on extra drop areas; `onMove` gets the dragged id, the target id, and the
- * side. The hovered target carries `data-drop-marker` and `data-native-sortable-axis`, which
- * styles/dropIndicators.css turns into the drop line.
+ * `zoneProps(id)` on extra drop areas; `onMove` gets the dragged id, the target id, the
+ * side, and whether it landed inside an item `canNest` allows. The hovered target carries
+ * `data-drop-marker` and `data-native-sortable-axis`, which styles/dropIndicators.css turns
+ * into the drop line, or the outline of a drop inside.
  */
 export const useNativeSortableList = ({
   axis = "vertical",
   canAcceptTarget,
+  canNest,
   disabled = false,
   instanceId,
   onMove,
 }: {
   axis?: NativeSortableAxis;
   canAcceptTarget?: (sourceId: string, targetId: string) => boolean;
+  /** Whether the middle of `targetId` takes `sourceId` inside it; vertical lists only. */
+  canNest?: (sourceId: string, targetId: string) => boolean;
   disabled?: boolean;
   instanceId: string;
   onMove: (input: NativeSortableMove) => boolean | void;
@@ -103,6 +126,17 @@ export const useNativeSortableList = ({
   const acceptsTarget = (nextSourceId: string, targetId: string) =>
     canAcceptTarget ? canAcceptTarget(nextSourceId, targetId) : true;
 
+  const itemMarker = (
+    event: { clientX: number; clientY: number; currentTarget: HTMLElement },
+    nextSourceId: string,
+    itemId: string,
+  ): NativeSortableMarker => {
+    const half = pointerHalf(event, axis);
+    const inside =
+      axis === "vertical" && isPointerInside(event) && Boolean(canNest?.(nextSourceId, itemId));
+    return inside ? { targetId: itemId, half, inside } : { targetId: itemId, half };
+  };
+
   const commit = (nextSourceId: string, nextMarker: NativeSortableMarker | null) => {
     if (disabled || committedRef.current || !nextMarker) return false;
     if (nextSourceId === nextMarker.targetId) return false;
@@ -112,6 +146,7 @@ export const useNativeSortableList = ({
       sourceId: nextSourceId,
       targetId: nextMarker.targetId,
       half: nextMarker.half,
+      inside: Boolean(nextMarker.inside),
     });
     if (accepted === false) {
       committedRef.current = false;
@@ -127,7 +162,7 @@ export const useNativeSortableList = ({
       draggable: canDrag,
       "data-native-sortable-id": itemId,
       "data-native-sortable-axis": axis,
-      "data-drop-marker": marker?.targetId === itemId ? marker.half : undefined,
+      "data-drop-marker": markerAttribute(marker, itemId),
       className: nativeSortableMarkerClassName(marker, itemId),
       onDragStart: (event: ReactDragEvent<HTMLElement>) => {
         if (!canDrag) {
@@ -155,10 +190,7 @@ export const useNativeSortableList = ({
         event.stopPropagation();
         event.dataTransfer.dropEffect = "move";
         acceptedDragOverRef.current = event.nativeEvent;
-        setMarker({
-          targetId: itemId,
-          half: pointerHalf(event, axis),
-        });
+        setMarker(itemMarker(event, nextSourceId, itemId));
       },
       onDrop: (event: ReactDragEvent<HTMLElement>) => {
         const nextSourceId = resolveSourceId(event.dataTransfer);
@@ -171,7 +203,7 @@ export const useNativeSortableList = ({
         if (!acceptsTarget(nextSourceId, itemId)) return;
         event.preventDefault();
         event.stopPropagation();
-        commit(nextSourceId, { targetId: itemId, half: pointerHalf(event, axis) });
+        commit(nextSourceId, itemMarker(event, nextSourceId, itemId));
         reset();
       },
       onDragEnd: reset,

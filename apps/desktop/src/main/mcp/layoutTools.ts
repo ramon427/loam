@@ -23,10 +23,11 @@ export const layoutTools = ({ call, define, noteId, withNotes }: ToolContext): T
         name,
         projectId: projectId ?? null,
       })),
-      notes: library.notes.map(({ id, folderId, projectId }) => ({
+      notes: library.notes.map(({ id, folderId, projectId, parentNoteId }) => ({
         id,
         folderId: folderId ?? null,
         projectId: projectId ?? null,
+        parentNoteId: parentNoteId ?? null,
       })),
     };
   };
@@ -162,27 +163,33 @@ export const layoutTools = ({ call, define, noteId, withNotes }: ToolContext): T
     ),
     define(
       "loam_notes_move",
-      "Move a note to a folder, or with folderId null to the top level of projectId (null or omitted: the library's top level), optionally before another note in the destination.",
+      "Move a note to a folder, inside another note as its sub-note with parentNoteId, or with both null to the top level of projectId (null or omitted: the library's top level), optionally before another note in the destination. A note moved out of its parent stays linked from it wherever the parent links it.",
       {
         ...noteId,
         folderId: uuidSchema.nullable(),
         projectId: uuidSchema.nullable().optional(),
+        parentNoteId: uuidSchema.nullable().optional(),
         beforeNoteId: uuidSchema.optional(),
       },
       async (input) => {
         const next = await layout();
         const note = next.notes.find((entry) => entry.id === input.noteId);
+        const parentNoteId = input.folderId === null ? (input.parentNoteId ?? null) : null;
         if (
           !note ||
-          (input.folderId !== null && !next.folders.some((folder) => folder.id === input.folderId))
+          (input.folderId !== null &&
+            !next.folders.some((folder) => folder.id === input.folderId)) ||
+          (parentNoteId !== null && !next.notes.some((entry) => entry.id === parentNoteId))
         )
           throw new StoreError("Note or folder not found.", "NOT_FOUND", 404);
-        // A folder decides its notes' project.
-        const projectId = input.folderId === null ? (input.projectId ?? null) : null;
+        // A folder or parent note decides the note's project.
+        const projectId =
+          input.folderId === null && parentNoteId === null ? (input.projectId ?? null) : null;
         if (projectId) findProject(next, projectId);
         next.notes = next.notes.filter((entry) => entry.id !== input.noteId);
         note.folderId = input.folderId;
         note.projectId = projectId;
+        note.parentNoteId = parentNoteId;
         const before =
           input.beforeNoteId === undefined
             ? next.notes.length
@@ -190,11 +197,12 @@ export const layoutTools = ({ call, define, noteId, withNotes }: ToolContext): T
                 (entry) =>
                   entry.id === input.beforeNoteId &&
                   entry.folderId === input.folderId &&
-                  entry.projectId === projectId,
+                  entry.parentNoteId === parentNoteId &&
+                  (parentNoteId !== null || entry.projectId === projectId),
               );
         if (before < 0)
           throw new StoreError(
-            "The destination note is not in that folder or project.",
+            "The destination note is not in that folder, note or project.",
             "VALIDATION_ERROR",
             400,
           );

@@ -61,7 +61,14 @@ export const newNote = (
     blocks = [paragraph(text("Body"))],
     folderId,
     projectId,
-  }: { title?: string; blocks?: unknown[]; folderId?: string; projectId?: string } = {},
+    parentNoteId,
+  }: {
+    title?: string;
+    blocks?: unknown[];
+    folderId?: string;
+    projectId?: string;
+    parentNoteId?: string;
+  } = {},
 ): NewNote => ({
   id,
   title,
@@ -72,6 +79,7 @@ export const newNote = (
   tablesByTab: {},
   folderId: folderId ?? null,
   projectId: projectId ?? null,
+  ...(parentNoteId && { parentNoteId }),
 });
 
 export const createNote = (

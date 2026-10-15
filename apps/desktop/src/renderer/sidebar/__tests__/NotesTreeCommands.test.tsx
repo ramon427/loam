@@ -499,6 +499,7 @@ describe("a note's menu", () => {
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
     ).toEqual([
+      "New sub-note",
       "Rename note",
       "Duplicate note",
       "Copy link",

@@ -43,10 +43,11 @@ export const toLayout = ({ notes, folders, projects }: Library): NotesLayout => 
     name,
     projectId: projectId ?? null,
   })),
-  notes: sortByPosition(notes).map(({ id, folderId, projectId }) => ({
+  notes: sortByPosition(notes).map(({ id, folderId, projectId, parentNoteId }) => ({
     id,
     folderId: folderId ?? null,
-    projectId: folderId ? null : (projectId ?? null),
+    projectId: folderId || parentNoteId ? null : (projectId ?? null),
+    parentNoteId: folderId ? null : (parentNoteId ?? null),
   })),
 });
 
