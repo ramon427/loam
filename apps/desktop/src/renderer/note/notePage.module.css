@@ -32,6 +32,13 @@
   padding-right: 1rem;
 }
 
+/* Behind the sheet, so a right-click on the canvas around the paper reaches it. */
+.backdrop {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+}
+
 /* The paper and the tabs on its top edge share one column, the paper's width. */
 .sheet {
   display: flex;

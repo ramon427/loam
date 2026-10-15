@@ -3,13 +3,18 @@ import { MoveDiagonal2Icon, RotateCcwIcon, Undo2Icon } from "lucide-react";
 
 import { ActionMenuContent, ActionMenuItem } from "../action-menu/ActionMenu";
 import { formatShortcut } from "../keyboard/shortcuts";
-import { ContextMenu, ContextMenuTrigger } from "../ui/ContextMenu";
+import { ContextMenu, ContextMenuCheckboxItem, ContextMenuTrigger } from "../ui/ContextMenu";
 
 import { cn } from "../ui/cn";
 import { useMarkWhileScrolling } from "./useMarkWhileScrolling";
 import page from "./notePage.module.css";
 import { CanvasGridBackground } from "../ui/CanvasGridBackground";
 import { useNotesPaperSize } from "./useNotesPaperSize";
+import {
+  canvasBackgrounds,
+  useCanvasBackground,
+  type CanvasBackground,
+} from "./useCanvasBackground";
 
 type NoteDocumentFrameMode = "paper" | "immersive" | "graph";
 
@@ -42,6 +47,37 @@ function PaperSizeMenu({
         >
           Restore default size
         </ActionMenuItem>
+      </ActionMenuContent>
+    </ContextMenu>
+  );
+}
+
+const backgroundLabels: Record<CanvasBackground, string> = {
+  grid: "Graph paper",
+  dots: "Dots",
+  plain: "Plain",
+};
+
+/** The canvas around the paper; its right-click menu picks the pattern. */
+function CanvasBackdrop() {
+  const [background, setBackground] = useCanvasBackground();
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div className={page.backdrop} data-testid="notes-canvas-backdrop">
+          {background === "plain" ? null : <CanvasGridBackground pattern={background} />}
+        </div>
+      </ContextMenuTrigger>
+      <ActionMenuContent aria-label="Background">
+        {canvasBackgrounds.map((option) => (
+          <ContextMenuCheckboxItem
+            key={option}
+            checked={background === option}
+            onCheckedChange={() => setBackground(option)}
+          >
+            {backgroundLabels[option]}
+          </ContextMenuCheckboxItem>
+        ))}
       </ActionMenuContent>
     </ContextMenu>
   );
@@ -128,7 +164,7 @@ export const NoteDocumentFrame = ({
       style={isPaper ? paperStyle : undefined}
       className={isGraph ? page.graphCanvas : page.canvas}
     >
-      {!isGraph ? <CanvasGridBackground style={{ zIndex: -1 }} /> : null}
+      {!isGraph ? <CanvasBackdrop /> : null}
       <div className={page.sheet}>
         {tabs ? <div className={page.tabs}>{tabs}</div> : null}
         <div

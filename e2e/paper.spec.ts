@@ -119,3 +119,27 @@ test("Escape cancels a paper drag and shorter paper still fits a long note", asy
   expect(bodyBox.y + bodyBox.height).toBeLessThanOrEqual(paperBox.y + paperBox.height);
   await expect(noteBody(loam.window)).toHaveText(text.trim());
 });
+
+test("right-clicking the canvas around the paper picks its background", async ({ loam }) => {
+  await createNote(loam.window, { title: "Background", body: "Words on the paper." });
+  const pattern = () => loam.window.locator("[data-canvas-grid-background]");
+  await expect(pattern()).toHaveAttribute("data-canvas-grid-background", "grid");
+
+  const pick = async (name: string) => {
+    await loam.window
+      .getByTestId("notes-document-canvas")
+      .click({ button: "right", position: { x: 8, y: 8 } });
+    await loam.window.getByRole("menuitemcheckbox", { name }).click();
+  };
+  await pick("Dots");
+  await expect(pattern()).toHaveAttribute("data-canvas-grid-background", "dots");
+  await pick("Plain");
+  await expect(pattern()).toHaveCount(0);
+
+  await loam.restart();
+  await openNote(loam.window, "Background");
+  await expect(noteBody(loam.window)).toContainText("Words on the paper.");
+  await expect(pattern()).toHaveCount(0);
+  await pick("Graph paper");
+  await expect(pattern()).toHaveAttribute("data-canvas-grid-background", "grid");
+});
