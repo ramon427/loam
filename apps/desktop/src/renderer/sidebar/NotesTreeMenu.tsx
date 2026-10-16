@@ -2,16 +2,11 @@ import {
   CopyPlusIcon,
   CornerLeftUpIcon,
   FilePlusIcon,
-  FileOutputIcon,
-  FolderIcon,
   FolderInputIcon,
-  FolderOutputIcon,
   FolderPlusIcon,
   HistoryIcon,
-  LayoutListIcon,
   LinkIcon,
   ListChecksIcon,
-  PackageIcon,
   PackageMinusIcon,
   PackagePlusIcon,
   PencilIcon,
@@ -23,13 +18,12 @@ import {
 import { buildNoteHref } from "@loam/shared/notes/noteLinks";
 import type { NoteFolder, NoteProject } from "@loam/shared/notes/noteModel";
 
-import { ActionMenuItem, ActionMenuSub } from "../action-menu/ActionMenu";
+import { ActionMenuItem } from "../action-menu/ActionMenu";
 import { copyLink } from "../lib/copyLink";
 import { ContextMenuSeparator } from "../ui/ContextMenu";
 import { NoteRouteGlyph } from "../ui/NoteRouteIcon";
 import type { NoteDocument } from "../workspace/types";
 
-import { NoteProjectIcon } from "./NoteProjectIcon";
 import {
   folderSelectionKey,
   getNoteTitle,
@@ -61,8 +55,6 @@ export type NotesTreeMenuContext = {
   openSubNotes: (noteId: string) => void;
   selectAll: () => void;
   openHistory: (note: NoteDocument) => void;
-  exportNote: (noteId: string) => void;
-  isExporting: boolean;
 };
 
 /** The tree's own undo history, which ends every menu after the actions on what was clicked. */
@@ -90,107 +82,24 @@ function HistoryItems({ commands }: { commands: NotesTreeCommands }) {
   );
 }
 
-/**
- * Moves notes out of their folders or into one; the place they all are already is disabled.
- * A folder in a project names the project too.
- */
-function MoveToFolderMenu({
-  notes,
-  context,
-}: {
-  notes: NoteDocument[];
-  context: NotesTreeMenuContext;
-}) {
-  const places = new Set(
-    notes.map((note) =>
-      note.folderId && context.foldersById.has(note.folderId) ? note.folderId : null,
-    ),
-  );
-  const isCurrent = (folderId: string | null) => places.size === 1 && places.has(folderId);
-  const move = (folderId: string | null) => {
-    if (folderId) context.openFolder(folderId);
-    void context.commands.moveNotes(
-      notes.map((note) => note.id),
-      folderId,
-    );
-  };
-  return (
-    <ActionMenuSub label="Move to folder" icon={<FolderInputIcon aria-hidden="true" />}>
-      <ActionMenuItem
-        icon={<FolderOutputIcon aria-hidden="true" />}
-        disabled={isCurrent(null)}
-        onSelect={() => move(null)}
-      >
-        No folder
-      </ActionMenuItem>
-      {context.folders.map((folder) => {
-        const project = folder.projectId ? context.projectsById.get(folder.projectId) : undefined;
-        return (
-          <ActionMenuItem
-            key={folder.id}
-            icon={<FolderIcon aria-hidden="true" />}
-            disabled={isCurrent(folder.id)}
-            onSelect={() => move(folder.id)}
-          >
-            {folder.name}
-            {project ? <span className="ml-2 text-(--app-muted)">{project.name}</span> : null}
-          </ActionMenuItem>
-        );
-      })}
-    </ActionMenuSub>
-  );
-}
-
-/**
- * Moves notes and folders into a project or out of every project; the project they all are
- * in already is disabled. Notes leave their folders.
- */
-function MoveToProjectMenu({
+/** "Move to…" for notes or folders: one picker of folders and projects (NotesMoveDialog). */
+function MoveItem({
   items,
   context,
 }: {
   items: readonly NotesTreeItem[];
   context: NotesTreeMenuContext;
 }) {
-  if (context.projects.length === 0) return null;
-  const projectOf = (item: NotesTreeItem) => {
-    if (item.kind === "folder") return context.foldersById.get(item.id)?.projectId ?? null;
-    const note = context.notesById.get(item.id);
-    const folder = note?.folderId ? context.foldersById.get(note.folderId) : undefined;
-    return (folder ? folder.projectId : note?.projectId) ?? null;
-  };
-  const places = new Set(items.map(projectOf));
-  const isCurrent = (projectId: string | null) => places.size === 1 && places.has(projectId);
-  const move = (projectId: string | null) => {
-    if (projectId) context.openProject(projectId);
-    void context.commands.moveItemsToProject(
-      {
-        noteIds: items.filter((item) => item.kind === "note").map((item) => item.id),
-        folderIds: items.filter((item) => item.kind === "folder").map((item) => item.id),
-      },
-      projectId,
-    );
-  };
+  // A folder can only change project.
+  const onlyProjects = items.some((item) => item.kind === "folder");
+  if (onlyProjects && context.projects.length === 0) return null;
   return (
-    <ActionMenuSub label="Move to project" icon={<PackageIcon aria-hidden="true" />}>
-      <ActionMenuItem
-        icon={<LayoutListIcon aria-hidden="true" />}
-        disabled={isCurrent(null)}
-        onSelect={() => move(null)}
-      >
-        No project
-      </ActionMenuItem>
-      {context.projects.map((project) => (
-        <ActionMenuItem
-          key={project.id}
-          icon={<NoteProjectIcon icon={project.icon} />}
-          disabled={isCurrent(project.id)}
-          onSelect={() => move(project.id)}
-        >
-          {project.name}
-        </ActionMenuItem>
-      ))}
-    </ActionMenuSub>
+    <ActionMenuItem
+      icon={<FolderInputIcon aria-hidden="true" />}
+      onSelect={() => context.commands.requestMove(items)}
+    >
+      Move to…
+    </ActionMenuItem>
   );
 }
 
@@ -264,15 +173,9 @@ export function NotesTreeMenu({
 
   if (keys.length > 1) {
     const items = keys.flatMap((key) => treeItemFromSelectionKey(key) ?? []);
-    const selectedNotes = items.every((entry) => entry.kind === "note")
-      ? items.flatMap((entry) => context.notesById.get(entry.id) ?? [])
-      : [];
     return (
       <>
-        {selectedNotes.length > 0 ? (
-          <MoveToFolderMenu notes={selectedNotes} context={context} />
-        ) : null}
-        <MoveToProjectMenu items={items} context={context} />
+        <MoveItem items={items} context={context} />
         <ActionMenuItem icon={<ListChecksIcon aria-hidden="true" />} onSelect={context.selectAll}>
           Select all
         </ActionMenuItem>
@@ -328,21 +231,13 @@ export function NotesTreeMenu({
             {`Move out of “${getNoteTitle(parent)}”`}
           </ActionMenuItem>
         ) : null}
-        <MoveToFolderMenu notes={[note]} context={context} />
-        <MoveToProjectMenu items={[{ kind: "note", id: note.id }]} context={context} />
+        <MoveItem items={[{ kind: "note", id: note.id }]} context={context} />
         <ContextMenuSeparator />
         <ActionMenuItem
           icon={<HistoryIcon aria-hidden="true" />}
           onSelect={() => context.openHistory(note)}
         >
           Version history…
-        </ActionMenuItem>
-        <ActionMenuItem
-          icon={<FileOutputIcon aria-hidden="true" />}
-          disabled={context.isExporting}
-          onSelect={() => context.exportNote(note.id)}
-        >
-          Export as Markdown…
         </ActionMenuItem>
         <ContextMenuSeparator />
         <ActionMenuItem
@@ -377,7 +272,7 @@ export function NotesTreeMenu({
         >
           Rename folder
         </ActionMenuItem>
-        <MoveToProjectMenu items={[{ kind: "folder", id: folder.id }]} context={context} />
+        <MoveItem items={[{ kind: "folder", id: folder.id }]} context={context} />
         <ContextMenuSeparator />
         <ActionMenuItem
           icon={<Trash2Icon aria-hidden="true" />}

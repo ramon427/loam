@@ -50,7 +50,22 @@ const syncAll = async (...devices: Device[]) => {
 };
 
 const bodyText = async (store: NotesStore, id: string) =>
-  JSON.stringify((await store.getNote(id)).blocksByTab).match(/"text":"([^"]*)"/g) ?? [];
+  JSON.stringify((await store.getNote(id)).blocksByTab).match(/"text":"([^"]*)"/g) ??
+  ([] as string[]);
+
+/** The body text of each version of a note kept because it lost a conflict. */
+const conflictTexts = async (store: NotesStore, id: string) => {
+  const { versions } = await store.getNoteHistory(id);
+  const kept = versions.filter((version) => version.conflict);
+  return Promise.all(
+    kept.map(
+      async (version) =>
+        JSON.stringify((await store.getNoteVersion(id, version.id)).note.blocksByTab).match(
+          /"text":"([^"]*)"/g,
+        ) ?? [],
+    ),
+  );
+};
 
 /** What a user sees: folders, and each note's title, folder and body, in library order. */
 const libraryOf = async (store: NotesStore) => {
@@ -150,19 +165,46 @@ describe("sync through a folder", () => {
     await one.store.saveNote(A, bodyPatch(paragraph(text("From one"))));
     await two.store.saveNote(A, bodyPatch(paragraph(text("From two"))));
     const first = await one.sync();
-    await two.sync();
-    await one.sync();
+    const second = await two.sync();
+    const third = await one.sync();
 
     expect(await libraryOf(one.store)).toEqual(await libraryOf(two.store));
-    const notes = (await one.store.getLibrary()).notes;
-    expect(notes.map((note) => note.title).sort()).toEqual(["Plan", "Plan (conflict copy)"]);
-    const copy = notes.find((note) => note.title.endsWith("(conflict copy)"))!;
-    // The newer edit stays in the note; the other is the copy.
-    expect(
-      [...(await bodyText(one.store, A)), ...(await bodyText(one.store, copy.id))].sort(),
-    ).toEqual(['"text":"From one"', '"text":"From two"']);
-    // One published first, so it learns of the conflict only from two.
-    expect(first.conflictCopies).toEqual([]);
+    // No second note: the newer edit stays in the note.
+    expect((await one.store.getLibrary()).notes.map((note) => note.title)).toEqual(["Plan"]);
+    const current = await bodyText(one.store, A);
+    // The device whose edit lost keeps it in the note's history and is told.
+    const [loser, lostText] = current.includes('"text":"From one"')
+      ? [two, '"text":"From two"']
+      : [one, '"text":"From one"'];
+    expect(await conflictTexts(loser.store, A)).toEqual([[lostText]]);
+    const told = [first, second, third].flatMap((round) => round.conflicts);
+    expect(told).toEqual([expect.objectContaining({ noteId: A, title: "Plan" })]);
+  });
+
+  it("tells the device whose published edit lost, though it never saw both", async () => {
+    const one = await createDevice();
+    // Its clock runs an hour ahead, so its edit is the newer one.
+    const two = await createDevice(undefined, createClock(Date.parse("2026-10-10T10:00:00.000Z")));
+    await createNote(one.store, A, { title: "Plan" });
+    await syncAll(one, two);
+
+    await one.store.saveNote(A, bodyPatch(paragraph(text("Older, from one"))));
+    await one.sync();
+    // Newer, so it wins on two, which publishes it as the version after both.
+    await two.store.saveNote(A, bodyPatch(paragraph(text("Newer, from two"))));
+    const onTwo = await two.sync();
+    const onOne = await one.sync();
+
+    // Both are told: two saw both versions; one learns from what two published.
+    expect(onTwo.conflicts).toEqual([expect.objectContaining({ noteId: A, title: "Plan" })]);
+    expect(onOne.conflicts).toEqual([expect.objectContaining({ noteId: A, title: "Plan" })]);
+    expect(await bodyText(one.store, A)).toEqual(['"text":"Newer, from two"']);
+    expect(await conflictTexts(one.store, A)).toEqual([['"text":"Older, from one"']]);
+
+    // An ordinary edit made after that, on top of the winner, is no conflict.
+    await two.store.saveNote(A, bodyPatch(paragraph(text("Later edit"))));
+    await two.sync();
+    expect((await one.sync()).conflicts).toEqual([]);
   });
 
   it("converges on three devices editing one note at once", async () => {
@@ -175,11 +217,15 @@ describe("sync through a folder", () => {
 
     const [first, ...others] = await Promise.all(devices.map((device) => libraryOf(device.store)));
     for (const other of others) expect(other).toEqual(first);
-    expect(first!.notes.map((note) => note.body[0]).sort()).toEqual([
-      '"text":"Version 0"',
-      '"text":"Version 1"',
-      '"text":"Version 2"',
-    ]);
+    expect(first!.notes).toHaveLength(1);
+    // Every device still has its own edit: in the note, or in its history as lost.
+    for (const [index, device] of devices.entries()) {
+      const held = [
+        ...(await bodyText(device.store, A)),
+        ...(await conflictTexts(device.store, A)).flat(),
+      ];
+      expect(held).toContain(`"text":"Version ${index}"`);
+    }
   });
 
   it("doesn't count a save that changes nothing as an edit", async () => {
@@ -572,13 +618,20 @@ describe("sync through a folder", () => {
       opened.updatedAt,
     );
 
-    expect(saved.conflictCopy).toMatchObject({ title: "Shared (conflict copy)" });
+    expect(saved.conflict).toMatchObject({ noteId: A, title: "Shared" });
     expect(await bodyText(two.store, A)).toEqual(['"text":"Typed meanwhile"']);
-    expect(await bodyText(two.store, saved.conflictCopy!.id)).toEqual(['"text":"Synced in"']);
+    const version = await two.store.getNoteVersion(A, saved.conflict!.versionId);
+    expect(JSON.stringify(version.note.blocksByTab)).toContain("Synced in");
+    expect((await two.store.getLibrary()).notes).toHaveLength(1);
+    // The device whose edit lost is told, and keeps it.
+    await two.sync();
+    expect((await one.sync()).conflicts).toEqual([expect.objectContaining({ noteId: A })]);
+    expect(await bodyText(one.store, A)).toEqual(['"text":"Typed meanwhile"']);
+    expect(await conflictTexts(one.store, A)).toEqual([['"text":"Synced in"']]);
 
     // A later save made with the current version is an ordinary save.
     const again = await two.store.saveNote(A, { title: "Renamed" }, saved.updatedAt);
-    expect(again.conflictCopy).toBeUndefined();
+    expect(again.conflict).toBeUndefined();
   });
 
   it("keeps one file per document and its state across a restart", async () => {

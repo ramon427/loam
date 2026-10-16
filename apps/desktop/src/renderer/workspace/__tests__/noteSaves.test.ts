@@ -135,7 +135,7 @@ describe("noteSaves", () => {
     expect(saves.readNoteSaveStatus("note-1")).toBe("saved");
   });
 
-  it("calls saved listeners after each successful save, with any conflict copy", async () => {
+  it("calls saved listeners after each successful save, with any conflict", async () => {
     const saves = await loadSaves();
     const saved = vi.fn();
     saves.onNoteSaved(saved);
@@ -143,11 +143,11 @@ describe("noteSaves", () => {
     await saves.saveNoteEdits();
     expect(saved).toHaveBeenCalledWith("note-1", undefined);
 
-    const copy = { id: "copy-1", title: "Plan (conflict copy)" };
-    api.saveNote.mockResolvedValueOnce({ updatedAt: "latest", conflictCopy: copy });
+    const conflict = { noteId: "note-1", versionId: "version-1", title: "Plan" };
+    api.saveNote.mockResolvedValueOnce({ updatedAt: "latest", conflict });
     saves.recordNoteEdit(note(), ["title"]);
     await saves.saveNoteEdits();
-    expect(saved).toHaveBeenLastCalledWith("note-1", copy);
+    expect(saved).toHaveBeenLastCalledWith("note-1", conflict);
   });
 
   it("names the version each save's edits were made to", async () => {

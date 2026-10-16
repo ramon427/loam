@@ -33,7 +33,6 @@ export function NotesSidebarDeleteDialog({
   const deleteCandidateCount = deleteCandidate
     ? deleteCandidate.noteIds.length + deleteCandidate.folderIds.length
     : 0;
-  const isSingleNoteDelete = deleteCandidateCount === 1 && deleteCandidate?.noteIds.length === 1;
   const isSingleFolderDelete =
     deleteCandidateCount === 1 && deleteCandidate?.folderIds.length === 1;
 
@@ -42,12 +41,8 @@ export function NotesSidebarDeleteDialog({
     "Selected notes move to Trash, where you can restore them. Selected folders are removed; notes inside them stay in your library.";
   let deleteDialogCancelLabel = "Keep items";
   let deleteDialogConfirmLabel = `Delete ${deleteCandidateCount} items`;
-  if (isSingleNoteDelete) {
-    deleteDialogTitle = "Delete note?";
-    deleteDialogDescription = "This moves the note to Trash. You can restore it anytime.";
-    deleteDialogCancelLabel = "Keep note";
-    deleteDialogConfirmLabel = "Delete note";
-  } else if (isSingleFolderDelete) {
+  // Only a delete that includes a folder asks; notes alone go straight to Trash.
+  if (isSingleFolderDelete) {
     deleteDialogTitle = "Delete folder?";
     deleteDialogDescription =
       "This removes the folder. Notes inside it stay in your notes library.";

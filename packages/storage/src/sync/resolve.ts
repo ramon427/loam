@@ -22,19 +22,19 @@ const newer = ({ incomingClock, heldClock }: Arrival): Side =>
   incomingClock < heldClock ? "local" : "incoming";
 
 /**
- * A note: the newest edit wins and the other is kept as a conflict copy
- * (`copy` names whose content the copy holds). An edit always beats a delete,
- * and identical content just merges.
+ * A note: the newest edit wins and the other is kept in the note's history
+ * (`lost` names whose content that is). An edit always beats a delete, and
+ * identical content just merges.
  */
 export const decideNote = (
   arrival: Arrival,
   { local, incoming, same }: { local: boolean; incoming: boolean; same: boolean },
-): { kept: Side; copy: Side | null } => {
-  if (arrival.order !== "concurrent") return { kept: "incoming", copy: null };
-  if (same || !incoming) return { kept: "local", copy: null };
-  if (!local) return { kept: "incoming", copy: null };
+): { kept: Side; lost: Side | null } => {
+  if (arrival.order !== "concurrent") return { kept: "incoming", lost: null };
+  if (same || !incoming) return { kept: "local", lost: null };
+  if (!local) return { kept: "incoming", lost: null };
   const kept = newer(arrival);
-  return { kept, copy: kept === "local" ? "incoming" : "local" };
+  return { kept, lost: kept === "local" ? "incoming" : "local" };
 };
 
 /** A note's place follows the newest move. */

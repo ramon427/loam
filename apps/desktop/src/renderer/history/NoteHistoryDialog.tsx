@@ -15,7 +15,8 @@ import { NoteVersionPreview } from "./NoteVersionPreview";
 import { errorMessage } from "../lib/errorMessage";
 import { formatDateTime, formatSize } from "../lib/format";
 
-export type HistoryTarget = { noteId: string; title: string };
+/** A note's history to open, at `versionId` when given. */
+export type HistoryTarget = { noteId: string; title: string; versionId?: string };
 
 /** A note's saved versions, to preview and restore one. */
 export function NoteHistoryDialog({
@@ -33,7 +34,7 @@ export function NoteHistoryDialog({
     staleTime: 0,
   });
   const versions = history.data?.versions ?? [];
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(target.versionId ?? null);
   const selected = versions.find((version) => version.id === selectedId) ?? versions[0] ?? null;
   const preview = useQuery({
     queryKey: ["note-version", target.noteId, selected?.id],
@@ -106,6 +107,7 @@ export function NoteHistoryDialog({
                 >
                   <span>{formatDateTime(version.savedAt)}</span>
                   <span className="text-[12px] text-(--app-muted)">
+                    {version.conflict ? "Edited elsewhere at the same time · " : ""}
                     {version.title !== target.title ? `${version.title || "Untitled"} · ` : ""}
                     {formatSize(version.sizeBytes)}
                   </span>
@@ -128,6 +130,12 @@ export function NoteHistoryDialog({
                   {restoring ? "Restoring…" : "Restore this version"}
                 </Button>
               </div>
+              {selected.conflict ? (
+                <Notice className="mb-4">
+                  This edit was made elsewhere at the same time as the note's current one, which was
+                  kept. Restore it to use it instead, or copy what you need from it.
+                </Notice>
+              ) : null}
               {preview.isError ? <Notice tone="danger">Could not open this version.</Notice> : null}
               {preview.data ? (
                 <NoteVersionPreview noteId={target.noteId} note={preview.data.note} />

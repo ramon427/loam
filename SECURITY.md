@@ -38,6 +38,10 @@ every file in it as untrusted: a change is checked like any other save, and
 only image files with Loam's random names are copied in. Without encryption,
 anyone who can read that folder can read your notes.
 
+An import reads only what you pick in the system's file dialog, or what you
+drop on Settings › Import & export and then confirm in a system dialog the
+window can't answer for you.
+
 A file tab can link to a file where it is on your computer. A note can name
 any path, so Loam reads, writes, opens or copies in a linked file only when
 this computer linked that path itself. It keeps those paths, hashed, in

@@ -291,7 +291,7 @@ export const renderSidebar = async (options: SidebarOptions = {}) => {
           changedNoteIds: [],
           deletedNoteIds: before.filter((noteId) => !after.has(noteId)),
           layoutChanged: true,
-          conflictCopies: [],
+          conflicts: [],
         }),
       );
       await settle();
@@ -329,6 +329,24 @@ export const clickMenuItem = async (name: string) => {
     fireEvent.click(menuItem);
   });
   await waitFor(() => expect(screen.queryByRole("menuitem", { name })).toBeNull());
+  await settle();
+};
+
+/** A place in the open "Move to…" picker: a folder, or a project when `project` is set. */
+export const movePlace = (name: string, { project = false } = {}) => {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return screen.findByRole("option", {
+    name: new RegExp(`^${escaped}${project ? ", (Project|here now)" : "(, .*)?"}$`),
+  });
+};
+
+/** Picks "Move to…" in the open menu, then `name` in the picker. */
+export const moveTo = async (name: string, options: { project?: boolean } = {}) => {
+  await clickMenuItem("Move to…");
+  const place = await movePlace(name, options);
+  await act(async () => {
+    fireEvent.click(place);
+  });
   await settle();
 };
 

@@ -1,16 +1,11 @@
+import { basename } from "node:path";
+
 import { dialog, type BrowserWindow, type OpenDialogOptions } from "electron";
 
-import type { BridgeImportSource } from "@loam/shared/bridge/loamBridge";
 import { FILE_TAB_KINDS, type FileTabKind } from "@loam/shared/notes/noteModel";
 
-import { IMPORT_SOURCES } from "./import/sources";
+import { IMPORT_FILE_FILTER } from "./import/sources";
 import { TAB_FILE_TYPES } from "./tabFiles";
-
-const IMPORT_PICK_PROPERTIES = {
-  folder: ["openDirectory"],
-  files: ["openFile", "multiSelections"],
-  archive: ["openFile"],
-} satisfies Record<string, OpenDialogOptions["properties"]>;
 
 /** The picker's filter for files a tab of `kind` shows. */
 const tabFileFilter = (kind: FileTabKind): Electron.FileFilter => ({
@@ -20,10 +15,10 @@ const tabFileFilter = (kind: FileTabKind): Electron.FileFilter => ({
 
 /**
  * The native pickers the window opens. Paths reach the main process from
- * these, never from the window itself, except files dropped on the window,
- * which the files service reads only when they are a kind of file a tab
- * shows. Each resolves null (or an empty list) when the user cancels or no
- * window is open.
+ * these, never from the window itself, except files dropped on the window:
+ * the files service reads those only when they are a kind of file a tab shows,
+ * and an import only once the user confirms them here. Each resolves null (or
+ * an empty list, or false) when the user cancels or no window is open.
  */
 export const createDialogs = (getWindow: () => BrowserWindow | null) => {
   const open = async (options: OpenDialogOptions) => {
@@ -49,12 +44,36 @@ export const createDialogs = (getWindow: () => BrowserWindow | null) => {
         })
       )[0] ?? null,
 
-    pickImportPaths: (source: BridgeImportSource) =>
+    /**
+     * One picker for every import. macOS picks a folder or files in one dialog; elsewhere a
+     * dialog picks only one or the other, so it takes files and a folder is dropped instead.
+     */
+    pickImportPaths: () =>
       open({
-        ...IMPORT_SOURCES[source].dialog,
+        title: "Import notes",
         buttonLabel: "Import",
-        properties: IMPORT_PICK_PROPERTIES[IMPORT_SOURCES[source].pick],
+        filters: [IMPORT_FILE_FILTER],
+        properties:
+          process.platform === "darwin"
+            ? ["openFile", "openDirectory", "multiSelections"]
+            : ["openFile", "multiSelections"],
       }),
+
+    /** Asks before importing what was dropped on the window. */
+    confirmDroppedImport: async (paths: readonly string[]) => {
+      const window = getWindow();
+      if (!window) return false;
+      const named = paths.length === 1 ? `“${basename(paths[0]!)}”` : `${paths.length} items`;
+      const { response } = await dialog.showMessageBox(window, {
+        type: "question",
+        message: `Import ${named}?`,
+        detail: "Loam copies the notes in; the files stay where they are.",
+        buttons: ["Import", "Cancel"],
+        defaultId: 0,
+        cancelId: 1,
+      });
+      return response === 0;
+    },
 
     pickSyncFolder: async () =>
       (

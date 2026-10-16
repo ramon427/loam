@@ -15,6 +15,8 @@ import {
   callsTo,
   clickMenuItem,
   deferred,
+  movePlace,
+  moveTo,
   notes,
   openTreeMenu,
   REDO,
@@ -218,32 +220,14 @@ describe("renaming", () => {
 });
 
 describe("deleting", () => {
-  it("asks before deleting a note", async () => {
+  it("moves a note to Trash without asking", async () => {
     const { store } = await renderSidebar();
 
     openTreeMenu(row("Root first"));
     await clickMenuItem("Delete note");
-    expect(store.note("root-first")).toBeDefined();
-    expect(screen.getByRole("heading", { name: "Delete note?" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Keep note" })).toBeTruthy();
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Delete note" }));
-    });
     await waitFor(() => expect(store.inTrash("root-first")).toBe(true));
-  });
-
-  it("closes the dialog when its note disappeared before the delete", async () => {
-    const sidebar = await renderSidebar();
-    openTreeMenu(row("Root first"));
-    await clickMenuItem("Delete note");
-
-    await sidebar.changeElsewhere({ notes: notes.filter((note) => note.id !== "root-first") });
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Delete note" }));
-    });
-
-    await waitFor(() => expect(screen.queryByRole("heading", { name: "Delete note?" })).toBeNull());
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
 
@@ -457,9 +441,6 @@ describe("undo and redo", () => {
     });
     openTreeMenu(row("Typed note"));
     await clickMenuItem("Delete note");
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Delete note" }));
-    });
     await waitFor(() => expect(sidebar.store.inTrash("typed-note")).toBe(true));
 
     openTreeMenu();
@@ -503,9 +484,8 @@ describe("a note's menu", () => {
       "Rename note",
       "Duplicate note",
       "Copy link",
-      "Move to folder",
+      "Move to…",
       "Version history…",
-      "Export as Markdown…",
       "Delete note",
       `Undo${UNDO}`,
       `Redo${REDO}`,
@@ -613,18 +593,16 @@ describe("duplicating a note", () => {
 });
 
 describe("moving notes to a folder", () => {
-  const openMoveMenu = async () =>
-    fireEvent.click(await screen.findByRole("menuitem", { name: "Move to folder" }));
-
   it("moves a note to the end of a folder or the top level, with undo", async () => {
     const { store } = await renderSidebar();
     openTreeMenu(row("Root first"));
-    await openMoveMenu();
-    const here = await screen.findByRole("menuitem", { name: "No folder" });
-    expect(here.hasAttribute("data-disabled")).toBe(true);
-    const archive = screen.getByRole("menuitem", { name: "Archive" });
-    expect(archive.hasAttribute("data-disabled")).toBe(false);
-    await clickMenuItem("Planning");
+    await clickMenuItem("Move to…");
+    const here = await movePlace("No folder");
+    expect(here.getAttribute("aria-disabled")).toBe("true");
+    expect((await movePlace("Archive")).getAttribute("aria-disabled")).toBeNull();
+    await act(async () => {
+      fireEvent.click(await movePlace("Planning"));
+    });
     const planningWithMoved = ["First plan", "Second plan", "Root first"];
     await waitFor(() => expect(store.titlesIn("folder-planning")).toEqual(planningWithMoved));
     expect(store.titlesIn(null)).toEqual(["Root later"]);
@@ -639,8 +617,7 @@ describe("moving notes to a folder", () => {
     await waitFor(() => expect(store.titlesIn("folder-planning")).toEqual(planningWithMoved));
 
     openTreeMenu(row("First plan"));
-    await openMoveMenu();
-    await clickMenuItem("No folder");
+    await moveTo("No folder");
     await waitFor(() => expect(store.titlesIn(null)).toEqual(["Root later", "First plan"]));
   });
 
@@ -649,8 +626,7 @@ describe("moving notes to a folder", () => {
     fireEvent.click(row("Root first"));
     fireEvent.click(row("Root later"), { shiftKey: true });
     openTreeMenu(row("Root later"));
-    await openMoveMenu();
-    await clickMenuItem("Archive");
+    await moveTo("Archive");
     await waitFor(() =>
       expect(store.titlesIn("folder-archive")).toEqual(["Root first", "Root later"]),
     );
@@ -662,12 +638,28 @@ describe("moving notes to a folder", () => {
     expect(store.titlesIn("folder-archive")).toEqual([]);
   });
 
-  it("offers no move for a selection holding a folder", async () => {
+  it("finds a folder by typing and moves there with Enter", async () => {
+    const { store } = await renderSidebar();
+    openTreeMenu(row("Root first"));
+    await clickMenuItem("Move to…");
+    const search = screen.getByRole("combobox", { name: "Search folders and projects" });
+    fireEvent.change(search, { target: { value: "arch" } });
+    expect(
+      screen.getAllByRole("option").map((option) => option.getAttribute("aria-label")),
+    ).toEqual(["Archive"]);
+    await act(async () => {
+      fireEvent.keyDown(search, { key: "Enter" });
+    });
+    await waitFor(() => expect(store.titlesIn("folder-archive")).toEqual(["Root first"]));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("offers no move for a selection holding a folder when there are no projects", async () => {
     await renderSidebar();
     fireEvent.click(row("Root later"));
     fireEvent.click(row("Planning"), { ctrlKey: true });
     openTreeMenu(row("Planning"));
     expect(await screen.findByRole("menuitem", { name: "Delete selected" })).toBeTruthy();
-    expect(screen.queryByRole("menuitem", { name: "Move to folder" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Move to…" })).toBeNull();
   });
 });

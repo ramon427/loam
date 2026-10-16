@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { PuzzleIcon, TerminalIcon } from "lucide-react";
 
 import { formatCombo, parsePluginShortcut } from "../keyboard/shortcuts";
@@ -34,6 +34,8 @@ export function CommandPalette({
   const { commands } = usePluginHost();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
+  /** The chosen command, run once the palette has closed and handed focus back. */
+  const pending = useRef<(() => void) | null>(null);
 
   const rows = useMemo(() => {
     const all: Row[] = [
@@ -66,9 +68,8 @@ export function CommandPalette({
   };
   const run = (row: Row | undefined) => {
     if (!row) return;
+    pending.current = row.run;
     close();
-    // After the dialog has closed and given focus back.
-    requestAnimationFrame(row.run);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "ArrowDown") setSelected((index + 1) % Math.max(1, rows.length));
@@ -85,6 +86,12 @@ export function CommandPalette({
         showCloseButton={false}
         className="top-[20%] max-w-lg translate-y-0 gap-0 p-0"
         aria-describedby={undefined}
+        // After focus is back where it was, so a command that opens a dialog keeps its focus.
+        onCloseAutoFocus={() => {
+          const action = pending.current;
+          pending.current = null;
+          if (action) queueMicrotask(action);
+        }}
       >
         <DialogTitle className="sr-only">Commands</DialogTitle>
         <input

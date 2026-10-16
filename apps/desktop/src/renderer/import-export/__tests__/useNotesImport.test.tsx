@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   pickImport: vi.fn(),
+  pickDroppedImport: vi.fn(),
   saveImportImages: vi.fn(),
   writeImportNotes: vi.fn(),
   finishImport: vi.fn(),
@@ -30,6 +31,7 @@ import { useNotesImport } from "../useNotesImport";
 
 installFakeBridge({
   "import.pick": mocks.pickImport,
+  "import.pickDropped": mocks.pickDroppedImport,
   "import.images": mocks.saveImportImages,
   "import.write": mocks.writeImportNotes,
   "import.finish": mocks.finishImport,
@@ -38,6 +40,7 @@ installFakeBridge({
 
 const picked = {
   status: "picked",
+  source: "markdown",
   sessionId: "session-1",
   name: "Vault",
   files: [{ path: "A.md", text: "a" }],
@@ -52,7 +55,7 @@ const renderImport = () => {
   return {
     ...view,
     onImported,
-    run: () => act(() => view.result.current.importNotes("markdown")),
+    run: () => act(() => view.result.current.importNotes()),
   };
 };
 
@@ -99,6 +102,15 @@ describe("useNotesImport", () => {
     expect(result.current.summary).toBeNull();
   });
 
+  it("imports what was dropped through the request that confirms it first", async () => {
+    mocks.pickDroppedImport.mockResolvedValue(picked);
+    const { result, onImported } = renderImport();
+    await act(() => result.current.importNotes(["/Users/me/Vault"]));
+    expect(mocks.pickDroppedImport).toHaveBeenCalledWith({ paths: ["/Users/me/Vault"] });
+    expect(mocks.pickImport).not.toHaveBeenCalled();
+    expect(onImported).toHaveBeenCalledTimes(1);
+  });
+
   it("shows conversion progress as the converter reports it", async () => {
     let report: ((done: number, total: number) => void) | undefined;
     let finishConvert!: () => void;
@@ -111,7 +123,7 @@ describe("useNotesImport", () => {
     const { result, onImported } = renderImport();
     let running!: Promise<void>;
     act(() => {
-      running = result.current.importNotes("markdown");
+      running = result.current.importNotes();
     });
     await vi.waitFor(() => expect(report).toBeDefined());
     act(() => report!(25, 250));

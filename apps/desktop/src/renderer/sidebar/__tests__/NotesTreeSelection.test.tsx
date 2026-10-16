@@ -155,18 +155,14 @@ describe("selecting in the notes tree", () => {
 });
 
 describe("deleting the selection from the keyboard", () => {
-  it("asks first, then deletes the selected notes together", async () => {
+  it("deletes the selected notes together, without asking", async () => {
     const { store } = await renderSidebar();
     fireEvent.click(row("Root first"));
     fireEvent.click(row("Root later"), { shiftKey: true });
 
     fireEvent.keyDown(row("Root later"), { key: "Delete" });
 
-    expect(store.titlesIn(null)).toEqual(["Root first", "Root later"]);
-    expect(screen.getByRole("heading", { name: "Delete 2 items?" })).toBeTruthy();
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Delete 2 items" }));
-    });
+    expect(screen.queryByRole("dialog")).toBeNull();
     await waitFor(() => expect(store.titlesIn(null)).toEqual([]));
     expect(store.inTrash("root-first") && store.inTrash("root-later")).toBe(true);
     expect(store.folderNames()).toEqual(["Planning", "Archive"]);
@@ -197,9 +193,6 @@ describe("deleting the selection from the keyboard", () => {
     sidebar.openNote("root-later");
 
     fireEvent.keyDown(row("Root later"), { key: "Delete" });
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Delete note" }));
-    });
 
     await waitFor(() => expect(sidebar.store.inTrash("root-later")).toBe(true));
     expect(sidebar.store.note("root-first")).toBeDefined();
@@ -214,13 +207,15 @@ describe("deleting the selection from the keyboard", () => {
   });
 
   it("does not delete while a name is being typed", async () => {
-    await renderSidebar();
+    const sidebar = await renderSidebar();
     openTreeMenu(row("Root first"));
     await clickMenuItem("Rename note");
 
-    fireEvent.keyDown(screen.getByLabelText("Rename note"), { key: "Delete" });
+    await act(async () => {
+      fireEvent.keyDown(screen.getByLabelText("Rename note"), { key: "Delete" });
+    });
 
-    expect(screen.queryByRole("heading", { name: "Delete note?" })).toBeNull();
+    expect(callsTo(sidebar.invoke, "notes.delete")).toEqual([]);
   });
 
   it("keeps a selection made while a delete is still running", async () => {
@@ -234,11 +229,10 @@ describe("deleting the selection from the keyboard", () => {
       }),
     });
 
-    fireEvent.keyDown(row("Root first"), { key: "Delete" });
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Delete note" }));
+      fireEvent.keyDown(row("Root first"), { key: "Delete" });
     });
-    // The dialog stays open while the delete runs; the tree under it can still change.
+    // The tree can still change while the delete runs.
     fireEvent.click(screen.getByRole("button", { name: "Planning", hidden: true }));
     await sidebar.changeElsewhere({ notes: notes.filter((note) => note.id !== "root-later") });
     await act(async () => remove.resolve());

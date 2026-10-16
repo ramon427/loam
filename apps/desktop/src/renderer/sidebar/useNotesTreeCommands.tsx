@@ -79,6 +79,7 @@ function useNotesTreeCommandsState() {
   const [history, setHistory] = useState<History>({ undo: [], redo: [] });
   const [isRunningHistory, setIsRunningHistory] = useState(false);
   const [deleteRequest, setDeleteRequest] = useState<NotesDeleteCandidate | null>(null);
+  const [moveRequest, setMoveRequest] = useState<readonly NotesTreeItem[] | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const creatingNoteRef = useRef(false);
 
@@ -388,8 +389,7 @@ function useNotesTreeCommandsState() {
     return lib().deleteSelection(candidate);
   };
 
-  const confirmDelete = async () => {
-    const candidate = deleteRequest;
+  const deleteCandidate = async (candidate: NotesDeleteCandidate | null) => {
     if (!candidate || isDeleting) return;
     setIsDeleting(true);
     // Read before the delete, which moves the workspace off a deleted open note.
@@ -464,10 +464,20 @@ function useNotesTreeCommandsState() {
     closeProjectDialog: () => setProjectDialog(null),
     submitProjectDialog,
     removeProject,
+    /** The notes or folders "Move to…" is choosing a place for. */
+    moveRequest,
+    requestMove: setMoveRequest,
     deleteRequest,
     isDeleting,
-    requestDelete: setDeleteRequest,
-    confirmDelete,
+    /**
+     * Notes go to Trash at once, where Undo and Trash bring them back. A folder asks first: its
+     * removal isn't kept in Trash.
+     */
+    requestDelete: (candidate: NotesDeleteCandidate | null) => {
+      if (candidate && candidate.folderIds.length === 0) void deleteCandidate(candidate);
+      else setDeleteRequest(candidate);
+    },
+    confirmDelete: () => deleteCandidate(deleteRequest),
     undoLabel: lastUndo ? `Undo ${lastUndo.label}` : "Undo",
     redoLabel: lastRedo ? `Redo ${lastRedo.label}` : "Redo",
     canUndo: Boolean(lastUndo) && !isRunningHistory,

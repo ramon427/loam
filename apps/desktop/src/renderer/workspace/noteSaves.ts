@@ -1,6 +1,6 @@
 import { BridgeError, callBridge } from "../bridge";
 import type {
-  ConflictCopy,
+  NoteConflict,
   NoteContent,
   NoteDocument,
   NotePatch,
@@ -46,7 +46,7 @@ type KeptEdits = { patch: NotePatch; base?: string };
 const pending = new Map<string, PendingNote>();
 /** The version of each note the window last read or saved (its `updatedAt`). */
 const knownVersions = new Map<string, string>();
-const savedListeners = new Set<(noteId: string, conflictCopy?: ConflictCopy) => void>();
+const savedListeners = new Set<(noteId: string, conflict?: NoteConflict) => void>();
 let draftTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** Fields that hold blocks or what headings connect to. */
@@ -173,7 +173,7 @@ const runSave = (noteId: string, entry: PendingNote): Promise<void> => {
       // Right away, so a draft never holds content older than what is stored.
       writeDrafts();
       dropRetriedEdits(noteId);
-      for (const listener of savedListeners) listener(noteId, saved.conflictCopy);
+      for (const listener of savedListeners) listener(noteId, saved.conflict);
     },
     (error: unknown) => {
       entry.saving = null;
@@ -244,8 +244,8 @@ export const readNoteSaveStatus = (noteId: string): NoteSaveStatus => {
   return entry.saving ? "saving" : "unsaved";
 };
 
-/** Calls `listener` after each successful save of a note, with any conflict copy it made. */
-export const onNoteSaved = (listener: (noteId: string, conflictCopy?: ConflictCopy) => void) => {
+/** Calls `listener` after each successful save of a note, with any conflict it kept. */
+export const onNoteSaved = (listener: (noteId: string, conflict?: NoteConflict) => void) => {
   savedListeners.add(listener);
   return () => void savedListeners.delete(listener);
 };

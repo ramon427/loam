@@ -1,5 +1,7 @@
 import type {
   NoteBacklinks,
+  NoteConflict,
+  NoteContent,
   NoteContentSearchResponse,
   NoteDocument,
   NoteHistory,
@@ -46,7 +48,7 @@ import {
   type StoredNote,
   type TrashedNote,
 } from "./noteContent";
-import { versionWrites } from "./noteHistory";
+import { planVersionWrites, versionWrites } from "./noteHistory";
 import { PROJECTS_ID, projectsWrite } from "./projects";
 import { listRecords, readRecord } from "./records";
 import { scanNoteRows, toSearchResult } from "./search";
@@ -58,7 +60,7 @@ import {
   type StoreRecords,
 } from "./snapshots";
 import { StoreError, invalidRequest, noteNotFound } from "./storeError";
-import { addConflictCopy, applyRemoteChange, type RemoteApplyStore } from "./sync/applyRemote";
+import { applyRemoteChange, type RemoteApplyStore } from "./sync/applyRemote";
 import { syncKey, type SyncChange, type SyncChangeRef, type SyncDocKey } from "./sync/syncDocs";
 import { allSyncKeys, readUnpublishedChanges } from "./sync/publishChanges";
 import { SyncLedger } from "./sync/syncLedger";
@@ -94,7 +96,7 @@ const noChange = (): NotesChange => ({
   changedNoteIds: [],
   deletedNoteIds: [],
   layoutChanged: false,
-  conflictCopies: [],
+  conflicts: [],
 });
 
 export type NotesStoreOptions = {
@@ -148,6 +150,7 @@ export class NotesStore {
       readProjects: () => this.readProjects(),
       keepVersion: (writes, noteId, previous, force) =>
         this.keepVersion(writes, noteId, previous, force),
+      keepConflict: (writes, noteId, loser) => this.keepConflict(writes, noteId, loser),
       commit: (writes, changed) => this.commit(writes, changed),
       markRemote: (noteId, updatedAt) => void this.remoteUpdatedAt.set(noteId, updatedAt),
     };
@@ -211,8 +214,9 @@ export class NotesStore {
     writes: StorageWrite[],
     changed: readonly SyncDocKey[] = [],
     change?: StoreChange,
+    overridden?: ReadonlyMap<SyncDocKey, string>,
   ) {
-    writes.push(...(await this.ledger.recordLocal(changed)));
+    writes.push(...(await this.ledger.recordLocal(changed, overridden)));
     await this.adapter.commit(writes);
     this.ledger.afterCommit(writes);
     const rows = this.rows;
@@ -234,8 +238,8 @@ export class NotesStore {
   }
 
   private emit(change: StoreChange) {
-    const { changedNoteIds, deletedNoteIds, layoutChanged, conflictCopies } = change;
-    if (changedNoteIds.length || deletedNoteIds.length || layoutChanged || conflictCopies.length)
+    const { changedNoteIds, deletedNoteIds, layoutChanged, conflicts } = change;
+    if (changedNoteIds.length || deletedNoteIds.length || layoutChanged || conflicts.length)
       for (const listener of this.changeListeners) listener(change);
   }
 
@@ -269,6 +273,29 @@ export class NotesStore {
         createId: this.createId,
       }),
     );
+  }
+
+  /**
+   * Adds writes that keep `loser`, the version of a note that lost a conflict, in its history
+   * for good, and returns the conflict. Null when that content is kept that way already.
+   */
+  private async keepConflict(
+    writes: StorageWrite[],
+    noteId: string,
+    loser: { content: NoteContent; updatedAt: string },
+  ): Promise<NoteConflict | null> {
+    const planned = planVersionWrites(noteId, {
+      index: await readRecord(this.adapter, "history", noteId),
+      document: loser.content,
+      savedAt: Date.parse(loser.updatedAt),
+      now: this.now(),
+      force: true,
+      conflict: true,
+      createId: this.createId,
+    });
+    if (!planned) return null;
+    writes.push(...planned.writes);
+    return { noteId, versionId: planned.versionId, title: loser.content.title };
   }
 
   private updatedAt(previous?: string) {
@@ -342,7 +369,8 @@ export class NotesStore {
    * touches just the note's row.
    *
    * `baseUpdatedAt` is the version the edit was made to. User edits against an
-   * older sync or AI version keep that version as a conflict copy. External
+   * older sync or AI version keep that version in the note's history as a
+   * conflict. External
    * clients must supply the current version; their stale writes are rejected.
    */
   saveNote(
@@ -373,28 +401,33 @@ export class NotesStore {
       const changed: SyncDocKey[] = [syncKey("note", noteId)];
       // Sync and AI writes set this, so a user edit made to older content keeps both versions.
       const synced = this.remoteUpdatedAt.get(noteId);
-      const conflictCopy =
+      const conflict =
         baseUpdatedAt && synced === previous.row.updatedAt && baseUpdatedAt !== synced
-          ? await addConflictCopy(this.remote, writes, changed, noteId, {
+          ? await this.keepConflict(writes, noteId, {
               content: current,
-              clock: (await this.ledger.read(syncKey("note", noteId)))?.clock ?? "",
               updatedAt: previous.row.updatedAt,
-              place: previous.row,
             })
           : null;
-      await this.keepVersion(writes, noteId, previous, false);
+      // A conflict keeps the replaced content already; two plans would overwrite one index.
+      if (!conflict) await this.keepVersion(writes, noteId, previous, false);
       if (Object.keys(patch).some((key) => key !== "title")) writes.push(...noteWrites(row, next));
       else writes.push({ type: "put", collection: "notes", id: noteId, value: row });
-      await this.commit(writes, changed, {
-        ...noChange(),
-        changedNoteIds: conflictCopy ? [noteId, conflictCopy.id] : [noteId],
-        layoutChanged: Boolean(conflictCopy),
-        conflictCopies: conflictCopy ? [conflictCopy] : [],
-        external: Boolean(options.external),
-      });
+      // The device that wrote the version this edit replaced learns that its edit lost.
+      const heldClock = conflict && (await this.ledger.read(syncKey("note", noteId)))?.clock;
+      await this.commit(
+        writes,
+        changed,
+        {
+          ...noChange(),
+          changedNoteIds: [noteId],
+          conflicts: conflict ? [conflict] : [],
+          external: Boolean(options.external),
+        },
+        heldClock ? new Map([[syncKey("note", noteId), heldClock]]) : undefined,
+      );
       if (options.external) this.remoteUpdatedAt.set(noteId, updatedAt);
       else this.remoteUpdatedAt.delete(noteId);
-      return conflictCopy ? { updatedAt, conflictCopy } : { updatedAt };
+      return conflict ? { updatedAt, conflict } : { updatedAt };
     });
   }
 
@@ -667,11 +700,12 @@ export class NotesStore {
     return this.serialize(async () => {
       const history = await readRecord(this.adapter, "history", noteId);
       return {
-        versions: (history?.versions ?? []).map(({ id, savedAt, title, sizeBytes }) => ({
+        versions: (history?.versions ?? []).map(({ id, savedAt, title, sizeBytes, conflict }) => ({
           id,
           savedAt,
           title,
           sizeBytes,
+          ...(conflict && { conflict }),
         })),
       };
     });

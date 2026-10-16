@@ -92,8 +92,6 @@ test("deletes a note and brings it back with undo", async ({ loam }) => {
   await createNote(window, { title: "Remove me", body: "Body" });
   await noteRow(window, "Remove me").click({ button: "right" });
   await window.getByRole("menuitem", { name: "Delete note" }).click();
-  const confirm = window.getByRole("dialog");
-  if (await confirm.isVisible()) await confirm.getByRole("button", { name: "Delete note" }).click();
   await expect(noteRow(window, "Remove me")).toHaveCount(0);
   await window.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(noteRow(window, "Remove me")).toBeVisible();

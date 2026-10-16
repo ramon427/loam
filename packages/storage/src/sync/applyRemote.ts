@@ -1,4 +1,5 @@
 import type {
+  NoteConflict,
   NoteContent,
   NoteFolder,
   NoteProject,
@@ -15,14 +16,12 @@ import {
   sameContent,
   toNoteContent,
   trashWrites,
-  type NotePlace,
   type NoteRow,
   type StoredNote,
 } from "../noteContent";
 import { projectsWrite } from "../projects";
 import { decideGroup, decideNote, decidePlace } from "./resolve";
 import {
-  conflictCopyId,
   isChangeOf,
   parseSyncKey,
   syncKey,
@@ -35,8 +34,8 @@ import type { IncomingOrder, SyncLedger } from "./syncLedger";
 
 /**
  * Applying a change from another device to the store: which version stays
- * (`resolve.ts` decides), and the writes that make it so, including conflict
- * copies. The store runs these one at a time, between its other requests.
+ * (`resolve.ts` decides), and the writes that make it so, including keeping
+ * the version that lost a conflict. The store runs these one at a time, between its other requests.
  */
 
 /** What applying a change reads from and writes to the store. */
@@ -54,6 +53,12 @@ export type RemoteApplyStore = {
     previous: StoredNote,
     force: boolean,
   ) => Promise<void>;
+  /** Adds writes that keep a version that lost a conflict in the note's history for good. */
+  keepConflict: (
+    writes: StorageWrite[],
+    noteId: string,
+    loser: { content: NoteContent; updatedAt: string },
+  ) => Promise<NoteConflict | null>;
   /** Commits `writes`; `changed` names documents to publish from this device. */
   commit: (writes: StorageWrite[], changed?: readonly SyncDocKey[]) => Promise<void>;
   /** Records that a note's content, saved at `updatedAt`, came from another device. */
@@ -63,32 +68,10 @@ export type RemoteApplyStore = {
 type Order = Exclude<IncomingOrder, "skip">;
 
 /**
- * Adds a note holding a version that lost a conflict, at the end of the
- * original's place. Each version gets one copy, the same on every device
- * (it carries the version's own save time), and a copy someone already
- * deleted is not made again. A user's edit to a version sync or an AI client
- * replaced makes one too.
+ * Applies a note's change as `decideNote` says. The losing version is kept in the note's
+ * history on this device, which has both; history doesn't sync, and every device that sees
+ * the conflict keeps it.
  */
-export const addConflictCopy = async (
-  store: Pick<RemoteApplyStore, "ledger" | "readRows">,
-  writes: StorageWrite[],
-  changed: SyncDocKey[],
-  noteId: string,
-  loser: { content: NoteContent; clock: string; updatedAt: string; place: NotePlace },
-) => {
-  const id = conflictCopyId(noteId, loser.clock);
-  const rows = await store.readRows();
-  if (rows.has(id) || (await store.ledger.read(syncKey("note", id)))) return null;
-  const title = `${loser.content.title || "Untitled"} (conflict copy)`;
-  const content = { ...loser.content, title };
-  const position = nextPosition(rows.values(), loser.place);
-  const row = buildNoteRow(id, content, { ...loser.place, position }, loser.updatedAt);
-  writes.push(...noteWrites(row, content));
-  changed.push(syncKey("note", id), syncKey("place", id));
-  return { id, title };
-};
-
-/** Applies a note's change as `decideNote` says, keeping the losing version as a conflict copy. */
 const applyRemoteNote = async (
   store: RemoteApplyStore,
   noteId: string,
@@ -100,28 +83,27 @@ const applyRemoteNote = async (
   const local = await store.findNote(noteId);
   const incoming = change.value;
   const writes: StorageWrite[] = [];
-  const changed: SyncDocKey[] = [];
   const current = local ? toNoteContent(local.row, local.content) : null;
   const heldClock = ledger.heldClock(change.key);
   const incomingAt = new Date(change.savedAt).toISOString();
-  const { kept, copy } = decideNote(
+  const same = sameContent(current, incoming);
+  const decided = decideNote(
     { order, incomingClock: change.clock, heldClock },
-    {
-      local: Boolean(current),
-      incoming: Boolean(incoming),
-      same: sameContent(current, incoming),
-    },
+    { local: Boolean(current), incoming: Boolean(incoming), same },
   );
-  if (copy) {
+  const { kept } = decided;
+  // The author won a conflict over the version held here: it lost, though this device
+  // never saw the two side by side.
+  const overridden =
+    kept === "incoming" && current && incoming && !same && change.overrode?.includes(heldClock);
+  const lost = decided.lost ?? (overridden ? "local" : null);
+  if (lost) {
     const loser =
-      copy === "incoming"
-        ? { content: incoming!, clock: change.clock, updatedAt: incomingAt }
-        : { content: current!, clock: heldClock, updatedAt: local!.row.updatedAt };
-    const conflictCopy = await addConflictCopy(store, writes, changed, noteId, {
-      ...loser,
-      place: local?.row ?? { folderId: null },
-    });
-    if (conflictCopy) result.conflictCopies.push(conflictCopy);
+      lost === "incoming"
+        ? { content: incoming!, updatedAt: incomingAt }
+        : { content: current!, updatedAt: local!.row.updatedAt };
+    const conflict = await store.keepConflict(writes, noteId, loser);
+    if (conflict) result.conflicts.push({ ...conflict, title: current!.title });
   }
   if (kept === "incoming" && incoming) {
     let placement: PlaceValue | undefined = local?.row;
@@ -133,7 +115,8 @@ const applyRemoteNote = async (
         position: nextPosition((await store.readRows()).values(), { folderId: null }),
       };
     }
-    if (local) await store.keepVersion(writes, noteId, local, false);
+    // A local version that lost is kept as the conflict already.
+    if (local && lost !== "local") await store.keepVersion(writes, noteId, local, false);
     writes.push(...noteWrites(buildNoteRow(noteId, incoming, placement, incomingAt), incoming));
     store.markRemote(noteId, incomingAt);
     result.changedNoteIds.push(noteId);
@@ -143,7 +126,7 @@ const applyRemoteNote = async (
     result.deletedNoteIds.push(noteId);
   }
   writes.push(...ledger.recordIncoming(change, kept));
-  await store.commit(writes, changed);
+  await store.commit(writes);
 };
 
 /** Moves a note as `decidePlace` says; a place for a note not here yet waits for it. */

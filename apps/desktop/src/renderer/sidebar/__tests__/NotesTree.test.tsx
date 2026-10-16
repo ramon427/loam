@@ -246,9 +246,6 @@ describe("a library too large to render at once", () => {
 
     fireEvent.click(row("Note 3"));
     fireEvent.keyDown(row("Note 3"), { key: "Delete" });
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Delete note" }));
-    });
 
     await waitFor(() => expect(store.inTrash("note-3")).toBe(true));
     expect(screen.queryByRole("button", { name: "Note 3" })).toBeNull();

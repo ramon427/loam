@@ -280,7 +280,7 @@ export async function syncWithFolder(store: NotesStore, folder: SyncFolder) {
     changedNoteIds: [],
     deletedNoteIds: [],
     layoutChanged: false,
-    conflictCopies: [],
+    conflicts: [],
     published: 0,
     unreadable: 0,
   };
@@ -298,7 +298,7 @@ export async function syncWithFolder(store: NotesStore, folder: SyncFolder) {
     const applied = await store.applyRemoteChanges(changes);
     result.changedNoteIds.push(...applied.changedNoteIds);
     result.deletedNoteIds.push(...applied.deletedNoteIds);
-    result.conflictCopies.push(...applied.conflictCopies);
+    result.conflicts.push(...applied.conflicts);
     result.layoutChanged ||= applied.layoutChanged;
   }
 

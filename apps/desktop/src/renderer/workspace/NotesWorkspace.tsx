@@ -1,8 +1,17 @@
-import { createContext, use, useCallback, useEffect, useMemo, type ReactNode } from "react";
+import {
+  createContext,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import type { NoteFolder, NoteProject, NoteProjectIcon } from "@loam/shared/notes/noteModel";
 import { callBridge } from "../bridge";
+import type { HistoryTarget } from "../history/NoteHistoryDialog";
 
 import {
   keepUnsavedEditsOnClose,
@@ -57,6 +66,10 @@ export type NotesWorkspace = {
   /** Goes up when sync replaces the open note's content, so its editor starts over. */
   activeNoteRevision: number;
   openNote: (noteId: string, options?: { tabId?: string; focusTitle?: boolean }) => void;
+  /** The note whose version history is open, or null. */
+  historyTarget: HistoryTarget | null;
+  /** Opens a note's version history, at one version when `target` names it; null closes it. */
+  openHistory: (target: HistoryTarget | null) => void;
   /**
    * Changes a note read in full and saves the fields `change` names after a
    * short pause. A function gets the note as it is now, edits included.
@@ -141,9 +154,10 @@ export function NotesWorkspaceProvider({ children }: { children: ReactNode }) {
   const { createFolder, renameFolder, removeFolders, deleteFolder, restoreFolder } =
     useFolderCommands(layout);
   const { createProject, updateProject } = useProjectCommands(layout);
+  const [historyTarget, openHistory] = useState<HistoryTarget | null>(null);
   const { activeNoteRevision, reloadNote } = useSyncedChanges({
     activeNoteId,
-    openNote,
+    openHistory,
     leaveDeletedNotes,
     recover: layout.recover,
   });
@@ -181,6 +195,8 @@ export function NotesWorkspaceProvider({ children }: { children: ReactNode }) {
       openRequest,
       activeNoteRevision,
       openNote,
+      historyTarget,
+      openHistory,
       updateNote,
       createNote,
       duplicateNote,
@@ -203,6 +219,7 @@ export function NotesWorkspaceProvider({ children }: { children: ReactNode }) {
       openRequest,
       activeNoteRevision,
       openNote,
+      historyTarget,
       updateNote,
       createNote,
       duplicateNote,

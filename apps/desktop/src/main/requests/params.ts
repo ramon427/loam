@@ -226,7 +226,8 @@ export const BRIDGE_PARAMS: { [M in LoamBridgeMethod]: z.ZodType<LoamBridgeParam
   "ai.deleteThread": threadIdParams,
   "export.markdown": z.strictObject({ scope: exportScopeSchema }),
   "export.reveal": noParams,
-  "import.pick": z.strictObject({ source: importSourceSchema }),
+  "import.pick": noParams,
+  "import.pickDropped": z.strictObject({ paths: z.array(filePath).min(1).max(10_000) }),
   "import.images": z.strictObject({
     sessionId: idSchema,
     requests: z.array(z.strictObject({ fromPath: z.string(), reference: z.string() })),
