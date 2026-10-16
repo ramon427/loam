@@ -11,6 +11,7 @@
     --glass-solid-bg: var(--app-bg);
     --glass-solid-page: var(--app-page);
     --glass-solid-surface: var(--app-surface);
+    --glass-solid-control: var(--app-control);
     --glass-window-opacity: 38%;
     --glass-page-opacity: 46%;
     --glass-paper-opacity: 78%;
@@ -39,6 +40,36 @@
     --main-column-bg: var(--app-page);
     --app-page-region: transparent;
     --card-bg: var(--app-surface);
+
+    /* Lines and the fills that mark a state (hover, selected, a pill, code) shade what is under
+       them in the text's colour, rather than laying a solid grey over the glass. */
+    --app-border: color-mix(in srgb, var(--app-text) 11%, transparent);
+    --app-border-subtle: color-mix(in srgb, var(--app-text) 7%, transparent);
+    --app-border-strong: color-mix(in srgb, var(--app-text) 16%, transparent);
+    --app-divider: color-mix(in srgb, var(--app-text) 8%, transparent);
+    --app-page-2: color-mix(in srgb, var(--app-text) 5%, transparent);
+    --app-surface-2: color-mix(in srgb, var(--app-text) 9%, transparent);
+    --app-code-bg: color-mix(in srgb, var(--app-text) 7%, transparent);
+    --app-control: color-mix(in srgb, var(--glass-solid-control) 50%, transparent);
+    --app-control-hover: color-mix(in srgb, var(--app-text) 8%, transparent);
+    --app-sidebar-hover: color-mix(in srgb, var(--app-text) 6%, transparent);
+    --app-accent-muted: color-mix(in srgb, var(--app-text) 12%, transparent);
+    --sidebar-item-hover-bg: var(--app-sidebar-hover);
+    --sidebar-item-active-bg: color-mix(in srgb, var(--app-text) 10%, transparent);
+    --pill-bg: var(--app-page-2);
+    --pill-border: var(--app-border);
+    --table-border: color-mix(in srgb, var(--app-text) 7%, transparent);
+    --control-border: var(--app-border);
+    --control-border-hover: var(--app-border-strong);
+    --control-selected-bg: color-mix(in srgb, var(--app-text) 12%, transparent);
+    --control-selected-hover-bg: color-mix(in srgb, var(--app-text) 15%, transparent);
+    --raised-control-bg: var(--app-control);
+    --raised-control-hover-bg: var(--app-control-hover);
+    --raised-panel-border: var(--app-border-strong);
+    --menu-item-hover-bg: var(--raised-control-hover-bg);
+    --button-secondary-bg: color-mix(in srgb, var(--app-text) 6%, transparent);
+    --button-secondary-hover-bg: color-mix(in srgb, var(--app-text) 10%, transparent);
+    --button-secondary-border: var(--app-border-strong);
     background: transparent;
   }
 }
