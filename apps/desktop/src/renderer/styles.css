@@ -12,6 +12,22 @@
   --color-destructive: var(--status-danger);
 }
 
+/* A frosted surface over the page; --glass-tint picks its colour. Glass only reads with
+   something under it, so it is for what floats over content, not for panels. */
+@utility surface-glass {
+  background: color-mix(
+    in srgb,
+    var(--glass-tint, var(--app-page)) var(--glass-opacity),
+    transparent
+  );
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+
+  @media (prefers-reduced-transparency: reduce) {
+    background: var(--glass-tint, var(--app-page));
+  }
+}
+
 :root {
   --app-viewport-top: 0px;
   --app-viewport-height: 100dvh;
@@ -330,7 +346,7 @@
   color: var(--app-placeholder);
   border: 1px solid var(--app-border);
   border-radius: 0 0 10px 10px;
-  background: var(--app-control);
+  --glass-tint: var(--app-control);
   opacity: 0.7;
   transform: translateY(calc(var(--loam-header-search-peek) - 100%));
   transition:

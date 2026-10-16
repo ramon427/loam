@@ -164,7 +164,7 @@ export function NoteGraphSearchPanel({
   return (
     <section
       aria-label="Find in graph"
-      className="absolute left-3 top-3 z-30 w-80 max-w-[calc(100%-1.5rem)] rounded-md border border-(--app-border)/80 bg-(--app-page)/96 p-3 shadow-lg backdrop-blur"
+      className="absolute left-3 top-3 z-30 w-80 max-w-[calc(100%-1.5rem)] rounded-md border border-(--app-border)/80 surface-glass p-3 shadow-lg"
       role="search"
     >
       <div className="mb-2 flex items-center justify-between gap-2">

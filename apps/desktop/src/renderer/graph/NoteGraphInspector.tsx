@@ -355,7 +355,7 @@ export function NoteGraphInspector({
     <aside
       aria-label={`${kind} details`}
       className={cn(
-        "min-h-0 overflow-y-auto rounded-md border border-(--app-border)/80 bg-(--app-page)/96 p-3 shadow-lg backdrop-blur",
+        "min-h-0 overflow-y-auto rounded-md border border-(--app-border)/80 surface-glass p-3 shadow-lg",
         className,
       )}
     >

@@ -119,7 +119,7 @@ export function NotesSearch({
     >
       <SearchField
         surface="plain"
-        className="loam-header-search-field"
+        className="loam-header-search-field surface-glass"
         inputClassName="text-[13px] text-(--app-text) placeholder:text-[var(--app-placeholder,var(--app-muted))]"
         id="notes-search-input"
         ref={inputRef}
@@ -167,7 +167,7 @@ export function NotesSearch({
         <ul
           id={listId}
           ref={resultsRef}
-          className="loam-header-search-results z-30 m-0 flex max-h-[min(60vh,480px)] list-none flex-col gap-0.5 overflow-auto rounded-(--radius-control) border border-(--app-border) bg-(--app-surface) p-1 shadow-[0_12px_32px_rgb(0_0_0/18%)]"
+          className="loam-header-search-results z-30 m-0 flex max-h-[min(60vh,480px)] list-none flex-col gap-0.5 overflow-auto rounded-(--radius-control) border border-(--app-border) p-1 shadow-[0_12px_32px_rgb(0_0_0/18%)] [--glass-tint:var(--app-surface)] surface-glass"
           aria-label="Search results"
         >
           {ready

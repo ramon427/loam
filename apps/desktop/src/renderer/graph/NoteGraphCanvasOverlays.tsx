@@ -9,7 +9,7 @@ import { MAX_NOTE_GRAPH_NODES } from "@loam/shared/notes/noteGraphSchema";
 import type { NoteGraphNode } from "@loam/shared/notes/noteModel";
 
 const chipClass =
-  "rounded-md border border-(--app-border)/80 bg-(--app-page)/96 px-3 py-1.5 text-xs font-medium text-(--app-text) shadow-lg backdrop-blur";
+  "rounded-md border border-(--app-border)/80 surface-glass px-3 py-1.5 text-xs font-medium text-(--app-text) shadow-lg";
 
 /** Loops and the node limit, shown only while they apply. */
 export function NoteGraphWarnings({
@@ -22,7 +22,7 @@ export function NoteGraphWarnings({
   const nearLimit = nodeCount >= MAX_NOTE_GRAPH_NODES - 10;
   if (loopCount === 0 && !nearLimit) return null;
   return (
-    <div className="absolute bottom-14 left-3 z-20 flex items-center gap-2 rounded-md border border-amber-500/40 bg-(--app-page)/95 px-2 py-1 text-[10px] font-medium tabular-nums text-amber-600 shadow-sm backdrop-blur dark:text-amber-400">
+    <div className="absolute bottom-14 left-3 z-20 flex items-center gap-2 rounded-md border border-amber-500/40 surface-glass px-2 py-1 text-[10px] font-medium tabular-nums text-amber-600 shadow-sm dark:text-amber-400">
       {loopCount > 0 ? (
         <span title="This graph contains loops (circular connectors)">
           {loopCount === 1 ? "1 loop" : `${loopCount} loops`}
@@ -83,7 +83,7 @@ export function NoteGraphZoomControls({
   return (
     <div
       aria-label="Note graph zoom controls"
-      className="absolute bottom-3 left-3 z-20 flex items-center gap-0.5 rounded-md border border-(--app-border)/70 bg-(--app-page)/95 px-1 py-1 shadow-sm backdrop-blur"
+      className="absolute bottom-3 left-3 z-20 flex items-center gap-0.5 rounded-md border border-(--app-border)/70 surface-glass px-1 py-1 shadow-sm"
       role="toolbar"
     >
       <Button
@@ -153,7 +153,7 @@ export function NoteGraphWalkthroughBar({
   onExit: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-md border border-(--app-border)/80 bg-(--app-page)/96 px-3 py-1.5 shadow-lg backdrop-blur">
+    <div className="flex items-center gap-2 rounded-md border border-(--app-border)/80 surface-glass px-3 py-1.5 shadow-lg">
       <span className="text-[10px] font-semibold tabular-nums text-(--app-muted)">
         {index + 1} of {total}
       </span>
@@ -193,7 +193,7 @@ export function NoteGraphOutline({
   return (
     <aside
       aria-label="Node outline"
-      className="flex min-h-0 w-60 shrink-0 flex-col self-end rounded-md border border-(--app-border)/80 bg-(--app-page)/96 shadow-lg backdrop-blur"
+      className="flex min-h-0 w-60 shrink-0 flex-col self-end rounded-md border border-(--app-border)/80 surface-glass shadow-lg"
     >
       <div className="flex items-center justify-between border-b border-(--app-border)/60 px-3 py-2">
         <p className="text-xs font-semibold text-(--app-text)">Outline ({nodes.length})</p>

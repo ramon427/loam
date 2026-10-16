@@ -18,6 +18,11 @@
   --control-selected-focus-border: var(--app-text);
   --control-selected-text: var(--app-text);
   --control-selected-shadow: var(--raised-control-shadow);
+  /* Glass: what floats over the page, like the header search and the graph's toolbars,
+     frosts what scrolls under it. */
+  --glass-opacity: 68%;
+  --glass-blur: 10px;
+  --glass-saturation: 1.15;
 }
 
 .dark {
@@ -30,4 +35,7 @@
   --control-selected-focus-border: var(--app-focus-ring);
   --control-selected-text: var(--app-accent-muted-foreground);
   --control-selected-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+  --glass-opacity: 64%;
+  --glass-blur: 14px;
+  --glass-saturation: 1.08;
 }
