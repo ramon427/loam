@@ -26,7 +26,8 @@
     "check": "npm run typecheck && npm run lint && npm run knip && npm run format:check && npm test",
     "postinstall": "patch-package --error-on-fail",
     "bench": "vitest run --config vitest.bench.config.ts",
-    "e2e": "npm run build && playwright test -c e2e/playwright.config.ts"
+    "e2e": "npm run build && playwright test -c e2e/playwright.config.ts",
+    "friction": "npm run build && rm -rf tmp/friction && playwright test -c e2e/friction/playwright.config.ts; node e2e/friction/report.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.133.0",
