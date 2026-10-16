@@ -1,7 +1,7 @@
 {
   "name": "@loam/desktop",
   "productName": "Loam",
-  "version": "0.9.11",
+  "version": "0.9.12",
   "private": true,
   "description": "Loam desktop app.",
   "license": "MIT",
