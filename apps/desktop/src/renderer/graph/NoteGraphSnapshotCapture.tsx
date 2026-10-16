@@ -187,7 +187,7 @@ export function NoteGraphSnapshotCapture({
         onPointerUp={(event) => event.stopPropagation()}
       >
         <div
-          className="flex flex-wrap items-center justify-center gap-2 rounded-lg border border-(--app-border) bg-(--app-page) p-2 shadow-lg"
+          className="flex flex-wrap items-center justify-center gap-2 rounded-lg border border-(--app-border)/80 surface-glass p-2 shadow-lg"
           style={{ cursor: "default" }}
         >
           {snapshot && onInsert ? (

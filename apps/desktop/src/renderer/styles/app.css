@@ -90,6 +90,12 @@
   --pill-bg: var(--app-page-2);
   --pill-border: var(--app-border);
   --shell-bg: var(--app-bg);
+  /* The main column's own fill: clear, so the shell shows through, until whole-window glass
+     (styles/fullGlass.css) tints each region once instead. */
+  --main-column-bg: transparent;
+  /* What fills the page itself (the canvas around the paper, a full tab's paper); whole-window
+     glass clears it, since the main column paints the page there. */
+  --app-page-region: var(--app-page);
   --focus-ring: var(--app-focus-ring);
 
   --sidebar-bg: var(--app-bg);

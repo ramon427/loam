@@ -17,7 +17,8 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Overlay
       className={cn(
-        "fixed inset-0 top-[var(--app-viewport-top,0px)] z-50 bg-black/40 backdrop-blur-none dark:bg-black/55",
+        // The page behind a dialog blurs as well as dims, so the dialog reads as the one thing open.
+        "fixed inset-0 top-[var(--app-viewport-top,0px)] z-50 bg-black/30 backdrop-blur-[6px] dark:bg-black/45 reduced-transparency:bg-black/40 reduced-transparency:backdrop-blur-none dark:reduced-transparency:bg-black/55",
         className,
       )}
       {...props}

@@ -44,13 +44,19 @@ div.bn-text-input > svg {
   box-shadow: none;
 }
 
-/* The file panel: a raised panel holding tabs, a field and the app's button. */
+/* The file panel: a raised glass panel holding tabs, a field and the app's button. */
 .bn-panel {
   width: min(360px, 88vw) !important;
   padding: 5px !important;
   border: 1px solid var(--raised-panel-border) !important;
   border-radius: var(--radius-menu) !important;
-  background: var(--app-surface-overlay) !important;
+  background: color-mix(
+    in srgb,
+    var(--app-surface-overlay) var(--glass-opacity-thick),
+    transparent
+  ) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
   box-shadow: var(--raised-panel-shadow) !important;
   color: var(--app-text);
   pointer-events: auto;
@@ -111,4 +117,10 @@ div.bn-text-input > svg {
 
 .bn-panel .bn-button {
   width: 100%;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .bn-panel {
+    background: var(--app-surface-overlay) !important;
+  }
 }

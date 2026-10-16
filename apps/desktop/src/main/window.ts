@@ -66,6 +66,20 @@ const titleBarOptions = (
         titleBarOverlay: { ...themeColors(theme), height: TITLEBAR_HEIGHT },
       };
 
+/** Fully transparent, so the window's glass shows through the page. */
+const CLEAR = "#00000000";
+
+/**
+ * Lets the desktop show through the window, blurred by the system: vibrancy on macOS, acrylic on
+ * Windows 11 (older Windows ignores it). Linux has no system blur, so it keeps a solid window.
+ */
+const setWindowGlass = (window: BrowserWindow, glass: boolean) => {
+  if (process.platform === "darwin") window.setVibrancy(glass ? "under-window" : null);
+  else if (process.platform === "win32") window.setBackgroundMaterial(glass ? "acrylic" : "none");
+};
+
+const supportsGlass = () => process.platform === "darwin" || process.platform === "win32";
+
 const openExternal = (url: string) => {
   if (isSafeExternalUrl(url)) shell.openExternal(url).catch(() => undefined);
 };
@@ -90,6 +104,8 @@ export const createMainWindow = ({
   let pageReady = false;
   /** Runs once the window has closed (installing an update), unless the user keeps it open. */
   let afterClose: (() => void) | null = null;
+  /** Whether the window shows the desktop through it; see setWindowGlass. */
+  let glassShown = false;
 
   const current = () => (window && !window.isDestroyed() ? window : null);
   const isWindowContents = (contents: WebContents | null | undefined) =>
@@ -118,6 +134,7 @@ export const createMainWindow = ({
     });
     window = created;
     pageReady = false;
+    glassShown = false;
     created.webContents.on("did-start-navigation", (details) => {
       if (details.isMainFrame && !details.isSameDocument) pageReady = false;
     });
@@ -210,12 +227,18 @@ export const createMainWindow = ({
       return true;
     },
 
-    /** Keeps the native window controls in the renderer's theme. */
-    setTheme(theme: Theme, colors: TitleBarColors = themeColors(theme)) {
+    /** Keeps the native window controls, and the window's glass, in the renderer's theme. */
+    setTheme(theme: Theme, colors: TitleBarColors = themeColors(theme), glass = false) {
       const shown = current();
       if (!shown) return;
-      shown.setBackgroundColor(colors.color);
-      if (process.platform !== "darwin") shown.setTitleBarOverlay(colors);
+      const showGlass = glass && supportsGlass();
+      if (showGlass !== glassShown) {
+        setWindowGlass(shown, showGlass);
+        glassShown = showGlass;
+      }
+      shown.setBackgroundColor(showGlass ? CLEAR : colors.color);
+      if (process.platform !== "darwin")
+        shown.setTitleBarOverlay(showGlass ? { ...colors, color: CLEAR } : colors);
     },
 
     /**
