@@ -89,6 +89,12 @@
   -webkit-app-region: no-drag;
 }
 
+/* A drag area swallows presses, so while search has focus a press on the row reaches the page
+   and closes the search. */
+.loam-shell:has(.loam-header-search:focus-within) .loam-chrome-row {
+  -webkit-app-region: no-drag;
+}
+
 .loam-app-name {
   color: var(--app-text);
   font-size: 14px;
