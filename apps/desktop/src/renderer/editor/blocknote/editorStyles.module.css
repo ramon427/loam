@@ -1571,9 +1571,16 @@
   }
 }
 
-/* Adapt BlockNote's toolbar to the shared menu surface and density. */
+/* Adapt BlockNote's toolbar to the shared menu surface and density; it floats
+   over the note's text, so it is glass like the app's other floating bars. */
 .editorRoot :global(.bn-toolbar) {
-  background: var(--editor-popup-surface) !important;
+  background: color-mix(
+    in srgb,
+    var(--editor-popup-surface) var(--glass-opacity),
+    transparent
+  ) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
   border: 1px solid var(--editor-popup-border) !important;
   border-radius: var(--editor-popup-radius) !important;
   box-shadow: var(--editor-popup-shadow) !important;
@@ -1585,6 +1592,12 @@
   animation: menuSlideIn 150ms ease;
   pointer-events: auto !important;
   z-index: 50 !important;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .editorRoot :global(.bn-toolbar) {
+    background: var(--editor-popup-surface) !important;
+  }
 }
 
 /* Only toolbar actions are square; nested popover controls keep their own sizing. */

@@ -28,6 +28,18 @@
   }
 }
 
+/* Toasts float over whatever is open; their fill comes from the Toaster's --normal-bg. */
+.toaster [data-sonner-toast] {
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .toaster {
+    --normal-bg: var(--app-surface) !important;
+  }
+}
+
 :root {
   --app-viewport-top: 0px;
   --app-viewport-height: 100dvh;
