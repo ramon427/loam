@@ -352,14 +352,19 @@ export function ProjectRow({
   );
 }
 
-/** The strip under the top-level notes: dropping a note or folder here moves it to the top. */
+/**
+ * A place where dropping a note or folder moves it to the top level: the strip under the
+ * top-level notes, and the empty space under the whole list.
+ */
 export const RootDropZone = ({
   zoneProps,
+  className = "h-4",
 }: {
   zoneProps: ReturnType<SortableList["zoneProps"]>;
+  className?: string;
 }) => (
   <div
-    className="h-4 rounded-sm"
+    className={cn("rounded-sm", className)}
     data-native-sortable-zone={zoneProps["data-native-sortable-zone"]}
     data-drop-marker={zoneProps["data-drop-marker"]}
     data-native-sortable-axis={zoneProps["data-native-sortable-axis"]}

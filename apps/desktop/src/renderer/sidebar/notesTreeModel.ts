@@ -71,6 +71,10 @@ export const deleteCandidateFromKeys = (
 
 const DRAG_PREFIX = "notes-tree:";
 export const NOTES_TREE_ROOT_DROP_ID = "notes-tree-root";
+/** The empty space under the list; a drop there also goes to the top level. */
+export const NOTES_TREE_END_DROP_ID = "notes-tree-end";
+const isTopLevelDropId = (id: string) =>
+  id === NOTES_TREE_ROOT_DROP_ID || id === NOTES_TREE_END_DROP_ID;
 
 export const noteDragId = (noteId: string) => `${DRAG_PREFIX}note:${noteId}`;
 export const folderDragId = (folderId: string) => `${DRAG_PREFIX}folder:${folderId}`;
@@ -453,7 +457,7 @@ export const canAcceptNotesTreeTarget = ({
   const target = parseDragId(targetId);
   if (source?.kind === "project") return target?.kind === "project";
   const ontoContainer =
-    target?.kind === "folder" || target?.kind === "project" || targetId === NOTES_TREE_ROOT_DROP_ID;
+    target?.kind === "folder" || target?.kind === "project" || isTopLevelDropId(targetId);
   if (source?.kind === "folder") return ontoContainer;
   if (source?.kind !== "note") return false;
   if (ontoContainer) return true;
@@ -505,7 +509,7 @@ export const applyNotesTreeMove = <
 }): NotesTreeMove<TNote, TFolder, TProject> | null => {
   const places = placesOf(folders, projects, notes);
   const source = parseDragId(sourceId);
-  const target = targetId === NOTES_TREE_ROOT_DROP_ID ? null : parseDragId(targetId);
+  const target = isTopLevelDropId(targetId) ? null : parseDragId(targetId);
   if (target?.kind === "project" && !places.projectIds.has(target.id)) return null;
   if (target?.kind === "folder" && !places.folderIds.has(target.id)) return null;
 

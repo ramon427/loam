@@ -33,6 +33,7 @@ import {
   deleteCandidateFromKeys,
   folderDragId,
   noteDragId,
+  NOTES_TREE_END_DROP_ID,
   NOTES_TREE_ROOT_DROP_ID,
   notesTreeRowHeight,
   projectDragId,
@@ -263,7 +264,7 @@ export function NotesTree({ folderScopeId, projectScope, onOpenHistory }: NotesT
             <div
               ref={scrollRef}
               aria-label="Notes tree selection area"
-              className="relative min-h-0 flex-1 overflow-y-auto pb-2"
+              className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pb-2"
               role="group"
               {...selection.marqueeProps}
             >
@@ -303,7 +304,10 @@ export function NotesTree({ folderScopeId, projectScope, onOpenHistory }: NotesT
                   }
                 />
               ) : null}
-              <ul className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+              <ul
+                className="relative w-full shrink-0"
+                style={{ height: virtualizer.getTotalSize() }}
+              >
                 {virtualizer.getVirtualItems().map((virtualRow) => {
                   const row = tree.rows[virtualRow.index]!;
                   return (
@@ -320,6 +324,11 @@ export function NotesTree({ folderScopeId, projectScope, onOpenHistory }: NotesT
                   );
                 })}
               </ul>
+              {/* With every note in a project, the space under the list is where a note leaves it. */}
+              <RootDropZone
+                className="min-h-10 flex-1"
+                zoneProps={sortable.zoneProps(NOTES_TREE_END_DROP_ID, "before")}
+              />
               {selection.marqueeStyle ? (
                 <div
                   aria-hidden="true"
