@@ -23,6 +23,8 @@ const APPEARANCE_KEY = "appearance";
 
 export interface Appearance extends AppearanceOverrides {
   themeId: string;
+  /** The desktop shows through the whole window, not only through what floats over the page. */
+  glass?: "full";
 }
 
 const DEFAULT_APPEARANCE: Appearance = { themeId: DEFAULT_THEME_ID };
@@ -43,6 +45,7 @@ const readAppearanceValue = (value: unknown): Appearance | null => {
     themeId: value.themeId,
     ...(typeof value.accent === "string" && isHexColor(value.accent) && { accent: value.accent }),
     ...(readFonts(value.fonts) && { fonts: readFonts(value.fonts) }),
+    ...(value.glass === "full" && { glass: "full" as const }),
   };
 };
 
@@ -111,6 +114,10 @@ const keepSheetsLast = () => {
   new MutationObserver(() => placeSheets()).observe(document.head, { childList: true });
 };
 
+/** Only macOS and Windows blur the desktop behind a window; elsewhere it would show unblurred. */
+export const supportsFullGlass = () =>
+  ["darwin", "win32"].includes(document.documentElement.dataset.platform ?? "");
+
 /** Lays the saved appearance over the default tokens and tells the window's listeners. */
 export const applyAppearance = (appearance: Appearance = readAppearance()) => {
   const theme = findTheme(appearance.themeId);
@@ -125,6 +132,10 @@ export const applyAppearance = (appearance: Appearance = readAppearance()) => {
   cache(THEME_CSS_KEY, css);
   cache(SNIPPETS_CSS_KEY, snippetsCss);
   keepSheetsLast();
+  // Read by the styles, and by the window chrome to give the native window its glass.
+  if (appearance.glass === "full" && supportsFullGlass())
+    document.documentElement.dataset.glass = "full";
+  else delete document.documentElement.dataset.glass;
   window.dispatchEvent(new Event("theme-change"));
   window.dispatchEvent(new Event("appearance-change"));
 };

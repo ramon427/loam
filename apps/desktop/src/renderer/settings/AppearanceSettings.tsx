@@ -17,6 +17,7 @@ import {
   availableThemes,
   readAppearance,
   subscribeToAppearance,
+  supportsFullGlass,
   updateAppearance,
   type Appearance,
 } from "../themes/appearance";
@@ -182,6 +183,31 @@ export function AppearanceSettings() {
                     {option.label}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          }
+        />
+        <SettingsRow
+          title="Glass"
+          description={
+            supportsFullGlass()
+              ? "Whole window lets your desktop show through Loam."
+              : "Whole window needs macOS or Windows 11."
+          }
+          control={
+            <Select
+              value={appearance.glass ?? "floating"}
+              disabled={!supportsFullGlass()}
+              onValueChange={(value) =>
+                updateAppearance({ glass: value === "full" ? "full" : undefined })
+              }
+            >
+              <SelectTrigger aria-label="Glass" className="w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="floating">Menus and bars</SelectItem>
+                <SelectItem value="full">Whole window</SelectItem>
               </SelectContent>
             </Select>
           }

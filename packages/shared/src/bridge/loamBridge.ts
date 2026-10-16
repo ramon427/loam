@@ -302,9 +302,16 @@ type LoamBridgeRequests = {
   "app.info": Request<NoParams, BridgeAppInfo>;
   /** Opens the data folder in the system file manager. */
   "app.openDataDirectory": Request<NoParams, null>;
-  /** Keeps the native window controls in the window's theme. */
+  /**
+   * Keeps the native window controls in the window's theme. `glass` lets the desktop show
+   * through the window, frosted, where the platform can draw it (macOS and Windows 11).
+   */
   "app.setTheme": Request<
-    { theme: "light" | "dark"; colors?: { color: string; symbolColor: string } },
+    {
+      theme: "light" | "dark";
+      colors?: { color: string; symbolColor: string };
+      glass?: boolean;
+    },
     null
   >;
   /** The theme files and CSS snippets in the data folder. */

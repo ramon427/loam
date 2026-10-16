@@ -132,8 +132,8 @@ export const createHandlers = (app: AppServices): Handlers => {
       await app.revealDataDirectory();
       return null;
     },
-    "app.setTheme": async ({ theme, colors }) => {
-      app.window.setTheme(theme, colors);
+    "app.setTheme": async ({ theme, colors, glass }) => {
+      app.window.setTheme(theme, colors, glass);
       return null;
     },
     "app.automationResult": async ({ requestId, result }) => {

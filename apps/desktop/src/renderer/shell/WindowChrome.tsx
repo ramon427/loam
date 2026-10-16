@@ -17,7 +17,7 @@ import { Button } from "../ui/Button";
 
 /**
  * Paints the native window buttons (Windows and Linux) in the window's
- * colors, now and whenever the theme changes.
+ * colors, and gives the window its glass, now and whenever the theme changes.
  */
 export function useWindowControlsTheme() {
   useEffect(() => {
@@ -45,6 +45,7 @@ export function useWindowControlsTheme() {
       void callBridge("app.setTheme", {
         theme: resolveTheme(),
         colors: color && symbolColor ? { color, symbolColor } : undefined,
+        glass: document.documentElement.dataset.glass === "full",
       }).catch((error: unknown) => {
         console.warn("Could not update the window theme.", error);
       });

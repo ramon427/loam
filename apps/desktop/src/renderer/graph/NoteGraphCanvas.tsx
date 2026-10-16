@@ -390,7 +390,7 @@ export function NoteGraphCanvas(props: NoteGraphPanelProps & { graph: NoteGraph 
             aria-label="Note graph canvas"
             aria-describedby={hintsId}
             className={cn(
-              "relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-(--app-page) outline-none",
+              "relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-(--app-page-region) outline-none",
               preferences.theme !== "default" && `note-graph-theme-${preferences.theme}`,
             )}
             data-note-graph-pane={tabId}

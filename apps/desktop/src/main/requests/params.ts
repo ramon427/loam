@@ -115,6 +115,7 @@ export const BRIDGE_PARAMS: { [M in LoamBridgeMethod]: z.ZodType<LoamBridgeParam
   "app.setTheme": z.strictObject({
     theme: z.enum(["light", "dark"]),
     colors: z.strictObject({ color: hexColor, symbolColor: hexColor }).optional(),
+    glass: z.boolean().optional(),
   }),
   "customizations.list": noParams,
   "customizations.reveal": z.strictObject({ kind: z.enum(["themes", "snippets"]) }),

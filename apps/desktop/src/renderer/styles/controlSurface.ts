@@ -3,9 +3,20 @@ import { cn } from "../ui/cn";
 const raisedTransitionClass =
   "transition-[color,background-color,border-color,box-shadow] duration-(--control-transition-duration) ease-(--control-transition-easing) motion-reduce:transition-none";
 
-/** Floating panels: menus, popovers and dialogs. Dark panels sit a step above the page. */
+const raisedPanelEdgeClass =
+  "rounded-(--radius-menu) border border-(--raised-panel-border) text-(--text) shadow-(--raised-panel-shadow)";
+
+/** Dialogs: solid, since the page behind them is already dimmed and blurred. Dark panels sit a step above the page. */
 export const raisedPanelClass = cn(
-  "rounded-(--radius-menu) border border-(--raised-panel-border) bg-(--app-surface-overlay) text-(--text) shadow-(--raised-panel-shadow)",
+  raisedPanelEdgeClass,
+  "bg-(--app-surface-overlay)",
+  raisedTransitionClass,
+);
+
+/** Menus and popovers float right over the page, so they are thick glass. */
+export const glassPanelClass = cn(
+  raisedPanelEdgeClass,
+  "surface-glass surface-glass-thick [--glass-tint:var(--app-surface-overlay)]",
   raisedTransitionClass,
 );
 
