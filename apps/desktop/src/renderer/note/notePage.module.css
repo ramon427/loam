@@ -243,9 +243,8 @@
 }
 
 .fullPaper {
-  /* Solid even in whole-window glass, which sets --glass-solid-page: nothing behind the window
-     shows through a note's paper. */
-  background: var(--glass-solid-page, var(--app-page-region));
+  /* Whole-window glass clears the page region but frosts the paper (styles/fullGlass.css). */
+  background: var(--glass-paper-page, var(--app-page-region));
   border: 0;
   border-radius: 0;
   box-shadow: none;

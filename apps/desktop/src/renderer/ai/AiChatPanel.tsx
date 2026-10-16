@@ -2,7 +2,6 @@ import { createContext, use, useEffect, useState, type CSSProperties, type React
 import {
   CheckIcon,
   ChevronDownIcon,
-  ChevronRightIcon,
   FileTextIcon,
   GlobeIcon,
   ListChecksIcon,
@@ -39,10 +38,21 @@ import styles from "./aiChat.module.css";
 import { useAiChat, type AiChat } from "./useAiChat";
 import { PANEL_ID, type AiChatLayout } from "./useAiChatLayout";
 
+/** Each card names the task briefly and puts its full request in the message box. */
 const STARTERS = [
-  { text: "Summarize this note", icon: FileTextIcon },
-  { text: "Turn this note into a checklist", icon: ListChecksIcon },
-  { text: "Research this topic and add what you find", icon: GlobeIcon },
+  { title: "Summarize", detail: "This note", text: "Summarize this note", icon: FileTextIcon },
+  {
+    title: "Checklist",
+    detail: "From this note",
+    text: "Turn this note into a checklist",
+    icon: ListChecksIcon,
+  },
+  {
+    title: "Research",
+    detail: "From the web",
+    text: "Research this topic and add what you find",
+    icon: GlobeIcon,
+  },
 ];
 
 /** How long the chat's column takes to close; it stays until then. */
@@ -152,13 +162,14 @@ export function AiChatSide({
         <p className={cn("mb-1 text-[13px] text-(--app-secondary-label)", styles.riseIn)}>
           Ask anything. It can search the web, use a browser, and read and change your notes.
         </p>
-        <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {STARTERS.map((starter, index) => (
             <button
               key={starter.text}
               type="button"
+              aria-label={starter.text}
               className={cn(
-                "flex w-full cursor-pointer items-center gap-2.5 rounded-[12px] border border-(--app-border) bg-(--chat-composer-bg) px-3 py-2.5 text-left text-[13px] text-(--app-text) transition-colors duration-(--control-transition-duration) hover:border-(--app-border-strong) hover:bg-(--app-surface-2) focus-visible:outline-2 focus-visible:outline-(--app-focus-ring)",
+                "flex min-w-0 cursor-pointer flex-col items-start gap-3 rounded-[14px] border border-(--app-border) bg-(--chat-composer-bg) p-3 text-left shadow-[0_1px_2px_rgb(0_0_0/4%)] transition-colors duration-(--control-transition-duration) hover:border-(--app-border-strong) hover:bg-(--app-surface-2) focus-visible:outline-2 focus-visible:outline-(--app-focus-ring)",
                 styles.riseIn,
               )}
               style={{ animationDelay: `${40 + index * 35}ms` }}
@@ -167,9 +178,19 @@ export function AiChatSide({
                 document.getElementById(PANEL_ID)?.querySelector("textarea")?.focus();
               }}
             >
-              <starter.icon className="size-4 shrink-0 text-(--app-secondary-label)" aria-hidden />
-              <span className="min-w-0 flex-1">{starter.text}</span>
-              <ChevronRightIcon className="size-4 shrink-0 text-(--app-placeholder)" aria-hidden />
+              <starter.icon
+                className="size-[18px] shrink-0 text-(--app-secondary-label)"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="truncate text-[13px] font-medium text-(--app-text)">
+                  {starter.title}
+                </span>
+                <span className="text-[12px] leading-snug text-(--app-secondary-label)">
+                  {starter.detail}
+                </span>
+              </span>
             </button>
           ))}
         </div>
