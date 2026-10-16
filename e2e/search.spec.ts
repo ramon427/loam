@@ -1,5 +1,5 @@
 import { expect, test } from "./app";
-import { createNote, noteBody } from "./notes";
+import { createNote, noteBody, sidebar } from "./notes";
 
 const seedNotes = async (window: import("@playwright/test").Page, count: number) => {
   await window.evaluate(async (count) => {
@@ -120,6 +120,30 @@ test("search pages past 50 matches and arrow keys open a chosen result", async (
   await expect(list).toBeVisible();
   await window.keyboard.press("Escape");
   await expect(list).toHaveCount(0);
+  await expect(search).toHaveValue("paginationmarker");
+});
+
+test("search lets go when the page or header is pressed elsewhere", async ({ loam }) => {
+  const { window } = loam;
+  await seedNotes(window, 1);
+  const search = window.getByRole("searchbox", { name: "Search notes" });
+  const list = window.getByRole("list", { name: "Search results" });
+  await search.fill("paginationmarker");
+  await expect(list).toBeVisible();
+  await window.locator(".loam-main-header").click({ position: { x: 24, y: 20 } });
+  await expect(list).toHaveCount(0);
+  await expect(search).not.toBeFocused();
+  await search.focus();
+  await expect(list).toBeVisible();
+  await window.locator("main").click({ position: { x: 40, y: 200 } });
+  await expect(list).toHaveCount(0);
+  await expect(search).not.toBeFocused();
+  await search.focus();
+  const tree = sidebar(window).getByRole("group", { name: "Notes tree selection area" });
+  const box = (await tree.boundingBox())!;
+  await window.mouse.click(box.x + box.width / 2, box.y + box.height - 8);
+  await expect(list).toHaveCount(0);
+  await expect(search).not.toBeFocused();
   await expect(search).toHaveValue("paginationmarker");
 });
 

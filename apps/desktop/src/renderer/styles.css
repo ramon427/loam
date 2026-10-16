@@ -12,6 +12,34 @@
   --color-destructive: var(--status-danger);
 }
 
+/* A frosted surface over the page; --glass-tint picks its colour. Glass only reads with
+   something under it, so it is for what floats over content, not for panels. */
+@utility surface-glass {
+  background: color-mix(
+    in srgb,
+    var(--glass-tint, var(--app-page)) var(--glass-opacity),
+    transparent
+  );
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+
+  @media (prefers-reduced-transparency: reduce) {
+    background: var(--glass-tint, var(--app-page));
+  }
+}
+
+/* Toasts float over whatever is open; their fill comes from the Toaster's --normal-bg. */
+.toaster [data-sonner-toast] {
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .toaster {
+    --normal-bg: var(--app-surface) !important;
+  }
+}
+
 :root {
   --app-viewport-top: 0px;
   --app-viewport-height: 100dvh;
@@ -86,6 +114,12 @@
 }
 
 .loam-chrome-row :is(button, input, textarea, select, a, [role="button"]) {
+  -webkit-app-region: no-drag;
+}
+
+/* A drag area swallows presses, so while search has focus a press on the row reaches the page
+   and closes the search. */
+.loam-shell:has(.loam-header-search:focus-within) .loam-chrome-row {
   -webkit-app-region: no-drag;
 }
 
@@ -324,7 +358,7 @@
   color: var(--app-placeholder);
   border: 1px solid var(--app-border);
   border-radius: 0 0 10px 10px;
-  background: var(--app-control);
+  --glass-tint: var(--app-control);
   opacity: 0.7;
   transform: translateY(calc(var(--loam-header-search-peek) - 100%));
   transition:

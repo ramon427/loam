@@ -122,7 +122,7 @@ export function NoteFindBar({ ref }: { ref: Ref<NoteFindBarHandle> }) {
     <div
       data-note-find-bar
       // Floats under the header's right end, over the page, like a browser's find bar.
-      className="absolute top-[calc(var(--loam-titlebar-height)+8px)] right-4 z-40 flex h-10 items-center gap-1.5 rounded-lg border border-(--app-border) bg-(--app-page) px-1.5 shadow-(--app-shadow-elevated)"
+      className="absolute top-[calc(var(--loam-titlebar-height)+8px)] right-4 z-40 flex h-10 items-center gap-1.5 rounded-lg border border-(--app-border) surface-glass px-1.5 shadow-(--app-shadow-elevated)"
       role="search"
       aria-label="Find in note"
       onKeyDown={(event) => {

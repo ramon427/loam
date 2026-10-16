@@ -132,6 +132,23 @@ describe("projects in the notes tree", () => {
     await waitFor(() => expect(store.note("idea")?.projectId).toBe(launch.id));
   });
 
+  it("drops a note in the space under the list to move it out of every project", async () => {
+    const { store } = await renderSidebar({
+      projects: [launch],
+      notes: [
+        buildNote({ id: "pitch", title: "Pitch", projectId: launch.id, position: 0 }),
+        buildNote({ id: "plan", title: "Plan", projectId: launch.id, position: 1 }),
+      ],
+      activeNoteId: null,
+    });
+    const space = document.querySelector<HTMLElement>(
+      '[data-native-sortable-zone="notes-tree-end"]',
+    )!;
+    await dragTreeRow("Pitch", space);
+    await waitFor(() => expect(store.note("pitch")?.projectId).toBeUndefined());
+    expect(store.note("plan")?.projectId).toBe(launch.id);
+  });
+
   it("removes a project, keeping what it held, and brings it all back with undo", async () => {
     const { store } = await renderProjects();
     openTreeMenu(row("Launch"));

@@ -93,7 +93,7 @@ function NoteGraphFloatingToolbar({
     <div
       aria-label="Selection actions"
       className={cn(
-        "nodrag nowheel absolute z-30 flex -translate-x-1/2 items-center gap-0.5 rounded-md border border-(--app-border)/80 bg-(--app-page)/96 px-1 py-1 shadow-lg backdrop-blur",
+        "nodrag nowheel absolute z-30 flex -translate-x-1/2 items-center gap-0.5 rounded-md border border-(--app-border)/80 surface-glass px-1 py-1 shadow-lg",
         !below && "-translate-y-full",
       )}
       ref={ref}

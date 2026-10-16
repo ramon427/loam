@@ -24,7 +24,7 @@ const Toaster = ({ icons, toastOptions, ...props }: ToasterProps) => {
       }}
       style={
         {
-          "--normal-bg": "var(--app-surface)",
+          "--normal-bg": "color-mix(in srgb, var(--app-surface) var(--glass-opacity), transparent)",
           "--normal-text": "var(--app-text)",
           "--normal-border": "var(--app-border)",
           "--border-radius": "var(--radius)",

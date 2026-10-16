@@ -1,4 +1,4 @@
-import { useDeferredValue, useId, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useId, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { callBridge } from "../bridge";
@@ -44,6 +44,7 @@ export function NotesSearch({
 }) {
   const { openNote } = useNotesWorkspace();
   const listId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLUListElement>(null);
   const [query, setQuery] = useState("");
@@ -67,13 +68,32 @@ export function NotesSearch({
   const results = deferredQuery ? (search.data?.pages.flatMap((page) => page.results) ?? []) : [];
   const ready = deferredQuery === query.trim();
   const expanded = showResults && query.trim().length > 0;
+  const [focused, setFocused] = useState(false);
+
+  // A press on content that takes no focus, like the note's paper or the header, leaves focus in
+  // the search, so the search lets go itself and slides back up.
+  useEffect(() => {
+    if (!focused) return;
+    const release = (event: PointerEvent) => {
+      if (rootRef.current?.contains(event.target as Node)) return;
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && rootRef.current?.contains(active)) active.blur();
+    };
+    document.addEventListener("pointerdown", release, true);
+    return () => document.removeEventListener("pointerdown", release, true);
+  }, [focused]);
+  const close = () => {
+    setShowResults(false);
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && rootRef.current?.contains(active)) active.blur();
+  };
 
   const open = (result: NoteContentSearchResult) => {
     if (!ready) return;
     onOpen();
     openNote(result.noteId, { tabId: result.tabId });
     onFind(result.noteId, result.matchText ?? deferredQuery.split(/\s+/)[0]!);
-    setShowResults(false);
+    close();
   };
   const select = (index: number) => {
     const next = Math.max(0, Math.min(index, results.length - 1));
@@ -87,16 +107,19 @@ export function NotesSearch({
 
   return (
     <div
+      ref={rootRef}
       className="loam-header-search"
       role="search"
+      onFocus={() => setFocused(true)}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
-          setShowResults(false);
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+        setFocused(false);
+        setShowResults(false);
       }}
     >
       <SearchField
         surface="plain"
-        className="loam-header-search-field"
+        className="loam-header-search-field surface-glass"
         inputClassName="text-[13px] text-(--app-text) placeholder:text-[var(--app-placeholder,var(--app-muted))]"
         id="notes-search-input"
         ref={inputRef}
@@ -120,7 +143,9 @@ export function NotesSearch({
           if (event.key === "Escape") {
             event.preventDefault();
             event.stopPropagation();
-            setShowResults(false);
+            // The first Escape hides the results; the next one leaves the search.
+            if (expanded) setShowResults(false);
+            else close();
             return;
           }
           if (!ready || !results.length) return;
@@ -142,7 +167,7 @@ export function NotesSearch({
         <ul
           id={listId}
           ref={resultsRef}
-          className="loam-header-search-results z-30 m-0 flex max-h-[min(60vh,480px)] list-none flex-col gap-0.5 overflow-auto rounded-(--radius-control) border border-(--app-border) bg-(--app-surface) p-1 shadow-[0_12px_32px_rgb(0_0_0/18%)]"
+          className="loam-header-search-results z-30 m-0 flex max-h-[min(60vh,480px)] list-none flex-col gap-0.5 overflow-auto rounded-(--radius-control) border border-(--app-border) p-1 shadow-[0_12px_32px_rgb(0_0_0/18%)] [--glass-tint:var(--app-surface)] surface-glass"
           aria-label="Search results"
         >
           {ready
