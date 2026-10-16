@@ -1,8 +1,9 @@
 /*
  * Whole-window glass (Appearance > Glass). The native window is clear and the system blurs the
  * desktop behind it (main/window.ts); the window's regions keep their theme colours as tints over
- * that blur. The sidebar and top rows are the thinnest, the page is thicker, and the note's paper
- * is nearly solid so its text reads. With reduced transparency asked for, the window stays solid.
+ * that blur. The sidebar and top rows are the thinnest and the page is thicker; the note's paper
+ * stays solid, so nothing behind the window shows through what you write. With reduced
+ * transparency asked for, the window stays solid.
  */
 
 @media not (prefers-reduced-transparency: reduce) {
@@ -10,28 +11,20 @@
     /* The theme's solid colours, read here so body can mix them without referring to itself. */
     --glass-solid-bg: var(--app-bg);
     --glass-solid-page: var(--app-page);
-    --glass-solid-surface: var(--app-surface);
     --glass-solid-control: var(--app-control);
     --glass-window-opacity: 38%;
     --glass-page-opacity: 46%;
-    --glass-paper-opacity: 78%;
     background: transparent;
   }
 
   :root.dark[data-glass="full"] {
     --glass-window-opacity: 52%;
     --glass-page-opacity: 50%;
-    --glass-paper-opacity: 76%;
   }
 
   [data-glass="full"] body {
     --app-bg: color-mix(in srgb, var(--glass-solid-bg) var(--glass-window-opacity), transparent);
     --app-page: color-mix(in srgb, var(--glass-solid-page) var(--glass-page-opacity), transparent);
-    --app-surface: color-mix(
-      in srgb,
-      var(--glass-solid-surface) var(--glass-paper-opacity),
-      transparent
-    );
     /* Each region paints its tint once, so the tints don't stack: the sidebar its own, the main
        column the page under its header and scrollbar. The shell and the page itself stay clear.
        Aliases resolve where they are declared, so they are laid down again over the tints. */
@@ -39,7 +32,6 @@
     --sidebar-bg: var(--app-bg);
     --main-column-bg: var(--app-page);
     --app-page-region: transparent;
-    --card-bg: var(--app-surface);
 
     /* Lines and the fills that mark a state (hover, selected, a pill, code) shade what is under
        them in the text's colour, rather than laying a solid grey over the glass. */
