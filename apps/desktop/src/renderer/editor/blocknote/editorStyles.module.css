@@ -32,6 +32,12 @@
   --editor-inline-control-hit-size: 20px;
   --editor-inline-control-icon-size: 14px;
   --editor-popup-surface: var(--app-surface-overlay, var(--raised-control-bg));
+  /* Menus over the note are thick glass, like the app's own menus. */
+  --editor-popup-glass: color-mix(
+    in srgb,
+    var(--editor-popup-surface) var(--glass-opacity-thick),
+    transparent
+  );
   --editor-popup-border: var(--raised-panel-border);
   --editor-popup-radius: var(--radius-menu);
   --editor-popup-shadow: var(--raised-panel-shadow);
@@ -1071,7 +1077,9 @@
 
 /* Suggestion Menu (Slash Menu) - Clean Utility */
 .editorRoot :global(.bn-suggestion-menu) {
-  background: var(--editor-popup-surface);
+  background: var(--editor-popup-glass);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
   border: 1px solid var(--editor-popup-border);
   border-radius: var(--editor-popup-radius);
   box-shadow: var(--editor-popup-shadow);
@@ -1163,7 +1171,9 @@
   max-height: var(--editor-popup-max-height);
   border-radius: var(--editor-popup-radius);
   border: 1px solid var(--editor-popup-border);
-  background: var(--editor-popup-surface);
+  background: var(--editor-popup-glass);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
   box-shadow: var(--editor-popup-shadow);
   overflow: hidden;
   display: flex;
@@ -1597,6 +1607,11 @@
 @media (prefers-reduced-transparency: reduce) {
   .editorRoot :global(.bn-toolbar) {
     background: var(--editor-popup-surface) !important;
+  }
+
+  .editorRoot :global(.bn-suggestion-menu),
+  .slashMenu {
+    background: var(--editor-popup-surface);
   }
 }
 

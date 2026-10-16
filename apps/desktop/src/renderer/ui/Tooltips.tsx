@@ -173,7 +173,7 @@ function Tooltip({ text, anchor }: Shown) {
           : { left: 0, top: 0, visibility: "hidden" }
       }
       className={cn(
-        "pointer-events-none fixed z-[140] max-w-80 rounded-[7px] border border-(--raised-panel-border) bg-(--app-surface-overlay) px-2 py-1 text-xs leading-snug dark:bg-[#2e2e2e] text-balance break-words text-(--app-text) shadow-md",
+        "pointer-events-none fixed z-[140] max-w-80 rounded-[7px] border border-(--raised-panel-border) surface-glass surface-glass-thick [--glass-tint:var(--app-surface-overlay)] px-2 py-1 text-xs leading-snug dark:[--glass-tint:#2e2e2e] text-balance break-words text-(--app-text) shadow-md",
         place && styles.enter,
       )}
     >

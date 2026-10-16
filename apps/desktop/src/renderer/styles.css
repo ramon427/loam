@@ -5,6 +5,7 @@
 @source not "./**/*.test.{ts,tsx}";
 
 @custom-variant dark (&:is(.dark, .dark *));
+@custom-variant reduced-transparency (@media (prefers-reduced-transparency: reduce));
 
 @theme inline {
   --color-primary: var(--app-accent);
@@ -26,6 +27,12 @@
   @media (prefers-reduced-transparency: reduce) {
     background: var(--glass-tint, var(--app-page));
   }
+}
+
+/* Thicker glass for what holds rows of text, like menus and tooltips, so a busy page under
+   them stays out of the way of reading. */
+@utility surface-glass-thick {
+  --glass-opacity: var(--glass-opacity-thick);
 }
 
 /* Toasts float over whatever is open; their fill comes from the Toaster's --normal-bg. */
