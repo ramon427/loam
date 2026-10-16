@@ -8,6 +8,7 @@ import {
   expectSaved,
   noteBody,
   noteRow,
+  openNote,
   openSettings,
   storedLibrary,
   storedText,
@@ -48,7 +49,7 @@ test("imports a Markdown folder with its subfolders", async ({ loam }) => {
 
   const settings = await openSettings(loam.window, "Import & export");
   await loam.window.evaluate(() => Object.assign(window, { __beforeImport: true }));
-  await settings.getByRole("button", { name: "Import a folder…" }).click();
+  await settings.getByRole("button", { name: "Import…", exact: true }).click();
   const summary = loam.window.getByRole("dialog", { name: "Import finished" });
   await expect(summary).toContainText("2 notes");
   await summary.getByRole("button", { name: "Done" }).click();
@@ -72,12 +73,39 @@ test("exports every note as Markdown files", async ({ loam }) => {
   await loam.answerFilePickers([exports]);
 
   const settings = await openSettings(loam.window, "Import & export");
-  await settings.getByRole("button", { name: "Export all notes…" }).click();
+  await settings.getByRole("button", { name: "Export…", exact: true }).click();
+  await loam.window
+    .getByRole("dialog", { name: "Export as Markdown" })
+    .getByRole("button", { name: /^All notes/ })
+    .click();
   await expect(loam.window.getByText(/^Exported 1 note/)).toBeVisible();
 
   const [folder] = readdirSync(exports);
   expect(folder).toMatch(/^Loam export /);
   expect(readFileSync(join(exports, folder!, "Export me.md"), "utf8")).toContain("Exported body");
+});
+
+test("exports the open note from the command palette", async ({ loam }) => {
+  const { window } = loam;
+  await createNote(window, { title: "Only me", body: "Single export" });
+  await createNote(window, { title: "Not me", body: "Left out" });
+  await openNote(window, "Only me");
+  const exports = join(loam.root, "exports");
+  mkdirSync(exports);
+  await loam.answerFilePickers([exports]);
+
+  await window.keyboard.press("ControlOrMeta+Shift+p");
+  await window.getByRole("combobox", { name: "Search commands" }).fill("export");
+  await window.keyboard.press("Enter");
+  await window
+    .getByRole("dialog", { name: "Export as Markdown" })
+    .getByRole("button", { name: "This note: Only me" })
+    .click();
+  await expect(window.getByText(/^Exported 1 note/)).toBeVisible();
+
+  const files = readdirSync(exports, { recursive: true }).map(String);
+  expect(files.some((file) => file.endsWith("Only me.md"))).toBe(true);
+  expect(files.some((file) => file.endsWith("Not me.md"))).toBe(false);
 });
 
 test("backs up and restores the whole library", async ({ loam }) => {

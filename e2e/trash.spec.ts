@@ -13,10 +13,6 @@ test("deleted notes and their last edits can be restored from Trash after restar
   await appendToBody(loam.window, " Last unsaved words.");
   await noteRow(loam.window, "Recover").click({ button: "right" });
   await loam.window.getByRole("menuitem", { name: "Delete note" }).click();
-  await loam.window
-    .getByRole("dialog", { name: "Delete note?" })
-    .getByRole("button", { name: "Delete note" })
-    .click();
   await expect(noteRow(loam.window, "Recover")).toHaveCount(0);
   await loam.restart();
   await loam.window.getByRole("button", { name: "Trash", exact: true }).click();
@@ -40,10 +36,6 @@ test("permanent deletion clears Undo snapshots and leaves the other notes alone"
   await createNote(window, { title: "Forget me", body: "Removed content." });
   await noteRow(window, "Forget me").click({ button: "right" });
   await window.getByRole("menuitem", { name: "Delete note", exact: true }).click();
-  await window
-    .getByRole("dialog", { name: "Delete note?" })
-    .getByRole("button", { name: "Delete note", exact: true })
-    .click();
   await window.getByRole("button", { name: "Trash", exact: true }).click();
   const trash = window.getByRole("dialog", { name: "Trash", exact: true });
   await trash.getByRole("button", { name: "Permanently delete Forget me", exact: true }).click();

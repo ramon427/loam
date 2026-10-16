@@ -214,6 +214,7 @@ export const BRIDGE_TOOLS: { [M in LoamBridgeMethod]: BridgeTool<M> } = {
   },
   // The window's import steps; AI clients import end to end with import_run.
   "import.pick": false,
+  "import.pickDropped": false,
   "import.images": false,
   "import.write": false,
   "import.finish": false,

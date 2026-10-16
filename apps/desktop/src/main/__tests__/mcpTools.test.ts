@@ -295,11 +295,11 @@ describe("Loam MCP tools", () => {
     expect(stale.isError).toBe(true);
     expect(stale.structuredContent).toMatchObject({ error: { code: "CONFLICT", status: 409 } });
     const userSave = await store.saveNote(note.id, { title: "User version" }, note.updatedAt);
-    expect(userSave.conflictCopy).toBeTruthy();
-    const library = await store.getLibrary();
-    expect(library.notes.map((n) => n.title)).toEqual(
-      expect.arrayContaining(["User version", "AI version (conflict copy)"]),
-    );
+    expect(userSave.conflict).toBeTruthy();
+    // The AI's version is kept in the note's history, not as another note.
+    expect((await store.getLibrary()).notes.map((n) => n.title)).toEqual(["User version"]);
+    const kept = await store.getNoteVersion(note.id, userSave.conflict!.versionId);
+    expect(kept.note.title).toBe("AI version");
   });
 
   it("tells the window about notes an AI client changes, including one restored from Trash", async () => {

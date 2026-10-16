@@ -8,7 +8,8 @@ import { fnv1a } from "./fnv1a";
  * Version history rules, kept apart from the store so they can be tested on
  * their own. A version is the content a note had before it was changed: one
  * is kept when a save replaces content last captured over ten minutes ago,
- * before a delete, and before a restore.
+ * before a delete, and before a restore. The version that loses a sync
+ * conflict is kept too, and never let go: it is all there is of that edit.
  */
 
 export const HISTORY_CAPTURE_INTERVAL_MS = 10 * 60 * 1000;
@@ -31,6 +32,8 @@ export type HistoryEntry = {
   title: string;
   sizeBytes: number;
   contentHash: string;
+  /** Lost a conflict with an edit made elsewhere at the same time; retention keeps it. */
+  conflict?: true;
 };
 
 /** The `history` record for one note, newest version first. */
@@ -68,13 +71,20 @@ const hashNoteContent = (document: NoteContent) => {
  * Which versions to keep, newest first: every one kept in the last day, then
  * the newest of each hour for a week, then of each day for a month, at most
  * 100. Ages count from when a version was kept, so the content an old note
- * had before today's edit is kept as long as any other version.
+ * had before today's edit is kept as long as any other version. Versions that
+ * lost a conflict are always kept and don't count.
  */
 export const selectVersionsToKeep = (versions: readonly HistoryEntry[], now: number) => {
   const sorted = [...versions].sort((left, right) => right.capturedAt - left.capturedAt);
   const keep: HistoryEntry[] = [];
   const buckets = new Set<string>();
+  let counted = 0;
   for (const version of sorted) {
+    if (version.conflict) {
+      keep.push(version);
+      continue;
+    }
+    if (counted >= HISTORY_RETENTION.max) continue;
     const age = now - version.capturedAt;
     if (age > HISTORY_RETENTION.dailyWithinMs) continue;
     if (age > HISTORY_RETENTION.allWithinMs) {
@@ -84,7 +94,7 @@ export const selectVersionsToKeep = (versions: readonly HistoryEntry[], now: num
       buckets.add(bucket);
     }
     keep.push(version);
-    if (keep.length >= HISTORY_RETENTION.max) break;
+    counted++;
   }
   return keep;
 };
@@ -99,6 +109,7 @@ export const planHistoryCapture = ({
   savedAt,
   now,
   force,
+  conflict = false,
   createId,
 }: {
   index: HistoryIndex | null;
@@ -109,14 +120,25 @@ export const planHistoryCapture = ({
   now: number;
   /** Keep the version even if one was kept moments ago (deletes and restores). */
   force: boolean;
+  /** The content lost a sync conflict: always kept, and marked so retention keeps it. */
+  conflict?: boolean;
   createId: () => string;
 }) => {
   const versions = index?.versions ?? [];
   const newest = versions[0];
   const contentHash = hashNoteContent(document);
-  // Nothing changed since the last version, so there's nothing new to keep.
-  if (newest?.contentHash === contentHash) return null;
-  if (!force && newest && now - newest.capturedAt < HISTORY_CAPTURE_INTERVAL_MS) return null;
+  if (newest?.contentHash === contentHash) {
+    // Nothing changed since the last version, so there's nothing new to keep.
+    if (!conflict || newest.conflict) return null;
+    const marked: HistoryEntry = { ...newest, conflict: true };
+    return {
+      entry: marked,
+      index: { versions: [marked, ...versions.slice(1)] } satisfies HistoryIndex,
+      removedIds: [],
+    };
+  }
+  if (!force && !conflict && newest && now - newest.capturedAt < HISTORY_CAPTURE_INTERVAL_MS)
+    return null;
 
   const entry: HistoryEntry = {
     id: createId(),
@@ -125,6 +147,7 @@ export const planHistoryCapture = ({
     title: document.title,
     sizeBytes: Buffer.byteLength(JSON.stringify(document)),
     contentHash,
+    ...(conflict && { conflict: true as const }),
   };
   const kept = selectVersionsToKeep([entry, ...versions], now);
   const keptIds = new Set(kept.map((version) => version.id));
@@ -137,22 +160,36 @@ export const planHistoryCapture = ({
 
 /**
  * The writes that keep `document`, which note `noteId` is about to replace,
- * as a version: none when `planHistoryCapture` keeps nothing.
+ * as a version, and that version's id: null when `planHistoryCapture` keeps
+ * nothing.
  */
-export const versionWrites = (
+export const planVersionWrites = (
   noteId: string,
   capture: Parameters<typeof planHistoryCapture>[0],
-): StorageWrite[] => {
+): { writes: StorageWrite[]; versionId: string } | null => {
   const plan = planHistoryCapture(capture);
-  if (!plan) return [];
+  if (!plan) return null;
   const revision: RevisionRecord = {
     noteId,
     savedAt: plan.entry.savedAt,
     document: capture.document,
   };
-  return [
-    { type: "put", collection: "revisions", id: plan.entry.id, value: revision },
-    ...plan.removedIds.map((id): StorageWrite => ({ type: "delete", collection: "revisions", id })),
-    { type: "put", collection: "history", id: noteId, value: plan.index },
-  ];
+  return {
+    versionId: plan.entry.id,
+    writes: [
+      { type: "put", collection: "revisions", id: plan.entry.id, value: revision },
+      ...plan.removedIds.map((id): StorageWrite => ({
+        type: "delete",
+        collection: "revisions",
+        id,
+      })),
+      { type: "put", collection: "history", id: noteId, value: plan.index },
+    ],
+  };
 };
+
+/** `planVersionWrites`'s writes alone. */
+export const versionWrites = (
+  noteId: string,
+  capture: Parameters<typeof planHistoryCapture>[0],
+): StorageWrite[] => planVersionWrites(noteId, capture)?.writes ?? [];

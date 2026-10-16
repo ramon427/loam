@@ -151,7 +151,8 @@ follow it. Edits not saved yet are also written to the window's localStorage
 shortly after each change and as the window closes, and the next launch saves
 them before it reads any note. A save names the version of the note it
 started from. If sync or an AI client changed the note since, the user's edit
-is saved and the version it replaced is kept as a "(conflict copy)" note; an
+is saved and the version it replaced is kept in the note's history as a
+conflict, and a toast offers to compare them; an
 AI client's own stale write is refused instead, so it reads the note again.
 
 Each page tab has its own BlockNote editor (`renderer/editor/PageTabEditor.tsx`),
@@ -205,7 +206,9 @@ video's column, which this computer remembers per note.
 `packages/storage/src/noteHistory.ts` keeps the content a note had before it
 changes, at most once every ten minutes, and before a delete or restore. It
 keeps every version from the last day, hourly ones for a week and daily ones
-for 30 days. Restoring a version saves the current content as a version first.
+for 30 days. A version that lost a sync conflict is marked and always kept.
+Restoring a version saves the current content as a version first. History
+belongs to the computer: it doesn't sync.
 
 `apps/desktop/src/main/backups/` copies the whole library once a day and
 before every import or restore. A backup holds every collection except
@@ -224,8 +227,12 @@ Syncthing) keeps in step between computers. Loam never runs a server.
 - Each computer writes one file per changed document into its own subfolder,
   so no two computers write the same file.
 - Version vectors tell whether two versions were edited at the same time. Then
-  the newest edit wins and the other becomes a "(conflict copy)" note, the same
-  one on every computer. An edit always beats a delete.
+  the newest edit wins and the other is kept, marked, in the note's history on
+  each computer that sees both, which shows a toast to compare them. A computer
+  that keeps its own edit over another publishes the clocks it won over
+  (`overrode`), so the computer whose edit lost keeps that edit too, though it
+  never saw both. Computers on versions before this publish "(conflict copy)"
+  notes instead, which arrive as ordinary notes. An edit always beats a delete.
 
 Every file in the sync folder is untrusted: changes are checked like any other
 save, and only image files with Loam's random names are copied in.

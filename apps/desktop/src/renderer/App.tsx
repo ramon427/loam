@@ -5,9 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AiChatSide, AiChatToggleProvider } from "./ai/AiChatPanel";
 import { useAiChatLayout } from "./ai/useAiChatLayout";
 import { CommandPalette, type AppCommand } from "./commands/CommandPalette";
+import { ExportDialog } from "./import-export/ExportDialog";
 import { OpenedFileView } from "./files/OpenedFileView";
 import { useOpenedFiles } from "./files/useOpenedFiles";
-import { NoteHistoryDialog, type HistoryTarget } from "./history/NoteHistoryDialog";
+import { NoteHistoryDialog } from "./history/NoteHistoryDialog";
 import { pluginHost } from "./plugins/host";
 import { PluginPanes, PluginShortcuts } from "./plugins/PluginPanes";
 import { PluginSlot } from "./plugins/PluginSlot";
@@ -43,11 +44,11 @@ const createQueryClient = () =>
 
 function Workspace() {
   const workspace = useNotesWorkspace();
-  const { createNote } = useNotesTreeCommands();
+  const { createNote, requestMove } = useNotesTreeCommands();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId>();
-  const [historyTarget, setHistoryTarget] = useState<HistoryTarget | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   // Plugins run while the library is open: this screen only shows once notes are unlocked.
   useEffect(() => pluginHost.start(), []);
   const findBarRef = useRef<NoteFindBarHandle>(null);
@@ -187,8 +188,26 @@ function Workspace() {
       { id: "app.file.open", title: "Open a file…", run: () => void pickFile() },
       { id: "app.settings", title: "Open settings", run: openSettings },
       { id: "app.sidebar.toggle", title: "Toggle sidebar", run: toggleSidebar },
+      ...(workspace.activeNoteId
+        ? [
+            {
+              id: "app.note.move",
+              title: "Move to…",
+              run: () => requestMove([{ kind: "note" as const, id: workspace.activeNoteId! }]),
+            },
+          ]
+        : []),
+      { id: "app.export", title: "Export…", run: () => setExportOpen(true) },
     ],
-    [createNote, newNotePlace, openSettings, pickFile, toggleSidebar],
+    [
+      createNote,
+      newNotePlace,
+      openSettings,
+      pickFile,
+      requestMove,
+      toggleSidebar,
+      workspace.activeNoteId,
+    ],
   );
   useWindowControlsTheme();
 
@@ -247,7 +266,9 @@ function Workspace() {
                 <NotesSidebar
                   folderScopeId={folderScopeId}
                   projectScope={projectScope}
-                  onOpenHistory={(note) => setHistoryTarget({ noteId: note.id, title: note.title })}
+                  onOpenHistory={(note) =>
+                    workspace.openHistory({ noteId: note.id, title: note.title })
+                  }
                 />
               </div>
               <PluginSlot name="sidebar.footer" props={{}} className="px-1" />
@@ -305,10 +326,11 @@ function Workspace() {
       </KeyboardShortcutsScope>
       <SettingsScreen open={settingsOpen} section={settingsSection} onClose={closeSettings} />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} appCommands={appCommands} />
-      {historyTarget ? (
+      <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
+      {workspace.historyTarget ? (
         <NoteHistoryDialog
-          target={historyTarget}
-          onClose={() => setHistoryTarget(null)}
+          target={workspace.historyTarget}
+          onClose={() => workspace.openHistory(null)}
           onRestored={workspace.reloadNote}
         />
       ) : null}

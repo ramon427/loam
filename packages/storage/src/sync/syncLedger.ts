@@ -23,7 +23,15 @@ export type SyncRecord = {
   dirty?: true;
   /** A place that arrived before its note; used when the note does. */
   pendingPlace?: PlaceValue;
+  /**
+   * Clocks of versions from other devices that this unpublished one won a conflict over. They
+   * are published with it, so the devices that wrote them learn their edit lost.
+   */
+  overrode?: Clock[];
 };
+
+/** How many overridden clocks a record keeps; more would only grow a change file. */
+const MAX_OVERRODE = 32;
 
 type SyncState = {
   device: string;
@@ -120,17 +128,29 @@ export class SyncLedger {
     return [...this.records].flatMap(([key, record]) => (record ? [key] : []));
   }
 
-  /** Writes recording that `keys` changed here; returns them with the state record. */
-  async recordLocal(keys: Iterable<SyncDocKey>): Promise<StorageWrite[]> {
+  /**
+   * Writes recording that `keys` changed here; returns them with the state record. `overridden`
+   * names, per key, another device's version this change replaced without building on it.
+   */
+  async recordLocal(
+    keys: Iterable<SyncDocKey>,
+    overridden: ReadonlyMap<SyncDocKey, Clock> = new Map(),
+  ): Promise<StorageWrite[]> {
     const writes: StorageWrite[] = [];
     for (const key of new Set(keys)) {
       const previous = await this.read(key);
       const clock = this.clock.next();
+      // Still unpublished, so the conflicts it won must still be told.
+      const overrode = previous?.dirty ? [...(previous.overrode ?? [])] : [];
+      const lost = overridden.get(key);
+      // A version this device made itself (an AI client's) has no other author to tell.
+      if (lost && lost.slice(-this.device.length) !== this.device) overrode.push(lost);
       writes.push(
         this.put(key, {
           vector: { ...previous?.vector, [this.device]: clock },
           clock,
           dirty: true,
+          ...(overrode.length > 0 && { overrode: overrode.slice(-MAX_OVERRODE) }),
         }),
       );
     }
@@ -171,7 +191,10 @@ export class SyncLedger {
       vector: mergeVectors(held?.vector ?? {}, change.vector),
       clock: kept === "incoming" || !held ? change.clock : held.clock,
     };
-    if (kept === "local" && held?.dirty) record.dirty = true;
+    if (kept === "local" && held?.dirty) {
+      record.dirty = true;
+      record.overrode = [...(held.overrode ?? []), change.clock].slice(-MAX_OVERRODE);
+    }
     if (pendingPlace) record.pendingPlace = pendingPlace;
     return [this.put(change.key, record), this.putState({})];
   }
@@ -196,7 +219,7 @@ export class SyncLedger {
     for (const { key, clock } of published) {
       const record = this.loaded(key);
       if (!record?.dirty || record.clock !== clock) continue;
-      const { dirty: _dirty, ...rest } = record;
+      const { dirty: _dirty, overrode: _overrode, ...rest } = record;
       writes.push(this.put(key, rest));
     }
     return writes;

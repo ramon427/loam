@@ -9,6 +9,7 @@ import {
   buildNote,
   clickMenuItem,
   dragTreeRow,
+  moveTo,
   openTreeMenu,
   renderSidebar,
   row,
@@ -45,9 +46,6 @@ const renderProjects = () =>
   });
 
 /** Opens a submenu of the open menu. */
-const openSubmenu = async (name: string) =>
-  fireEvent.click(await screen.findByRole("menuitem", { name }));
-
 /** Fills in the open project dialog, picking a line icon, and submits it. */
 const submitProject = async (name: string, icon?: string) => {
   const dialog = await screen.findByRole("dialog");
@@ -109,13 +107,11 @@ describe("projects in the notes tree", () => {
   it("moves a note and a folder into a project, and back with undo", async () => {
     const { store } = await renderProjects();
     openTreeMenu(row("Loose idea"));
-    await openSubmenu("Move to project");
-    await clickMenuItem("Garden");
+    await moveTo("Garden", { project: true });
     expect(store.note("idea")?.projectId).toBe(garden.id);
 
     openTreeMenu(row("Assets"));
-    await openSubmenu("Move to project");
-    await clickMenuItem("No project");
+    await moveTo("No project");
     expect(store.folder("Assets")?.projectId).toBeUndefined();
 
     openTreeMenu(row("Loose folder"));

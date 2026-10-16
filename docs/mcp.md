@@ -38,7 +38,7 @@ The tool catalog covers:
 Start with `loam_notes_library` and `loam_notes_get`. Reads save pending editor changes
 first. Updates require the `updatedAt` from the last read as `baseUpdatedAt`; stale
 AI updates fail with `CONFLICT` so the client can reread before retrying. User edits
-made concurrently with an AI update retain the AI content as a conflict copy.
+made concurrently with an AI update keep the AI content in the note's version history.
 Convenience tools such as `loam_notes_new`, `loam_tabs_add`, `loam_blocks_set`,
 `loam_graphs_set`, `loam_tables_set` and `loam_import_run` preserve unrelated content.
 `loam_notes_save` also accepts the full editor data model. Import/export paths are

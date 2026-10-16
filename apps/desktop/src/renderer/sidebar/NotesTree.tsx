@@ -12,7 +12,6 @@ import {
   isActionMenuTarget,
   leaveToNativeMenu,
 } from "../action-menu/ActionMenu";
-import { useMarkdownExport } from "../import-export/useMarkdownExport";
 import { useNotesWorkspace } from "../workspace/NotesWorkspace";
 import type { NoteDocument } from "../workspace/types";
 import { isEditableTarget, matchesShortcut, shortcuts } from "../keyboard/shortcuts";
@@ -24,7 +23,8 @@ import { NoteRouteGlyph } from "../ui/NoteRouteIcon";
 
 import { NotesProjectDialog } from "./NotesProjectDialog";
 import { NotesSidebarDeleteDialog } from "./NotesSidebarDeleteDialog";
-import { NotesTreeMenu } from "./NotesTreeMenu";
+import { NotesMoveDialog } from "./NotesMoveDialog";
+import { NotesTreeMenu, type NotesTreeMenuContext } from "./NotesTreeMenu";
 import {
   applyNotesTreeMove,
   canAcceptNotesTreeTarget,
@@ -85,7 +85,6 @@ export function NotesTree({ folderScopeId, projectScope, onOpenHistory }: NotesT
     activeNoteId,
     onSelectNote: openNote,
   });
-  const { exportNotes, isExporting } = useMarkdownExport();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const exists = (item: NotesTreeItem) =>
@@ -251,6 +250,22 @@ export function NotesTree({ folderScopeId, projectScope, onOpenHistory }: NotesT
   const hasNoUnfiledNotes =
     folderScopeId === null && !isEmpty && !editing && !tree.rows.some((row) => row.kind === "note");
 
+  const menuContext: NotesTreeMenuContext = {
+    commands,
+    notesById: tree.notesById,
+    foldersById: tree.foldersById,
+    projectsById: tree.projectsById,
+    folders: tree.sortedFolders,
+    projects: tree.sortedProjects,
+    folderScopeId,
+    scopedProjectId: scopedProjectOf(projectScope),
+    deleteCandidate,
+    openFolder: tree.openFolder,
+    openProject: tree.openProject,
+    openSubNotes: tree.openNote,
+    selectAll: selection.selectAll,
+    openHistory: onOpenHistory,
+  };
   return (
     <>
       <ContextMenu>
@@ -340,27 +355,7 @@ export function NotesTree({ folderScopeId, projectScope, onOpenHistory }: NotesT
           </nav>
         </ContextMenuTrigger>
         <ActionMenuContent aria-label="Notes actions">
-          <NotesTreeMenu
-            keys={menuKeys}
-            context={{
-              commands,
-              notesById: tree.notesById,
-              foldersById: tree.foldersById,
-              projectsById: tree.projectsById,
-              folders: tree.sortedFolders,
-              projects: tree.sortedProjects,
-              folderScopeId,
-              scopedProjectId: scopedProjectOf(projectScope),
-              deleteCandidate,
-              openFolder: tree.openFolder,
-              openProject: tree.openProject,
-              openSubNotes: tree.openNote,
-              selectAll: selection.selectAll,
-              openHistory: onOpenHistory,
-              exportNote: (noteId) => void exportNotes({ kind: "note", noteId }),
-              isExporting,
-            }}
-          />
+          <NotesTreeMenu keys={menuKeys} context={menuContext} />
         </ActionMenuContent>
       </ContextMenu>
 
@@ -369,6 +364,7 @@ export function NotesTree({ folderScopeId, projectScope, onOpenHistory }: NotesT
         onClose={commands.closeProjectDialog}
         onSubmit={(details) => void commands.submitProjectDialog(details)}
       />
+      <NotesMoveDialog context={menuContext} />
       <NotesSidebarDeleteDialog
         candidate={commands.deleteRequest}
         notesById={tree.notesById}

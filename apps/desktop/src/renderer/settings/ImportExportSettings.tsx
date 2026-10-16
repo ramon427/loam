@@ -1,29 +1,22 @@
 import { FileOutputIcon, FileInputIcon } from "lucide-react";
+import { useState, type DragEvent } from "react";
 
-import type { BridgeImportSource } from "@loam/shared/bridge/loamBridge";
-import { useMarkdownExport } from "../import-export/useMarkdownExport";
+import { ExportDialog } from "../import-export/ExportDialog";
 import { useNotesImport, type NotesImportProgress } from "../import-export/useNotesImport";
 import { Button } from "../ui/Button";
+import { cn } from "../ui/cn";
+import { toastError } from "../ui/toast";
 import { useNotesWorkspace } from "../workspace/NotesWorkspace";
 
 import { ImportSummaryDialog } from "./ImportSummaryDialog";
-import { useSecurityStatus } from "./queries";
 import {
   SettingsDetails,
   SettingsNote,
-  SettingsNotice,
   SettingsRow,
   SettingsSection,
   useSettingsBusy,
 } from "./SettingsLayout";
 import styles from "./settings.module.css";
-
-const IMPORT_SOURCES: { source: BridgeImportSource; label: string; button: string }[] = [
-  { source: "markdown", label: "Markdown or Obsidian", button: "Import a folder…" },
-  { source: "evernote", label: "Evernote", button: "Import .enex files…" },
-  { source: "notion", label: "Notion", button: "Import a .zip export…" },
-  { source: "html", label: "Web pages (HTML)", button: "Import .html files…" },
-];
 
 const describeProgress = (progress: NotesImportProgress) => {
   if (progress.phase === "reading") return "Reading files…";
@@ -34,14 +27,30 @@ const describeProgress = (progress: NotesImportProgress) => {
 
 /** Brings notes in from other apps and copies them out as plain files. */
 export function ImportExportSettings() {
-  const { exportNotes, isExporting } = useMarkdownExport();
+  const [exportOpen, setExportOpen] = useState(false);
   const { reloadLibrary } = useNotesWorkspace();
   const { importNotes, progress, summary, dismissSummary } = useNotesImport({
     onImported: reloadLibrary,
   });
-  const security = useSecurityStatus();
-  const busy = progress !== null || isExporting;
+  const busy = progress !== null;
   useSettingsBusy(busy);
+  const [dragging, setDragging] = useState(false);
+  const hasFiles = (event: DragEvent) => event.dataTransfer.types.includes("Files");
+  const drop = (event: DragEvent) => {
+    event.preventDefault();
+    setDragging(false);
+    if (busy) return;
+    // Folders and files from this computer have a path; things dragged from a page don't.
+    const paths = [...event.dataTransfer.files].flatMap((file) => {
+      const path = window.loam.pathForFile(file);
+      return path ? [path] : [];
+    });
+    if (paths.length === 0)
+      toastError("Nothing to import", {
+        description: "Drop a folder or files from this computer.",
+      });
+    else void importNotes(paths);
+  };
 
   return (
     <>
@@ -49,23 +58,40 @@ export function ImportExportSettings() {
         title="Import"
         description="Add notes from another app. Your existing notes stay as they are."
       >
-        {IMPORT_SOURCES.map(({ source, label, button }) => (
+        <div
+          // The window's own drop handler opens dropped files; here they are imported instead.
+          data-takes-file-drops=""
+          className={cn(
+            "rounded-(--radius-control) border border-dashed border-transparent transition-colors",
+            dragging && "border-(--app-accent) bg-(--app-accent)/5",
+          )}
+          onDragOver={(event) => {
+            if (!hasFiles(event)) return;
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+              setDragging(false);
+          }}
+          onDrop={drop}
+        >
           <SettingsRow
-            key={source}
-            title={label}
+            title="Markdown or Obsidian, Evernote, Notion or web pages"
+            description="Pick the files, or drop a folder or files here. Loam tells what they are."
             control={
               <Button
                 variant="outline"
                 size="sm"
                 disabled={busy}
-                onClick={() => void importNotes(source)}
+                onClick={() => void importNotes()}
               >
                 <FileInputIcon className="size-4" aria-hidden="true" />
-                {button}
+                Import…
               </Button>
             }
           />
-        ))}
+        </div>
         {progress ? (
           <p className={styles.note} role="status">
             {describeProgress(progress)}
@@ -74,26 +100,15 @@ export function ImportExportSettings() {
       </SettingsSection>
       <SettingsSection
         title="Export"
-        description="Save your whole library as Markdown files that open in Obsidian and other editors."
+        description="Save the open note or your whole library as Markdown files that open in Obsidian and other editors."
       >
-        {security.data?.state === "on" ? (
-          <SettingsNotice tone="warning">
-            Your notes are encrypted, but an export isn't: anyone who can open the folder you export
-            to can read them.
-          </SettingsNotice>
-        ) : null}
         <SettingsRow
           title="Markdown"
           description="A folder of .md files, with images alongside."
           control={
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={busy}
-              onClick={() => void exportNotes({ kind: "all" })}
-            >
+            <Button variant="outline" size="sm" disabled={busy} onClick={() => setExportOpen(true)}>
               <FileOutputIcon className="size-4" aria-hidden="true" />
-              {isExporting ? "Exporting…" : "Export all notes…"}
+              Export…
             </Button>
           }
         />
@@ -105,6 +120,7 @@ export function ImportExportSettings() {
         </SettingsDetails>
       </SettingsSection>
       <ImportSummaryDialog summary={summary} onClose={dismissSummary} />
+      <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
     </>
   );
 }

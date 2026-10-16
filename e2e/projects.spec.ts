@@ -27,8 +27,8 @@ test("projects hold folders and notes, and the filter shows any mix of them", as
 
   // A note moves into another project from its menu.
   await noteRow(window, "Loose idea").click({ button: "right" });
-  await window.getByRole("menuitem", { name: "Move to project" }).click();
-  await window.getByRole("menuitem", { name: "Garden", exact: true }).click();
+  await window.getByRole("menuitem", { name: "Move to…" }).click();
+  await window.getByRole("option", { name: "Garden, Project" }).click();
   await expect
     .poll(
       async () =>

@@ -319,20 +319,30 @@ export type NotesBootstrap = {
 
 /** A note's saved versions, newest first; its current content is not one of them. */
 export type NoteHistory = {
-  versions: Array<{ id: string; savedAt: number; title: string; sizeBytes: number }>;
+  versions: Array<{
+    id: string;
+    savedAt: number;
+    title: string;
+    sizeBytes: number;
+    /** Lost to an edit made elsewhere at the same time. */
+    conflict?: boolean;
+  }>;
 };
 
 /** One saved version's full content. */
 export type NoteVersion = { savedAt: number; note: NoteContent };
 
-/** A copy of a note kept because two computers changed it at once. */
-export type ConflictCopy = { id: string; title: string };
+/**
+ * A note two computers (or the user and an AI client) changed at once: the edit
+ * that lost is kept in its history as `versionId`.
+ */
+export type NoteConflict = { noteId: string; versionId: string; title: string };
 
 /**
- * A saved note's new `updatedAt`, and the conflict copy made if the save
- * replaced content another device or an AI client had just written.
+ * A saved note's new `updatedAt`, and the conflict if the save replaced
+ * content another device or an AI client had just written.
  */
-export type SavedNote = { updatedAt: string; conflictCopy?: ConflictCopy };
+export type SavedNote = { updatedAt: string; conflict?: NoteConflict };
 
 /** What changed in the library, so a window showing it can catch up. */
 export type NotesChange = {
@@ -341,8 +351,8 @@ export type NotesChange = {
   deletedNoteIds: string[];
   /** Folders or the order of notes changed. */
   layoutChanged: boolean;
-  /** Notes made to keep a version that lost a conflict. */
-  conflictCopies: ConflictCopy[];
+  /** Notes whose history now holds a version that lost a conflict. */
+  conflicts: NoteConflict[];
 };
 
 /** A deleted note that can be restored without replacing the library. */

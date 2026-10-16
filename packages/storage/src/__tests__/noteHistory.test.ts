@@ -59,6 +59,20 @@ describe("selectVersionsToKeep", () => {
     const versions = Array.from({ length: 140 }, (_, index) => entry(NOW - index * MINUTE));
     expect(selectVersionsToKeep(versions, NOW)).toHaveLength(100);
   });
+
+  it("always keeps versions that lost a conflict, without counting them", () => {
+    const lost = (capturedAt: number): HistoryEntry => ({ ...entry(capturedAt), conflict: true });
+    const versions = [
+      ...Array.from({ length: 120 }, (_, index) => entry(NOW - index * MINUTE)),
+      // Old enough to go, and sharing an hour with a newer version.
+      lost(NOW - 3 * DAY - 20 * MINUTE),
+      entry(NOW - 3 * DAY - 10 * MINUTE),
+      lost(NOW - 400 * DAY),
+    ];
+    const kept = selectVersionsToKeep(versions, NOW);
+    expect(kept.filter((version) => version.conflict)).toHaveLength(2);
+    expect(kept.filter((version) => !version.conflict)).toHaveLength(100);
+  });
 });
 
 describe("planHistoryCapture", () => {
@@ -86,6 +100,42 @@ describe("planHistoryCapture", () => {
     expect(
       planHistoryCapture({ ...soon, now: NOW + HISTORY_CAPTURE_INTERVAL_MS, force: false }),
     ).not.toBeNull();
+  });
+
+  it("keeps a version that lost a conflict even moments after another, and marks it", () => {
+    const first = planHistoryCapture({
+      index: null,
+      document: document("a"),
+      savedAt: NOW - DAY,
+      now: NOW,
+      force: false,
+      createId,
+    })!;
+    const lost = planHistoryCapture({
+      index: first.index,
+      document: document("b"),
+      savedAt: NOW,
+      now: NOW + MINUTE,
+      force: false,
+      conflict: true,
+      createId,
+    });
+    expect(lost?.entry).toMatchObject({ conflict: true });
+    expect(lost?.index.versions).toHaveLength(2);
+
+    // Content kept already is marked rather than kept twice.
+    const same = planHistoryCapture({
+      index: first.index,
+      document: document("a"),
+      savedAt: NOW,
+      now: NOW + MINUTE,
+      force: true,
+      conflict: true,
+      createId,
+    });
+    expect(same?.entry).toMatchObject({ id: first.entry.id, conflict: true });
+    expect(same?.index.versions).toHaveLength(1);
+    expect(same?.removedIds).toEqual([]);
   });
 
   it("never keeps the same content twice in a row", () => {

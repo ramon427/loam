@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import type { ConflictCopy, NotesChange } from "@loam/shared/notes/noteModel";
+import type { NoteConflict, NotesChange } from "@loam/shared/notes/noteModel";
 import { callBridge, onBridgeEvent } from "../bridge";
 import { toastInfo } from "../ui/toast";
 
@@ -16,44 +16,47 @@ import type { NoteDocument } from "./types";
  */
 export function useSyncedChanges({
   activeNoteId,
-  openNote,
+  openHistory,
   leaveDeletedNotes,
   recover,
 }: {
   activeNoteId: string | null;
-  openNote: NotesWorkspace["openNote"];
+  openHistory: NotesWorkspace["openHistory"];
   leaveDeletedNotes: (deletedIds: ReadonlySet<string>) => void;
   recover: (message: string, error: unknown) => void;
 }) {
   const queryClient = useQueryClient();
   const [activeNoteRevision, setActiveNoteRevision] = useState(0);
 
-  const announceConflictCopies = useCallback(
-    (copies: readonly ConflictCopy[]) => {
-      for (const copy of copies)
+  const announceConflicts = useCallback(
+    (conflicts: readonly NoteConflict[]) => {
+      for (const { noteId, versionId, title } of conflicts)
         toastInfo("Edited in two places at once", {
-          description: `Both versions are kept. The other one is in “${copy.title}”.`,
-          action: { label: "Open", onClick: () => openNote(copy.id) },
+          description: `The other edit to “${title || "Untitled"}” is in its version history.`,
+          action: {
+            label: "Compare",
+            onClick: () => openHistory({ noteId, title, versionId }),
+          },
         });
     },
-    [openNote],
+    [openHistory],
   );
 
   // Links change when a note is saved, so what links where is read again.
   useEffect(
     () =>
-      onNoteSaved((_noteId, conflictCopy) => {
+      onNoteSaved((_noteId, conflict) => {
         void queryClient.invalidateQueries({ queryKey: ["note-backlinks"] });
-        if (!conflictCopy) return;
-        void queryClient.invalidateQueries({ queryKey: LIBRARY_KEY });
-        announceConflictCopies([conflictCopy]);
+        if (!conflict) return;
+        void queryClient.invalidateQueries({ queryKey: ["note-history", conflict.noteId] });
+        announceConflicts([conflict]);
       }),
-    [announceConflictCopies, queryClient],
+    [announceConflicts, queryClient],
   );
 
   /**
    * Catches up with changes sync brought. Notes with unsaved edits keep them:
-   * their next save keeps the synced version as a conflict copy, and one
+   * their next save keeps the synced version in its history, and one
    * deleted elsewhere is put back, since an edit beats a delete.
    */
   const applySyncedChanges = useCallback(
@@ -98,9 +101,11 @@ export function useSyncedChanges({
       void queryClient.invalidateQueries({ queryKey: LIBRARY_KEY });
       void queryClient.invalidateQueries({ queryKey: ["note-backlinks"] });
       void queryClient.invalidateQueries({ queryKey: ["notes-trash"] });
-      announceConflictCopies(changes.conflictCopies);
+      for (const { noteId } of changes.conflicts)
+        void queryClient.invalidateQueries({ queryKey: ["note-history", noteId] });
+      announceConflicts(changes.conflicts);
     },
-    [activeNoteId, announceConflictCopies, leaveDeletedNotes, queryClient, recover],
+    [activeNoteId, announceConflicts, leaveDeletedNotes, queryClient, recover],
   );
 
   useEffect(() => onBridgeEvent("notes.changed", applySyncedChanges), [applySyncedChanges]);
@@ -111,7 +116,7 @@ export function useSyncedChanges({
         changedNoteIds: [noteId],
         deletedNoteIds: [],
         layoutChanged: false,
-        conflictCopies: [],
+        conflicts: [],
       }),
     [applySyncedChanges],
   );

@@ -7,9 +7,9 @@ import {
   createNote,
   expectSaved,
   noteBody,
-  noteRow,
   openNote,
   openSettings,
+  storedLibrary,
 } from "./notes";
 
 /** Picks `folder` in Settings › Sync and waits for the first sync. */
@@ -70,9 +70,16 @@ test("syncs notes between two computers through a shared folder", async ({ loam 
     await turnOnSync(two, shared);
     await syncNow(loam);
 
-    for (const app of [loam, two])
-      await expect(noteRow(app.window, "Shopping (conflict copy)")).toBeVisible();
+    // One note stays; the edit that lost is in its history, a Compare away.
     await expect(two.window.getByText("Edited in two places at once")).toBeVisible();
+    await two.window.getByRole("button", { name: "Compare" }).click();
+    const history = two.window.getByRole("dialog", { name: "Version history" });
+    await expect(history).toContainText("Edited elsewhere at the same time");
+    await expect(history).toContainText(/bread|butter/);
+    for (const app of [loam, two])
+      expect((await storedLibrary(app.window)).notes.map((note) => note.title)).toEqual([
+        "Shopping",
+      ]);
   } finally {
     await two.dispose();
   }

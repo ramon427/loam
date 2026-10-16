@@ -219,9 +219,15 @@ export const createHandlers = (app: AppServices): Handlers => {
       return null;
     },
 
-    "import.pick": async ({ source }) => {
+    "import.pick": async () => {
       const { importer } = library();
-      return importer.pick(source, await app.dialogs.pickImportPaths(source), "window");
+      return importer.pick("auto", await app.dialogs.pickImportPaths(), "window");
+    },
+    "import.pickDropped": async ({ paths }) => {
+      const { importer } = library();
+      // Paths from the window are read only after the user confirms them where it can't reach.
+      if (!(await app.dialogs.confirmDroppedImport(paths))) return { status: "canceled" };
+      return importer.pick("auto", paths, "window");
     },
     "import.images": async ({ sessionId, requests }) =>
       library().importer.images(sessionId, requests),

@@ -327,13 +327,50 @@ const readImportArchive = async (path: string, source: BridgeImportSource): Prom
   };
 };
 
-/** Reads what was picked for `source`: a folder, files, or one archive, as the source expects. */
-export const readImport = (source: BridgeImportSource, paths: readonly string[]) => {
-  const kind = IMPORT_SOURCES[source].pick;
-  if (kind === "files") return readImportFiles(paths, source);
+const UNKNOWN_IMPORT =
+  "Loam imports a Markdown or Obsidian folder, .md files, Evernote .enex files, a Notion .zip export, or .html files.";
+
+/**
+ * Which app's export `paths` are, from what they are: a folder is a Markdown or Obsidian vault,
+ * and files go by their extension, all of one kind. Says what Loam takes when it can't tell.
+ */
+export const detectImport = async (
+  paths: readonly string[],
+): Promise<{ source: BridgeImportSource; pick: ImportPick }> => {
+  const infos = await Promise.all(paths.map((path) => stat(path)));
+  if (infos.some((info) => info.isDirectory())) {
+    if (paths.length > 1)
+      throw new StoreError("Import one folder at a time.", "VALIDATION_ERROR", 400);
+    return { source: "markdown", pick: "folder" };
+  }
+  const extensions = new Set(paths.map((path) => extname(path).toLowerCase()));
+  const only = (...allowed: string[]) => [...extensions].every((ext) => allowed.includes(ext));
+  if (only(".zip")) {
+    if (paths.length > 1)
+      throw new StoreError("Import one Notion export at a time.", "VALIDATION_ERROR", 400);
+    return { source: "notion", pick: "archive" };
+  }
+  if (only(".enex")) return { source: "evernote", pick: "files" };
+  if (only(".html", ".htm")) return { source: "html", pick: "files" };
+  if (only(...IMPORT_SOURCES.markdown.noteExtensions)) return { source: "markdown", pick: "files" };
+  throw new StoreError(UNKNOWN_IMPORT, "VALIDATION_ERROR", 400);
+};
+
+type ImportPick = (typeof IMPORT_SOURCES)[BridgeImportSource]["pick"];
+
+/**
+ * Reads what was picked for `source`: a folder, files, or one archive, as the source expects
+ * unless `pick` says otherwise (Markdown files picked one by one rather than their folder).
+ */
+export const readImport = (
+  source: BridgeImportSource,
+  paths: readonly string[],
+  pick: ImportPick = IMPORT_SOURCES[source].pick,
+) => {
+  if (pick === "files") return readImportFiles(paths, source);
   if (paths.length !== 1)
     throw new StoreError("This import expects one folder or archive.", "VALIDATION_ERROR", 400);
-  return kind === "folder"
+  return pick === "folder"
     ? readImportFolder(paths[0]!, source)
     : readImportArchive(paths[0]!, source);
 };

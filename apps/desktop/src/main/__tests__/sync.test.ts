@@ -83,7 +83,7 @@ describe("sync service", () => {
     expect(await titles(two.store)).toEqual(["Written on one"]);
     expect(await readdir(two.mediaDirectory)).toEqual([IMAGE]);
     expect(two.changes).toEqual([
-      expect.objectContaining({ changedNoteIds: [noteId(1)], conflictCopies: [] }),
+      expect.objectContaining({ changedNoteIds: [noteId(1)], conflicts: [] }),
     ]);
   });
 

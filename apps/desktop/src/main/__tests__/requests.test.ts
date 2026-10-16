@@ -9,6 +9,7 @@ import { createNote, createTestStore, newNote, noteId } from "@loam/storage/test
 
 import { createWorkspaceRequests } from "../workspaceRequests";
 import { createMediaStore } from "../mediaStore";
+import type { AppServices } from "../requests/handlers";
 import type { MainWindow } from "../window";
 import { createTestApp, TEST_PASSPHRASE } from "./appFixture";
 
@@ -57,6 +58,22 @@ describe("requests", () => {
       dispatch("import.images", { sessionId: "s", requests: [{ fromPath: 1 }] }, "window"),
     ).resolves.toMatchObject(invalid);
     expect((await store.getLibrary()).notes).toEqual([]);
+  });
+
+  it("imports dropped paths only once the user confirms them in a system dialog", async () => {
+    const asked: string[][] = [];
+    const { dispatch } = await createTestApp(await createTestStore(), {
+      dialogs: {
+        confirmDroppedImport: async (paths: readonly string[]) => {
+          asked.push([...paths]);
+          return false;
+        },
+      } as unknown as AppServices["dialogs"],
+    });
+    await expect(
+      dispatch("import.pickDropped", { paths: ["/home/me/Vault"] }, "window"),
+    ).resolves.toMatchObject({ ok: true, data: { status: "canceled" } });
+    expect(asked).toEqual([["/home/me/Vault"]]);
   });
 
   it("never takes a file path from the window, only from its own pickers", async () => {

@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 
 import { callBridge } from "../bridge";
 import { saveAllNoteEdits } from "../workspace/saveAllNoteEdits";
-import type { BridgeImportSkip, BridgeImportSource } from "@loam/shared/bridge/loamBridge";
+import type { BridgeImportSkip } from "@loam/shared/bridge/loamBridge";
 import { toastError, toastWarning } from "../ui/toast";
 
 import { convertImport } from "./convertImport";
@@ -29,8 +29,8 @@ export type NotesImportProgress =
   | { phase: "saving"; done: number; total: number };
 
 /**
- * Imports notes from another app: open edits are saved first, nothing may be
- * edited meanwhile (the caller blocks the screen while `progress` is set),
+ * Imports notes from another app, picked or dropped; the main process tells
+ * which app's export it is. Open edits are saved first, nothing may be edited meanwhile (the caller blocks the screen while `progress` is set),
  * and `onImported` runs once notes were written, so the library shows them.
  * Whatever happens after the pick, the import is finished, so the notes
  * written so far land in their folders.
@@ -41,7 +41,8 @@ export function useNotesImport({ onImported }: { onImported: () => void }) {
   const [summary, setSummary] = useState<NotesImportSummary | null>(null);
 
   const importNotes = useCallback(
-    async (source: BridgeImportSource) => {
+    /** `dropped` names paths dropped on the window; without it the picker opens. */
+    async (dropped?: string[]) => {
       if (runningRef.current) return;
       runningRef.current = true;
       try {
@@ -52,8 +53,11 @@ export function useNotesImport({ onImported }: { onImported: () => void }) {
           return;
         }
         setProgress({ phase: "reading" });
-        const picked = await callBridge("import.pick", { source });
+        const picked = dropped
+          ? await callBridge("import.pickDropped", { paths: dropped })
+          : await callBridge("import.pick", {});
         if (picked.status === "canceled") return;
+        const { source } = picked;
 
         let skipped = picked.skipped;
         let written = 0;

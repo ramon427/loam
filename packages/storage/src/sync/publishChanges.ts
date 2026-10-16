@@ -35,7 +35,12 @@ export const readUnpublishedChanges = async (store: PublishStore, limit: number)
   const changes: SyncChange[] = [];
   for (const { key, record } of store.ledger.unpublished().slice(0, limit)) {
     const { kind, id } = parseSyncKey(key)!;
-    const fields = { clock: record.clock, vector: record.vector, savedAt: store.now() };
+    const fields = {
+      clock: record.clock,
+      vector: record.vector,
+      savedAt: store.now(),
+      ...(record.overrode && { overrode: record.overrode }),
+    };
     if (kind === "note") {
       const note = await store.findNote(id);
       const savedAt = note ? Date.parse(note.row.updatedAt) : fields.savedAt;

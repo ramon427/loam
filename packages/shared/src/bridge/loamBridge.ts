@@ -78,6 +78,8 @@ export type BridgeImportPick =
   | { status: "canceled" }
   | {
       status: "picked";
+      /** Which app's export it is: as asked, or as told from what was picked. */
+      source: BridgeImportSource;
       sessionId: string;
       /** The picked folder or file name, for messages. */
       name: string;
@@ -390,7 +392,10 @@ type LoamBridgeRequests = {
   /** Opens the folder the last export wrote. */
   "export.reveal": Request<NoParams, null>;
   /** Asks for the folder or files to import and reads their notes. */
-  "import.pick": Request<{ source: BridgeImportSource }, BridgeImportPick>;
+  /** Opens the one import picker; the main process tells the source from what is picked. */
+  "import.pick": Request<NoParams, BridgeImportPick>;
+  /** Imports what was dropped on the window, once the user confirms it in a system dialog. */
+  "import.pickDropped": Request<{ paths: string[] }, BridgeImportPick>;
   /** Copies the images imported notes refer to; results follow the request order. */
   "import.images": Request<
     { sessionId: string; requests: BridgeImportImageRequest[] },
@@ -524,6 +529,7 @@ const METHODS: Record<LoamBridgeMethod, true> = {
   "export.markdown": true,
   "export.reveal": true,
   "import.pick": true,
+  "import.pickDropped": true,
   "import.images": true,
   "import.write": true,
   "import.finish": true,

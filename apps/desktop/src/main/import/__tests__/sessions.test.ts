@@ -279,6 +279,39 @@ describe("notes importer", () => {
     expect(readdirSync(mediaDirectory)).toHaveLength(1);
   });
 
+  it("tells which app's export was picked from the folder or files themselves", async () => {
+    const { vault, importer } = await setup({
+      "Ideas.md": "# Ideas",
+      "Work/Standup.md": "Talk.",
+      "Notebook.enex": "<en-export/>",
+      "Export.zip": buildZip([{ name: "Page.md", content: "# Page" }]),
+      "Saved.html": "<p>Saved</p>",
+      "Minutes.docx": "x",
+    });
+    const sourceOf = async (...paths: string[]) => {
+      const picked = await importer.pick("auto", paths, "window");
+      return picked.status === "picked" ? picked.source : null;
+    };
+    expect(await sourceOf(vault)).toBe("markdown");
+    expect(await sourceOf(join(vault, "Ideas.md"))).toBe("markdown");
+    expect(await sourceOf(join(vault, "Notebook.enex"))).toBe("evernote");
+    expect(await sourceOf(join(vault, "Export.zip"))).toBe("notion");
+    expect(await sourceOf(join(vault, "Saved.html"))).toBe("html");
+    // Markdown files picked one by one are read as files, not as a folder.
+    const files = await importer.pick("auto", [join(vault, "Ideas.md")], "window");
+    expect(files.status === "picked" && files.files.map((file) => file.path)).toEqual(["Ideas.md"]);
+    // What Loam doesn't import says what it does.
+    await expect(importer.pick("auto", [join(vault, "Minutes.docx")], "window")).rejects.toThrow(
+      /Markdown or Obsidian folder/,
+    );
+    await expect(
+      importer.pick("auto", [join(vault, "Ideas.md"), join(vault, "Notebook.enex")], "window"),
+    ).rejects.toThrow(/Markdown or Obsidian folder/);
+    await expect(importer.pick("auto", [vault, join(vault, "Work")], "window")).rejects.toThrow(
+      "Import one folder at a time.",
+    );
+  });
+
   it("asks for the zip when something else is picked for Notion", async () => {
     const { importer, vault } = await setup({ "A.md": "a" });
     await expect(importer.pick("notion", [vault], "window")).rejects.toMatchObject({

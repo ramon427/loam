@@ -14,7 +14,7 @@ import { StoreError } from "@loam/storage/storeError";
 import { imageTypeOf, type MediaStore } from "../mediaStore";
 import type { Caller } from "../requests/dispatch";
 import { placeImportedNotes, writeImportedNotes, type ImportedNotePlacement } from "./placement";
-import { IMPORT_LIMITS, readImport, type ImageSource } from "./readers";
+import { detectImport, IMPORT_LIMITS, readImport, type ImageSource } from "./readers";
 
 const SESSION_TTL_MS = 60 * 60 * 1000;
 /** Sessions open at once; a window import replaces the window's previous one. */
@@ -80,11 +80,12 @@ export const createNotesImporter = ({
   return {
     /**
      * Reads what was picked for an import and starts its session. `paths` is
-     * what the window's picker returned (empty when canceled) or what an AI
-     * client named; a new window import replaces the window's previous one.
+     * what the window's picker returned (empty when canceled), what was dropped
+     * on it and confirmed, or what an AI client named; a new window import
+     * replaces the window's previous one. "auto" tells the source from the paths.
      */
     async pick(
-      source: BridgeImportSource,
+      requested: BridgeImportSource | "auto",
       paths: readonly string[],
       owner: Caller,
     ): Promise<BridgeImportPick> {
@@ -97,7 +98,9 @@ export const createNotesImporter = ({
         !(owner === "window" && uiSessionId && sessions.has(uiSessionId))
       )
         throw new StoreError("Finish an existing import before starting another.", "CONFLICT", 409);
-      const read = await readImport(source, paths);
+      const { source, pick } =
+        requested === "auto" ? await detectImport(paths) : { source: requested, pick: undefined };
+      const read = await readImport(source, paths, pick);
       const session: ImportSession = {
         id: randomUUID(),
         owner,
@@ -114,6 +117,7 @@ export const createNotesImporter = ({
       sessions.set(session.id, session);
       return {
         status: "picked",
+        source,
         sessionId: session.id,
         name: read.name,
         files: read.files,
