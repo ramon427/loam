@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BridgeCustomizations } from "@loam/shared/bridge/loamBridge";
 
@@ -36,6 +36,8 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  delete document.documentElement.dataset.platform;
+  delete document.documentElement.dataset.glass;
   document.getElementById("loam-theme")?.remove();
   document.getElementById("loam-snippets")?.remove();
 });
@@ -76,5 +78,32 @@ describe("AppearanceSettings", () => {
     const late = document.createElement("style");
     document.head.append(late);
     return waitFor(() => expect(document.head.lastElementChild?.id).toBe("loam-snippets"));
+  });
+
+  it("lets the desktop show through the whole window on macOS, and remembers it", async () => {
+    document.documentElement.dataset.platform = "darwin";
+    // The select scrolls its chosen option into view; jsdom lacks scrollIntoView.
+    Element.prototype.scrollIntoView ??= vi.fn();
+    render(<AppearanceSettings />);
+
+    fireEvent.keyDown(screen.getByRole("combobox", { name: "Glass" }), { key: "Enter" });
+    fireEvent.click(await screen.findByRole("option", { name: "Whole window" }));
+
+    expect(document.documentElement.dataset.glass).toBe("full");
+    expect(JSON.parse(localStorage.getItem("loam:appearance")!)).toEqual({
+      themeId: "loam",
+      glass: "full",
+    });
+  });
+
+  it("keeps the window solid where the system can't blur behind it", () => {
+    document.documentElement.dataset.platform = "linux";
+    localStorage.setItem("loam:appearance", JSON.stringify({ themeId: "loam", glass: "full" }));
+    render(<AppearanceSettings />);
+    act(() => window.dispatchEvent(new Event("appearance-change")));
+
+    expect(screen.getByRole("combobox", { name: "Glass" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText("Whole window needs macOS or Windows 11.")).toBeTruthy();
+    expect(document.documentElement.dataset.glass).toBeUndefined();
   });
 });

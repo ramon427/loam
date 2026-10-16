@@ -1,5 +1,6 @@
 @import "tailwindcss" source(none);
 @import "./styles/app.css";
+@import "./styles/fullGlass.css";
 @source "./";
 @source not "./**/__tests__";
 @source not "./**/*.test.{ts,tsx}";
@@ -115,7 +116,7 @@
   align-items: center;
   gap: 8px;
   height: var(--loam-titlebar-height);
-  background: var(--app-bg);
+  background: var(--shell-bg);
   user-select: none;
   -webkit-app-region: drag;
 }
@@ -156,7 +157,7 @@
   min-height: 0;
   flex: 1;
   grid-template-columns: var(--loam-sidebar-width, 280px) minmax(0, 1fr) var(--loam-chat-width, 0px);
-  background: var(--app-bg);
+  background: var(--shell-bg);
   transition: grid-template-columns var(--duration-enter-fast) var(--ease-out);
 }
 
@@ -307,6 +308,7 @@
   flex-direction: column;
   grid-column: 2;
   overflow: hidden;
+  background: var(--main-column-bg);
 }
 
 .loam-main {
