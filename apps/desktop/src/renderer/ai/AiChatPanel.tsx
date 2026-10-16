@@ -158,7 +158,7 @@ export function AiChatSide({
               key={starter.text}
               type="button"
               className={cn(
-                "flex w-full cursor-pointer items-center gap-2.5 rounded-[12px] border border-(--app-border) bg-(--app-surface) px-3 py-2.5 text-left text-[13px] text-(--app-text) transition-colors duration-(--control-transition-duration) hover:border-(--app-border-strong) hover:bg-(--app-surface-2) focus-visible:outline-2 focus-visible:outline-(--app-focus-ring)",
+                "flex w-full cursor-pointer items-center gap-2.5 rounded-[12px] border border-(--app-border) bg-(--chat-composer-bg) px-3 py-2.5 text-left text-[13px] text-(--app-text) transition-colors duration-(--control-transition-duration) hover:border-(--app-border-strong) hover:bg-(--app-surface-2) focus-visible:outline-2 focus-visible:outline-(--app-focus-ring)",
                 styles.riseIn,
               )}
               style={{ animationDelay: `${40 + index * 35}ms` }}
