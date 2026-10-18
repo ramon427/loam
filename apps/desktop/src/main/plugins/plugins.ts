@@ -59,10 +59,13 @@ const notFound = () => new StoreError("No plugin has that id.", "NOT_FOUND", 404
  */
 export const createPlugins = ({
   dataDirectory,
+  bundledDirectory,
   library,
   onChange,
 }: {
   dataDirectory: string;
+  /** The plugins that ship with the app, read-only; a folder of the same name in the plugins folder wins. */
+  bundledDirectory?: string;
   /** The open library; throws while notes are locked. */
   library: () => OpenLibrary;
   /** The plugins folder or plugins.json changed. */
@@ -91,15 +94,30 @@ export const createPlugins = ({
   const pluginState = (file: PluginsFile, id: string): PluginState =>
     file.plugins[id] ?? { enabled: false, granted: [], settings: {} };
 
+  /** Every plugin folder by name, and the folder it is in: the user's own before the app's. */
+  const locations = async () => {
+    const found = new Map<string, string>();
+    if (bundledDirectory)
+      for (const name of await pluginFolderNames(bundledDirectory))
+        found.set(name, bundledDirectory);
+    for (const name of await pluginFolderNames(folder)) found.set(name, folder);
+    return found;
+  };
+  const locate = async (id: string) => (await locations()).get(id) ?? folder;
+  const manifestOf = async (id: string) => readManifest(await locate(id), id);
+
   const list = async (): Promise<BridgePlugins> => {
     const file = await readState();
-    const names = await pluginFolderNames(folder);
+    const found = await locations();
+    const names = [...found.keys()].sort((a, b) => a.localeCompare(b));
     const plugins = await Promise.all(
       names.map(async (name): Promise<BridgePluginInfo> => {
         const own = pluginState(file, name);
-        const manifest = await readManifest(folder, name);
+        const location = found.get(name)!;
+        const manifest = await readManifest(location, name);
         return {
           folder: name,
+          bundled: location !== folder,
           ...own,
           // A permission the manifest no longer asks for is no longer granted.
           granted: manifest.ok
@@ -117,14 +135,15 @@ export const createPlugins = ({
   /** A plugin that may run now: on, and not held back by restricted mode. */
   const running = async (id: string) => {
     const file = await readState();
-    const manifest = await readManifest(folder, id);
+    const location = await locate(id);
+    const manifest = await readManifest(location, id);
     if (!manifest.ok) throw notFound();
     const own = pluginState(file, id);
     if (file.restrictedMode || !own.enabled) throw notAllowed("That plugin is not switched on.");
     const granted = own.granted.filter((permission) =>
       manifest.manifest.permissions.includes(permission as never),
     );
-    return { manifest: manifest.manifest, granted };
+    return { manifest: manifest.manifest, granted, location };
   };
 
   const requirePermission = (granted: readonly string[], permission: string) => {
@@ -150,7 +169,7 @@ export const createPlugins = ({
 
     /** Switches a plugin on with the permissions the user granted, which must be ones it asks for. */
     async setEnabled(id: string, enabled: boolean, granted?: readonly string[]) {
-      const manifest = await readManifest(folder, id);
+      const manifest = await manifestOf(id);
       if (!manifest.ok) throw notFound();
       const file = await readState();
       const own = pluginState(file, id);
@@ -165,7 +184,7 @@ export const createPlugins = ({
     },
 
     async setSetting(id: string, key: string, value: PluginSettingValue) {
-      const manifest = await readManifest(folder, id);
+      const manifest = await manifestOf(id);
       if (!manifest.ok) throw notFound();
       const setting = manifest.manifest.settings.find((candidate) => candidate.key === key);
       const expected = setting?.type === "select" ? "string" : setting?.type;
@@ -182,8 +201,8 @@ export const createPlugins = ({
 
     /** The module a running plugin loads. */
     async source(id: string) {
-      const { manifest } = await running(id);
-      const path = join(folder, id, manifest.main);
+      const { manifest, location } = await running(id);
+      const path = join(location, id, manifest.main);
       if ((await stat(path)).size > MAX_SOURCE_BYTES)
         throw new StoreError("The plugin's module is over 4 MB.", "PLUGIN_TOO_LARGE", 413);
       return { code: await readFile(path, "utf8") };

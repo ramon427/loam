@@ -285,6 +285,8 @@ export function PluginsSettings() {
   const plugins = usePlugins();
   const change = useChange();
   const list = plugins.data;
+  const bundled = list?.plugins.filter((plugin) => plugin.bundled) ?? [];
+  const installed = list?.plugins.filter((plugin) => !plugin.bundled) ?? [];
 
   return (
     <>
@@ -312,9 +314,9 @@ export function PluginsSettings() {
           title="Plugins folder"
           description={
             list
-              ? list.plugins.length === 1
+              ? installed.length === 1
                 ? "1 plugin"
-                : `${list.plugins.length} plugins`
+                : `${installed.length} plugins`
               : "Reading…"
           }
           control={
@@ -345,9 +347,16 @@ export function PluginsSettings() {
           }
         />
       </SettingsSection>
-      {list?.plugins.length ? (
+      {list && bundled.length ? (
+        <SettingsSection title="Built in">
+          {bundled.map((plugin) => (
+            <PluginRow key={plugin.folder} plugin={plugin} restricted={list.restrictedMode} />
+          ))}
+        </SettingsSection>
+      ) : null}
+      {list && installed.length ? (
         <SettingsSection title="Installed">
-          {list.plugins.map((plugin) => (
+          {installed.map((plugin) => (
             <PluginRow key={plugin.folder} plugin={plugin} restricted={list.restrictedMode} />
           ))}
         </SettingsSection>

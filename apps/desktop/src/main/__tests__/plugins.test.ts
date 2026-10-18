@@ -20,8 +20,13 @@ let dataDirectory: string;
 let store: NotesStore;
 let locked: boolean;
 
-const writePlugin = async (id: string, manifest: Record<string, unknown> = {}, code = "") => {
-  const folder = join(dataDirectory, "plugins", id);
+const writePlugin = async (
+  id: string,
+  manifest: Record<string, unknown> = {},
+  code = "",
+  parent = join(dataDirectory, "plugins"),
+) => {
+  const folder = join(parent, id);
   await mkdir(folder, { recursive: true });
   await writeFile(
     join(folder, "manifest.json"),
@@ -33,6 +38,7 @@ const writePlugin = async (id: string, manifest: Record<string, unknown> = {}, c
 const create = () =>
   createPlugins({
     dataDirectory,
+    bundledDirectory: join(dataDirectory, "bundled"),
     library: () => {
       if (locked) throw new Error("Your notes are locked.");
       return { store } as unknown as OpenLibrary;
@@ -239,5 +245,29 @@ describe("plugins", () => {
       code: "VALIDATION_ERROR",
     });
     expect((await plugins.list()).plugins[0]).toMatchObject({ settings: { folder: "Journal" } });
+  });
+
+  it("lists the plugins that ship with the app, letting a plugins folder of the same name win", async () => {
+    const bundled = join(dataDirectory, "bundled");
+    await writePlugin("calendar", {}, "export const register = () => 'bundled';", bundled);
+    await writePlugin("todos", {}, "export const register = () => 'bundled';", bundled);
+    await writePlugin("todos", {}, "export const register = () => 'mine';");
+    const plugins = create();
+
+    expect((await plugins.list()).plugins.map((plugin) => [plugin.folder, plugin.bundled])).toEqual(
+      [
+        ["calendar", true],
+        ["todos", false],
+      ],
+    );
+    await plugins.setRestricted(false);
+    await plugins.setEnabled("calendar", true);
+    await plugins.setEnabled("todos", true);
+    await expect(plugins.source("calendar")).resolves.toEqual({
+      code: "export const register = () => 'bundled';",
+    });
+    await expect(plugins.source("todos")).resolves.toEqual({
+      code: "export const register = () => 'mine';",
+    });
   });
 });

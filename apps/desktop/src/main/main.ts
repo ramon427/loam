@@ -193,6 +193,7 @@ const start = async () => {
   app.on("will-quit", () => customizations.close());
   const plugins = createPlugins({
     dataDirectory,
+    bundledDirectory: join(__dirname, "plugins"),
     library: () => libraryGate.library(),
     onChange: () => mainWindow.send("plugins.changed", null),
   });

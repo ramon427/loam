@@ -47,6 +47,7 @@ in the browser only for `http`, `https` and `mailto`.
 | `packages/storage`          | `NotesStore`, the stored-note schema, storage adapters (SQLite, memory), version history, search, sync and encryption                            | main            |
 | `packages/transfer`         | Import parsing (Markdown, Obsidian, Evernote, Notion, HTML), Markdown export, JSON Canvas and Mermaid                                            | main and window |
 | `packages/plugin-api`       | The types plugins are written against; `examples/plugins` uses them                                                                              | plugins         |
+| `apps/desktop/plugins`      | The plugins that ship with the app (Google Calendar, Todos), built into `dist-electron/plugins` and switched on in Settings like any other       | plugins         |
 
 Imports follow two rules, and ESLint checks both:
 

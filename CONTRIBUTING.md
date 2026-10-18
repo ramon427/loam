@@ -49,7 +49,8 @@ In short:
 - `packages/transfer` converts notes to and from Markdown and other formats.
 - `packages/shared` is the note model and what both processes need.
 - `packages/plugin-api` holds the plugin API's types; `examples/plugins` has
-  plugins written against it.
+  plugins written against it, and `apps/desktop/plugins` the ones that ship
+  with the app.
 
 ## Before you open a pull request
 

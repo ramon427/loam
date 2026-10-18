@@ -55,6 +55,7 @@ const spawn = (pluginId: string): WorkerPort => {
 
 const info = (id: string, permissions: string[] = []): BridgePluginInfo => ({
   folder: id,
+  bundled: false,
   enabled: true,
   granted: permissions,
   settings: {},
