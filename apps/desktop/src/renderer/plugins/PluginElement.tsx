@@ -174,7 +174,8 @@ export function PluginElement({
                 ? "font-medium"
                 : undefined,
             props.mono === true && "font-mono",
-            props.truncate === true && "min-w-0 truncate",
+            // A long link in plugin text wraps rather than widening its popover.
+            props.truncate === true ? "min-w-0 truncate" : "[overflow-wrap:anywhere]",
           )}
         >
           {textOf(children)}

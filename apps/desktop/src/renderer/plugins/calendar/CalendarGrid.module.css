@@ -264,6 +264,7 @@
 
 .event[data-compact="true"] .title {
   flex: 0 1 auto;
+  min-width: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -295,8 +296,10 @@
   padding-bottom: 0;
 }
 
+/* The time gives way before the title does. */
 .event[data-compact="true"] .meta {
-  flex: none;
+  flex: 0 1000 auto;
+  min-width: 0;
 }
 
 .resize {
