@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 
 import { expect, test } from "./app";
-import { createNote, expectSaved, noteBody } from "./notes";
+import { createNote, expectSaved, noteBody, noteRow } from "./notes";
 
 const LINES = ["First line of text", "Second line, a little longer than the first", "Third line"];
 
@@ -80,4 +80,31 @@ test("a drag or click in the margins around the note's text acts on the nearest 
   await window.keyboard.type("Then ");
   await expect.poll(() => lineTexts(window)).toEqual([LINES[0], `Then ${LINES[1]}`, LINES[2]]);
   await expectSaved(window, "Lines", `Then ${LINES[1]}`);
+});
+
+test("select all takes the line first, then the note, and never the window around it", async ({
+  loam,
+}) => {
+  const { window } = loam;
+  await createThreeLineNote(window);
+  const second = await lineBox(window, 1);
+  await click(window, second.x + 20, second.y + second.height / 2);
+
+  await window.keyboard.press("ControlOrMeta+A");
+  await expect.poll(() => selectedText(window)).toBe(LINES[1]);
+  await window.keyboard.press("ControlOrMeta+A");
+  await expect.poll(() => selectedText(window)).toBe(LINES.join("\n"));
+
+  // Typing over the first press's selection replaces only that line.
+  await click(window, second.x + 20, second.y + second.height / 2);
+  await window.keyboard.press("ControlOrMeta+A");
+  await window.keyboard.type("Replaced");
+  await expect.poll(() => lineTexts(window)).toEqual([LINES[0], "Replaced", LINES[2]]);
+  await expectSaved(window, "Lines", "Replaced");
+
+  // Outside the editor and text fields, nothing new is selected: no sidebar rows or labels.
+  await window.evaluate(() => document.getSelection()?.removeAllRanges());
+  await noteRow(window, "Lines").focus();
+  await window.keyboard.press("ControlOrMeta+A");
+  expect(await selectedText(window)).toBe("");
 });
