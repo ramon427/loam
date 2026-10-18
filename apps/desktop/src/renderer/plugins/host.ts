@@ -10,6 +10,7 @@ import {
   createPluginContributions,
   type PluginCommand,
   type PluginPane,
+  type PluginPrompt,
   type PluginSlashItem,
 } from "./pluginContributions";
 import { createPluginInstance, type PluginInstance, type WorkerPort } from "./pluginInstance";
@@ -38,6 +39,7 @@ export type HostSnapshot = {
   commands: readonly PluginCommand[];
   slashItems: readonly PluginSlashItem[];
   panes: readonly PluginPane[];
+  prompt: PluginPrompt | null;
   status: Readonly<Record<string, Running["status"]>>;
   logs: Readonly<Record<string, readonly PluginLogEntry[]>>;
 };
@@ -348,6 +350,7 @@ export const createPluginHost = ({
         commands: contributions.commands,
         slashItems: contributions.slashItems,
         panes: contributions.panes,
+        prompt: contributions.prompt,
         status: Object.fromEntries([...running].map(([id, plugin]) => [id, plugin.status])),
         logs: Object.fromEntries(logs),
       };

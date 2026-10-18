@@ -130,6 +130,18 @@ export const createPluginCalls = ({
         });
         return null;
       }
+      case "ui.prompt": {
+        requirePermission(plugin, "ui");
+        const input = asRecord(first);
+        return contributions.ask({
+          pluginId,
+          title: asString(input.title, "title", 120),
+          ...(typeof input.placeholder === "string" && {
+            placeholder: input.placeholder.slice(0, 200),
+          }),
+          ...(typeof input.value === "string" && { value: input.value.slice(0, 10_000) }),
+        });
+      }
       case "ui.close":
         contributions.closePane(pluginId, asString(first, "id", 64));
         return null;

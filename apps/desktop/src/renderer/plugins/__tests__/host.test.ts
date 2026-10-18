@@ -182,6 +182,44 @@ describe("plugin host", () => {
     );
   });
 
+  it("asks for a line of text for a plugin granted ui, one question at a time", async () => {
+    const answers = vi.fn();
+    plugins.set("asker", async (on) => {
+      on("command.run", ($: Api) => {
+        void $.ui.prompt({ title: "Add todo", placeholder: "What?" }).then(answers);
+        void $.ui.prompt({ title: "Second" }).then(answers);
+      });
+    });
+    await start(info("asker", ["ui"]));
+    await host.dispatch("command.run", { command: "add" }, () => null);
+
+    await vi.waitFor(() =>
+      expect(host.snapshot().prompt).toMatchObject({
+        pluginId: "asker",
+        title: "Add todo",
+        placeholder: "What?",
+      }),
+    );
+    host.snapshot().prompt!.answer("Buy milk");
+    await vi.waitFor(() => expect(host.snapshot().prompt?.title).toBe("Second"));
+    host.snapshot().prompt!.answer(null);
+    await vi.waitFor(() => expect(answers.mock.calls).toEqual([["Buy milk"], [null]]));
+    expect(host.snapshot().prompt).toBeNull();
+  });
+
+  it("answers a stopped plugin's open question with null", async () => {
+    const answers = vi.fn();
+    plugins.set("asker", async (on) => {
+      on("command.run", ($: Api) => void $.ui.prompt({ title: "Name?" }).then(answers));
+    });
+    await start(info("asker", ["ui"]));
+    await host.dispatch("command.run", { command: "ask" }, () => null);
+    await vi.waitFor(() => expect(host.snapshot().prompt).not.toBeNull());
+
+    stop();
+    expect(host.snapshot().prompt).toBeNull();
+  });
+
   it("parses Markdown before creating a note through the main process", async () => {
     plugins.set("writer", async (on) => {
       on("command.run", async ($: Api) => $.notes.create({ title: "Hi", markdown: "# Hello" }));

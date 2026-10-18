@@ -44,6 +44,7 @@ function PluginInput({ props, press }: { props: Record<string, unknown>; press: 
   useEffect(() => setDraft(value), [value]);
   return (
     <Input
+      type={props.type === "date" ? "date" : "text"}
       aria-label={typeof props.label === "string" ? props.label : undefined}
       placeholder={typeof props.placeholder === "string" ? props.placeholder : undefined}
       disabled={props.disabled === true}
@@ -57,6 +58,7 @@ function PluginInput({ props, press }: { props: Record<string, unknown>; press: 
         if (event.key === "Enter" && props.onSubmit) {
           event.preventDefault();
           press(props.onSubmit, draft);
+          if (props.clearOnSubmit === true) setDraft("");
         }
       }}
     />
@@ -82,23 +84,40 @@ export function PluginElement({
   switch (type) {
     case "Box": {
       const step = (value: unknown) => (typeof value === "number" ? value * 4 : undefined);
-      return (
-        <div
-          className={cn(
-            "flex min-w-0",
-            props.surface === true &&
-              "rounded-(--radius-control) border border-(--app-border) bg-(--app-surface)",
-          )}
-          style={{
-            flexDirection: props.direction === "row" ? "row" : "column",
-            gap: step(props.gap),
-            padding: step(props.padding),
-            alignItems: ALIGN[props.align as string],
-            justifyContent: JUSTIFY[props.justify as string],
-            flexWrap: props.wrap === true ? "wrap" : undefined,
-            flexGrow: props.grow === true ? 1 : undefined,
-          }}
+      const columns = typeof props.columns === "number" ? props.columns : undefined;
+      const className = cn(
+        columns ? "grid min-w-0" : "flex min-w-0",
+        props.surface === true &&
+          "rounded-(--radius-control) border border-(--app-border) bg-(--app-surface)",
+        props.onPress !== undefined &&
+          "cursor-pointer rounded-(--radius-control) text-left transition-colors hover:bg-(--app-control-hover) focus-visible:shadow-[0_0_0_1px_var(--app-focus-ring)] focus-visible:outline-none",
+      );
+      const style: CSSProperties = {
+        ...(columns
+          ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
+          : {
+              flexDirection: props.direction === "row" ? "row" : "column",
+              flexWrap: props.wrap === true ? "wrap" : undefined,
+            }),
+        gap: step(props.gap),
+        padding: step(props.padding),
+        alignItems: ALIGN[props.align as string],
+        justifyContent: JUSTIFY[props.justify as string],
+        flexGrow: props.grow === true ? 1 : undefined,
+      };
+      // A pressable box is one button, so a row of text can be picked as a whole.
+      return props.onPress !== undefined ? (
+        <button
+          type="button"
+          className={className}
+          style={style}
+          aria-label={typeof props.label === "string" ? props.label : undefined}
+          onClick={() => press(props.onPress)}
         >
+          {kids}
+        </button>
+      ) : (
+        <div className={className} style={style}>
           {kids}
         </div>
       );
@@ -199,6 +218,18 @@ export function PluginElement({
         </Select>
       );
     }
+    case "Link":
+      // The window hands new-window links to the system browser, past its safety check.
+      return (
+        <a
+          href={props.href as string}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="min-w-0 truncate text-xs text-(--app-accent) underline-offset-2 hover:underline"
+        >
+          {textOf(children) || (props.href as string)}
+        </a>
+      );
     case "Divider":
       return <hr className="my-1 border-0 border-t border-(--app-border)" />;
     case "Icon": {

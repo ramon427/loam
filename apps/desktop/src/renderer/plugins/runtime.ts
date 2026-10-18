@@ -27,7 +27,7 @@ export type Register = (on: On, options: Record<string, unknown>) => unknown;
 /** The `$` paths a plugin may call; each becomes one message the window answers. */
 const API = {
   notes: ["get", "list", "search", "backlinks", "create", "setTitle", "append", "trash"],
-  ui: ["toast", "open", "close", "invalidate", "openNote"],
+  ui: ["toast", "open", "close", "invalidate", "openNote", "prompt"],
   commands: ["register"],
   editor: ["registerSlashItem"],
   state: ["get", "set"],
@@ -48,6 +48,7 @@ export const ELEMENT_NAMES = [
   "Divider",
   "Icon",
   "Badge",
+  "Link",
 ] as const;
 
 const Fragment = "Fragment";

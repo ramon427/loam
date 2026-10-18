@@ -10,7 +10,7 @@ import { OpenedFileView } from "./files/OpenedFileView";
 import { useOpenedFiles } from "./files/useOpenedFiles";
 import { NoteHistoryDialog } from "./history/NoteHistoryDialog";
 import { pluginHost } from "./plugins/host";
-import { PluginPanes, PluginShortcuts } from "./plugins/PluginPanes";
+import { PluginPanes, PluginPromptDialog, PluginShortcuts } from "./plugins/PluginPanes";
 import { PluginSlot } from "./plugins/PluginSlot";
 import { NotesSidebarCreateActions } from "./sidebar/NotesSidebarCreateActions";
 import { NotesSidebarFilter } from "./sidebar/NotesSidebarFilter";
@@ -322,6 +322,7 @@ function Workspace() {
             />
           ) : null}
           <PluginShortcuts enabled={!settingsOpen} />
+          <PluginPromptDialog />
         </div>
       </KeyboardShortcutsScope>
       <SettingsScreen open={settingsOpen} section={settingsSection} onClose={closeSettings} />

@@ -1,10 +1,14 @@
+import { useState } from "react";
 import { XIcon } from "lucide-react";
 
 import { useShortcuts, type Shortcut } from "../keyboard/useShortcuts";
 import { parsePluginShortcut } from "../keyboard/shortcuts";
+import { FormDialog } from "../settings/FormDialog";
 import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";
 
 import { pluginHost } from "./host";
+import type { PluginPrompt } from "./pluginContributions";
 import { PluginSlot, usePluginHost } from "./PluginSlot";
 
 /**
@@ -70,4 +74,40 @@ export function PluginShortcuts({ enabled }: { enabled: boolean }) {
     }),
   );
   return null;
+}
+
+function PromptDialog({ prompt }: { prompt: PluginPrompt }) {
+  const [value, setValue] = useState(prompt.value ?? "");
+  return (
+    <FormDialog
+      title={prompt.title}
+      description={pluginHost.pluginName(prompt.pluginId)}
+      onClose={() => prompt.answer(null)}
+      onSubmit={() => prompt.answer(value)}
+      footer={
+        <>
+          <Button type="button" variant="outline" size="sm" onClick={() => prompt.answer(null)}>
+            Cancel
+          </Button>
+          <Button type="submit" size="sm" disabled={!value.trim()}>
+            OK
+          </Button>
+        </>
+      }
+    >
+      <Input
+        autoFocus
+        aria-label={prompt.title}
+        placeholder={prompt.placeholder}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+      />
+    </FormDialog>
+  );
+}
+
+/** The line of text a plugin asked for with `$.ui.prompt`, one question at a time. */
+export function PluginPromptDialog() {
+  const { prompt } = usePluginHost();
+  return prompt ? <PromptDialog key={prompt.id} prompt={prompt} /> : null;
 }

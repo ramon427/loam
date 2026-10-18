@@ -20,6 +20,11 @@ const isText =
 const isStep: Check = (value) =>
   Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 8;
 const isHandler: Check = isHandlerRef;
+const isColumns: Check = (value) =>
+  Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 7;
+/** Links open outside the app, so only web and mail addresses. */
+const isHref: Check = (value) =>
+  typeof value === "string" && value.length <= 2048 && /^(?:https?:\/\/|mailto:)/i.test(value);
 const isOptions: Check = (value) =>
   Array.isArray(value) &&
   value.length <= 100 &&
@@ -46,6 +51,9 @@ const SPECS: Record<string, Spec> = {
       wrap: isBool,
       grow: isBool,
       surface: isBool,
+      columns: isColumns,
+      onPress: isHandler,
+      label: isText(120),
     },
     children: "any",
   },
@@ -74,12 +82,14 @@ const SPECS: Record<string, Spec> = {
   },
   Input: {
     props: {
+      type: oneOf("text", "date"),
       value: isText(10_000),
       placeholder: isText(200),
       label: isText(120),
       disabled: isBool,
       onChange: isHandler,
       onSubmit: isHandler,
+      clearOnSubmit: isBool,
     },
     children: "none",
   },
@@ -97,6 +107,7 @@ const SPECS: Record<string, Spec> = {
     },
     children: "none",
   },
+  Link: { props: { href: isHref }, children: "text" },
   Divider: { props: {}, children: "none" },
   Icon: {
     props: { name: oneOf(...Object.keys(PLUGIN_ICONS)), tone: oneOf(...TONES) },

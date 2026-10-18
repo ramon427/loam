@@ -73,6 +73,15 @@ export interface Api {
     /** Draws every slot again, for state kept outside $.state. */
     invalidate(): Promise<null>;
     openNote(noteId: string): Promise<null>;
+    /**
+     * Asks for a line of text in a dialog; resolves with it, or null if dismissed. Don't await
+     * it inside a hook, which has 5 seconds to answer. Needs ui.
+     */
+    prompt(question: {
+      title: string;
+      placeholder?: string;
+      value?: string;
+    }): Promise<string | null>;
   };
   commands: {
     /** Adds a command to the palette (Mod+Shift+P), answered by a command.run hook. */
@@ -177,6 +186,9 @@ type IconName =
   | "bookmark"
   | "calendar"
   | "check"
+  | "chevron-down"
+  | "chevron-left"
+  | "chevron-right"
   | "clock"
   | "copy"
   | "external-link"
@@ -187,6 +199,8 @@ type IconName =
   | "info"
   | "link"
   | "list"
+  | "map-pin"
+  | "pencil"
   | "play"
   | "plus"
   | "refresh"
@@ -214,6 +228,12 @@ export interface ElementProps {
     grow?: boolean;
     /** A bordered card. */
     surface?: boolean;
+    /** Lays the children out in this many equal columns instead of a row or column. */
+    columns?: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+    /** Makes the whole box one button; put no other buttons inside it. */
+    onPress?: () => void;
+    /** Its accessible name, for a pressable box. */
+    label?: string;
     children?: Children;
   };
   Text: {
@@ -237,12 +257,16 @@ export interface ElementProps {
     children?: Children;
   };
   Input: {
+    /** "date" picks a day; its value is YYYY-MM-DD, or "" for none. */
+    type?: "text" | "date";
     value?: string;
     placeholder?: string;
     label?: string;
     disabled?: boolean;
     onChange?: (value: string) => void;
     onSubmit?: (value: string) => void;
+    /** Empties the field once Enter submitted it, as an "add an item" field does. */
+    clearOnSubmit?: boolean;
   };
   Checkbox: {
     checked?: boolean;
@@ -257,6 +281,8 @@ export interface ElementProps {
     disabled?: boolean;
     onChange?: (value: string) => void;
   };
+  /** Opens an https or mailto address in the system browser. */
+  Link: { href: string; children?: Children };
   Divider: Record<string, never>;
   Icon: { name: IconName; tone?: Tone };
 }
@@ -273,6 +299,7 @@ declare global {
   const Input: (props: ElementProps["Input"]) => Element;
   const Checkbox: (props: ElementProps["Checkbox"]) => Element;
   const Select: (props: ElementProps["Select"]) => Element;
+  const Link: (props: ElementProps["Link"]) => Element;
   const Divider: (props: ElementProps["Divider"]) => Element;
   const Icon: (props: ElementProps["Icon"]) => Element;
 
