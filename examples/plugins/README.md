@@ -48,6 +48,6 @@ export const register: Register = (on, options) => {
 - With the `google:calendar` permission, `$.google.calendar` sends requests to the Google
   Calendar API once the user signs in to Google in the plugin's settings. The main process adds
   the token; the plugin never sees it, and can reach nothing but `/calendar/v3`.
-- The plugins that ship with Loam, in `apps/desktop/plugins`, are larger examples: Google
-  Calendar (signed in, or read-only from an iCal feed), and a todo list kept in `$.store`.
+- The plugins that ship with Loam, in `apps/desktop/plugins`, are larger examples: a
+  calendar (Google, signed in, beside read-only calendars subscribed to by ICS link), and a todo list kept in `$.store`.
 - Plugin files reload as you save them.
