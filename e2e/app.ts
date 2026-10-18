@@ -165,6 +165,32 @@ export class LoamApp {
     }, paths);
   }
 
+  /**
+   * Answers the main process's requests to these addresses with these bodies, so nothing goes
+   * to the network. Returns a reader for how many requests each address had.
+   */
+  async answerFetches(bodies: Record<string, string>) {
+    await this.running!.app.evaluate((_, answers) => {
+      const counts: Record<string, number> = {};
+      const real = globalThis.fetch;
+      Object.assign(globalThis, { loamFetchCounts: counts });
+      globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (!(url in answers)) return real(input, init);
+        counts[url] = (counts[url] ?? 0) + 1;
+        return new Response(answers[url], {
+          status: 200,
+          headers: { "content-type": "text/calendar; charset=utf-8" },
+        });
+      }) as typeof fetch;
+    }, bodies);
+    return () =>
+      this.running!.app.evaluate(
+        () =>
+          (globalThis as unknown as { loamFetchCounts: Record<string, number> }).loamFetchCounts,
+      );
+  }
+
   /** Moves the main process's clock forward, for rules that wait on time. */
   async advanceClock(ms: number) {
     await this.running!.app.evaluate((_, offset) => {

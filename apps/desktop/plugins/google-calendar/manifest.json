@@ -1,0 +1,27 @@
+{
+  "id": "google-calendar",
+  "name": "Google Calendar",
+  "version": "1.0.0",
+  "description": "Your Google calendars in a pane: today and the days ahead, a week or a month, read from each calendar's secret iCal address.",
+  "author": "Loam",
+  "apiVersion": 1,
+  "permissions": ["ui", "network:calendar.google.com"],
+  "settings": [
+    {
+      "key": "urls",
+      "type": "string",
+      "label": "Secret iCal addresses",
+      "description": "From Google Calendar: Settings, your calendar, \"Secret address in iCal format\". Separate several with spaces."
+    },
+    {
+      "key": "weekStart",
+      "type": "select",
+      "label": "Weeks start on",
+      "options": [
+        { "value": "monday", "label": "Monday" },
+        { "value": "sunday", "label": "Sunday" }
+      ],
+      "default": "monday"
+    }
+  ]
+}

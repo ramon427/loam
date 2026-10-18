@@ -185,3 +185,76 @@ test("a theme applies before the first paint after a restart, and theme files jo
   );
   expect(["#2e3440", "#eceff4"]).toContain(background);
 });
+
+const CALENDAR_URL =
+  "https://calendar.google.com/calendar/ical/me%40example.com/private-0123abcd/basic.ics";
+
+test("the built-in calendar shows a Google Calendar feed as an agenda, a week and a month", async ({
+  loam,
+}) => {
+  const { window } = loam;
+  const fetches = await loam.answerFetches({
+    [CALENDAR_URL]: readFileSync(join(import.meta.dirname, "fixtures", "calendar.ics"), "utf8"),
+  });
+  const settings = await turnOn(window, "Google Calendar");
+  await expect(settings.getByTestId("plugin-status-google-calendar")).toHaveText("Running");
+  const address = settings.getByRole("textbox", { name: "Secret iCal addresses" });
+  await address.fill(CALENDAR_URL);
+  await address.press("Tab");
+  await expect
+    .poll(
+      () =>
+        JSON.parse(readFileSync(join(loam.dataDirectory, "plugins.json"), "utf8")).plugins[
+          "google-calendar"
+        ].settings.urls,
+    )
+    .toBe(CALENDAR_URL);
+  await backToNotes(window);
+
+  const pane = window.getByRole("region", { name: "Calendar" });
+  const standup = pane.getByRole("button", { name: /^Daily standup/ });
+  // The new setting restarts the plugin, closing a pane the old one opened, so open it again
+  // until the restarted one shows the feed.
+  await expect(async () => {
+    if (!(await pane.isVisible()))
+      await sidebar(window).getByRole("button", { name: "Calendar" }).click();
+    await expect(standup.first()).toBeVisible({ timeout: 2_000 });
+  }).toPass();
+  // Today and each of the next two weeks.
+  await expect(standup).toHaveCount(15);
+  await standup.first().click();
+  await expect(pane.getByText("Room 4", { exact: true })).toBeVisible();
+  await expect(pane.getByText("Bring your updates, please.")).toBeVisible();
+  await expect(pane.getByRole("link", { name: "https://example.com/standup-notes" })).toBeVisible();
+
+  await pane.getByRole("combobox", { name: "View" }).click();
+  await window.getByRole("option", { name: "Week" }).click();
+  await expect(standup).toHaveCount(7);
+  await pane.getByRole("button", { name: "Next" }).click();
+  await expect(standup).toHaveCount(7);
+
+  await pane.getByRole("combobox", { name: "View" }).click();
+  await window.getByRole("option", { name: "Month" }).click();
+  await pane.getByRole("button", { name: "Today" }).click();
+  const thisMonth = new Date().toLocaleDateString([], { month: "long", year: "numeric" });
+  await expect(pane.getByText(thisMonth, { exact: true })).toBeVisible();
+  await expect(standup).toHaveCount(1);
+  await pane.getByRole("button", { name: "Next" }).click();
+  await expect(pane.getByText(thisMonth, { exact: true })).toBeHidden();
+  await pane.getByRole("button", { name: "Today" }).click();
+  await expect(pane.getByText(thisMonth, { exact: true })).toBeVisible();
+
+  const before = (await fetches())[CALENDAR_URL]!;
+  await pane.getByRole("button", { name: "Refresh" }).click();
+  await expect.poll(async () => (await fetches())[CALENDAR_URL]).toBe(before + 1);
+
+  await createNote(window, { title: "Plan", body: "Today:" });
+  await appendToBody(window, "");
+  await window.keyboard.press("Enter");
+  await window.keyboard.type("/agenda");
+  await expect(
+    window.locator("#bn-suggestion-menu").getByRole("option", { name: /Today's agenda/ }),
+  ).toBeVisible();
+  await window.keyboard.press("Enter");
+  await expectSaved(window, "Plan", "Daily standup (Room 4)");
+});
