@@ -103,6 +103,7 @@ export const createPluginHost = ({
     getPlugin: (pluginId) => running.get(pluginId),
     contributions,
     redraw,
+    press: (pluginId, handlerId) => running.get(pluginId)?.instance.press(handlerId, undefined),
   });
 
   const settingsOf = (info: BridgePluginInfo & { ok: true }) =>
@@ -323,6 +324,10 @@ export const createPluginHost = ({
 
     closePane(pluginId: string, id: string) {
       contributions.closePane(pluginId, id);
+    },
+
+    closeViews() {
+      contributions.closeViews();
     },
 
     log,

@@ -1,0 +1,491 @@
+/* The calendar grid a plugin draws with CalendarGrid. Colors come from the theme's tokens, so
+   it sits in light, dark and glass themes like the rest of the window; events carry their own
+   calendar color. */
+
+.root {
+  --gutter: 56px;
+  --grid-line: var(--app-border-subtle, var(--app-border));
+  --bar-height: 22px;
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  flex-direction: column;
+  color: var(--app-text);
+  font-size: 12px;
+  user-select: none;
+  touch-action: none;
+}
+
+.root[data-dragging="true"] {
+  cursor: grabbing;
+}
+
+.head {
+  display: grid;
+  flex: none;
+  padding-right: var(--scrollbar-gap, 0px);
+}
+
+.dayHead {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 0 8px;
+  border: 0;
+  background: none;
+  color: var(--app-muted);
+  cursor: pointer;
+  font: inherit;
+}
+
+.dayHead:focus-visible {
+  outline: 2px solid var(--app-focus-ring);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+.weekday {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dayHead[data-today="true"] .weekday {
+  color: var(--app-accent);
+}
+
+.date {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--app-text);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+  transition: background-color 120ms ease;
+}
+
+.dayHead:hover .date {
+  background: var(--app-control-hover);
+}
+
+.dayHead[data-today="true"] .date {
+  background: var(--app-accent);
+  color: var(--app-accent-foreground);
+}
+
+.allDayRow {
+  display: grid;
+  flex: none;
+  border-bottom: 1px solid var(--grid-line);
+  padding-right: var(--scrollbar-gap, 0px);
+}
+
+.zone {
+  align-self: end;
+  padding: 0 8px 4px 0;
+  color: var(--app-muted);
+  font-size: 10px;
+  text-align: right;
+}
+
+.allDayCols {
+  position: relative;
+  min-height: 26px;
+}
+
+.columnLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--grid-line);
+  pointer-events: none;
+}
+
+.scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.body {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--gutter) 1fr;
+}
+
+.hours {
+  position: relative;
+}
+
+.hourLabel {
+  position: absolute;
+  right: 8px;
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.cols {
+  position: relative;
+  display: grid;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--grid-line) 0,
+    var(--grid-line) 1px,
+    transparent 1px,
+    transparent var(--hour-height)
+  );
+}
+
+.col {
+  position: relative;
+  min-width: 0;
+  border-left: 1px solid var(--grid-line);
+}
+
+.offHours {
+  position: absolute;
+  right: 0;
+  left: 0;
+  background: color-mix(in srgb, var(--app-text) 3.5%, transparent);
+  pointer-events: none;
+}
+
+.event {
+  position: absolute;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+  flex-direction: column;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--event-color);
+  box-shadow: 0 0 0 1px var(--app-page);
+  color: var(--event-text);
+  cursor: pointer;
+  line-height: 1.25;
+  outline: none;
+  transition:
+    box-shadow 120ms ease,
+    opacity 120ms ease;
+}
+
+.event:hover {
+  z-index: 3;
+}
+
+.event:focus-visible,
+.event[data-selected="true"] {
+  z-index: 4;
+  box-shadow:
+    0 0 0 2px var(--app-page),
+    0 0 0 4px var(--app-focus-ring),
+    0 6px 16px -6px rgb(0 0 0 / 0.35);
+}
+
+.event[data-readonly="true"] {
+  cursor: default;
+}
+
+.event[data-past="true"] {
+  opacity: 0.72;
+}
+
+.event[data-declined="true"] {
+  background: var(--app-page);
+  box-shadow: inset 0 0 0 1px var(--event-color);
+  color: var(--event-color);
+}
+
+.event[data-declined="true"] .title {
+  text-decoration: line-through;
+}
+
+.event[data-tentative="true"] {
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--event-color) 22%, var(--app-page)) 0 6px,
+    color-mix(in srgb, var(--event-color) 34%, var(--app-page)) 6px 12px
+  );
+  box-shadow: inset 0 0 0 1px var(--event-color);
+  color: var(--app-text);
+}
+
+.event[data-ghost="true"] {
+  z-index: 5;
+  opacity: 0.9;
+  box-shadow:
+    0 0 0 2px var(--app-page),
+    0 10px 24px -8px rgb(0 0 0 / 0.45);
+}
+
+.event[data-origin="true"] {
+  opacity: 0.35;
+}
+
+.event[data-draft="true"] {
+  z-index: 5;
+  box-shadow:
+    0 0 0 2px var(--app-page),
+    0 8px 20px -8px rgb(0 0 0 / 0.45);
+}
+
+.title {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  overflow: hidden;
+  opacity: 0.9;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event[data-compact="true"] {
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.event[data-compact="true"] .meta {
+  flex: none;
+}
+
+.resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 7px;
+  cursor: ns-resize;
+}
+
+.resizeX {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: ew-resize;
+}
+
+.bar {
+  position: absolute;
+  display: flex;
+  overflow: hidden;
+  height: calc(var(--bar-height) - 2px);
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-radius: 5px;
+  background: var(--event-color);
+  box-shadow: 0 0 0 1px var(--app-page);
+  color: var(--event-text);
+  cursor: pointer;
+  outline: none;
+  white-space: nowrap;
+}
+
+.bar[data-dot="true"] {
+  background: transparent;
+  box-shadow: none;
+  color: var(--app-text);
+}
+
+.bar[data-dot="true"]:hover {
+  background: var(--app-control-hover);
+}
+
+.bar:focus-visible,
+.bar[data-selected="true"] {
+  z-index: 4;
+  box-shadow:
+    0 0 0 2px var(--app-page),
+    0 0 0 4px var(--app-focus-ring);
+}
+
+.bar[data-declined="true"] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--event-color);
+  color: var(--event-color);
+  text-decoration: line-through;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--event-color);
+}
+
+.barTime {
+  flex: none;
+  color: var(--app-muted);
+}
+
+.bar .title {
+  font-weight: 500;
+}
+
+.more {
+  position: absolute;
+  height: calc(var(--bar-height) - 2px);
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--app-text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+}
+
+.more:hover {
+  background: var(--app-control-hover);
+}
+
+.selection {
+  position: absolute;
+  z-index: 2;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--app-accent) 22%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-accent) 60%, transparent);
+  color: var(--app-text);
+  font-size: 11px;
+  padding: 2px 6px;
+  pointer-events: none;
+}
+
+.now {
+  position: absolute;
+  z-index: 6;
+  right: 0;
+  left: -1px;
+  height: 2px;
+  background: #ea4335;
+  pointer-events: none;
+}
+
+.now::before {
+  position: absolute;
+  top: -5px;
+  left: -6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #ea4335;
+  content: "";
+}
+
+.monthHead {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--grid-line);
+}
+
+.monthWeekday {
+  padding: 8px 0 6px;
+  color: var(--app-muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.month {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+}
+
+.week {
+  position: relative;
+  display: grid;
+  min-height: 0;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--grid-line);
+}
+
+.cell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  border-left: 1px solid var(--grid-line);
+  padding-top: 4px;
+}
+
+.cell:first-child {
+  border-left: 0;
+}
+
+.cell[data-outside="true"] {
+  background: color-mix(in srgb, var(--app-text) 2.5%, transparent);
+}
+
+.cellDate {
+  display: grid;
+  min-width: 24px;
+  height: 24px;
+  place-items: center;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--app-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.cell[data-outside="true"] .cellDate {
+  color: var(--app-muted);
+}
+
+.cellDate:hover {
+  background: var(--app-control-hover);
+}
+
+.cellDate[data-today="true"] {
+  background: var(--app-accent);
+  color: var(--app-accent-foreground);
+}
+
+.popover {
+  position: absolute;
+  z-index: 30;
+  width: min(380px, calc(100% - 16px));
+  max-height: calc(100% - 16px);
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-surface-overlay, var(--app-surface));
+  box-shadow: var(--app-shadow-elevated);
+  user-select: text;
+  cursor: auto;
+}

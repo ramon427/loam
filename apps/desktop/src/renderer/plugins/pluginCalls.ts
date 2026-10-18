@@ -5,6 +5,8 @@ import { callBridge } from "../bridge";
 import { emitAppEvent } from "../lib/appEventBus";
 import { toastError, toastInfo, toastSuccess, toastWarning } from "../ui/toast";
 
+import { isHandlerRef } from "./protocol";
+
 import type { PluginContributions } from "./pluginContributions";
 
 /*
@@ -60,10 +62,13 @@ export const createPluginCalls = ({
   getPlugin,
   contributions,
   redraw,
+  press,
 }: {
   getPlugin: (pluginId: string) => PluginCaller | undefined;
   contributions: PluginContributions;
   redraw: (pluginId: string) => void;
+  /** Calls a function the plugin passed, such as a toast's action. */
+  press: (pluginId: string, handlerId: string) => void;
 }) =>
   /** Answers one `$` call of a running plugin. */
   async function handleCall(pluginId: string, path: string, args: unknown[]): Promise<unknown> {
@@ -108,7 +113,8 @@ export const createPluginCalls = ({
       case "ui.toast": {
         requirePermission(plugin, "ui");
         const text = asString(first, "text", MAX_TOAST_LENGTH);
-        const tone = asRecord(second).tone;
+        const { tone, action, duration } = asRecord(second);
+        const { label, onPress } = asRecord(action);
         const show =
           tone === "success"
             ? toastSuccess
@@ -117,7 +123,20 @@ export const createPluginCalls = ({
               : tone === "warning"
                 ? toastWarning
                 : toastInfo;
-        show(text, { description: plugin.manifest.name });
+        show(text, {
+          description: plugin.manifest.name,
+          ...(typeof label === "string" &&
+            label.trim() &&
+            isHandlerRef(onPress) && {
+              action: {
+                label: label.slice(0, 40),
+                onClick: () => press(pluginId, onPress.__handler),
+              },
+            }),
+          ...(typeof duration === "number" &&
+            duration >= 1000 &&
+            duration <= 30_000 && { duration }),
+        });
         return null;
       }
       case "ui.open": {
@@ -127,6 +146,7 @@ export const createPluginCalls = ({
           pluginId,
           id: asString(input.id, "id", 64),
           title: asString(input.title, "title", 80),
+          place: input.place === "main" ? "main" : "side",
         });
         return null;
       }
@@ -140,6 +160,29 @@ export const createPluginCalls = ({
             placeholder: input.placeholder.slice(0, 200),
           }),
           ...(typeof input.value === "string" && { value: input.value.slice(0, 10_000) }),
+        });
+      }
+      case "ui.choose": {
+        requirePermission(plugin, "ui");
+        const input = asRecord(first);
+        const choices = Array.isArray(input.choices)
+          ? input.choices.slice(0, 6).map((choice) => {
+              const { value, label, tone } = asRecord(choice);
+              return {
+                value: asString(value, "value", 100),
+                label: asString(label, "label", 80),
+                ...(tone === "danger" && { tone: "danger" as const }),
+              };
+            })
+          : [];
+        if (!choices.length) throw new Error("choices must list at least one choice.");
+        return contributions.choose({
+          pluginId,
+          title: asString(input.title, "title", 120),
+          ...(typeof input.description === "string" && {
+            description: input.description.slice(0, 500),
+          }),
+          choices,
         });
       }
       case "ui.close":
@@ -207,6 +250,32 @@ export const createPluginCalls = ({
           ...(typeof init.method === "string" && { method: init.method.toUpperCase() as "GET" }),
           ...(isPlainHeaders(init.headers) && { headers: init.headers }),
           ...(typeof init.body === "string" && { body: init.body }),
+        });
+      }
+
+      case "google.status":
+        requirePermission(plugin, "google:calendar");
+        return callBridge("plugins.googleStatus", { id: pluginId });
+      case "google.signIn":
+        requirePermission(plugin, "google:calendar");
+        return callBridge("plugins.googleSignIn", { id: pluginId });
+      case "google.calendar": {
+        requirePermission(plugin, "google:calendar");
+        const input = asRecord(first);
+        const method = typeof input.method === "string" ? input.method.toUpperCase() : "GET";
+        if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(method))
+          throw new Error("method must be GET, POST, PUT, PATCH or DELETE.");
+        return callBridge("plugins.googleCalendar", {
+          id: pluginId,
+          request: {
+            method: method as "GET",
+            path: asString(input.path, "path", 2048),
+            ...(input.query !== undefined && {
+              query: asRecord(input.query) as Record<string, string>,
+            }),
+            ...(typeof input.body === "string" && { body: input.body }),
+            ...(isPlainHeaders(input.headers) && { headers: input.headers }),
+          },
         });
       }
 

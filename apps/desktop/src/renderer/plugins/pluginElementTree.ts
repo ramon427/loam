@@ -25,6 +25,45 @@ const isColumns: Check = (value) =>
 /** Links open outside the app, so only web and mail addresses. */
 const isHref: Check = (value) =>
   typeof value === "string" && value.length <= 2048 && /^(?:https?:\/\/|mailto:)/i.test(value);
+const isHex: Check = (value) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
+const isDay: Check = (value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+/** A date, or a date-time with an offset or Z, as Google Calendar writes them. */
+const isEventTime: Check = (value) =>
+  isDay(value) ||
+  (typeof value === "string" &&
+    value.length <= 40 &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/.test(value));
+const isRecordOf =
+  (fields: Record<string, Check>, required: string[]): Check =>
+  (value) =>
+    Boolean(value) &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    required.every((key) => (value as Record<string, unknown>)[key] !== undefined) &&
+    Object.entries(value as Record<string, unknown>).every(
+      ([key, item]) => item === undefined || (fields[key]?.(item) ?? false),
+    );
+const isInteger =
+  (min: number, max: number): Check =>
+  (value) =>
+    Number.isInteger(value) && (value as number) >= min && (value as number) <= max;
+const isGridEvent = isRecordOf(
+  {
+    id: isText(1024),
+    title: isText(1000),
+    start: isEventTime,
+    end: isEventTime,
+    allDay: isBool,
+    color: isHex,
+    readOnly: isBool,
+    declined: isBool,
+    tentative: isBool,
+    location: isText(500),
+  },
+  ["id", "title", "start", "end", "allDay", "color"],
+);
+const isGridEvents: Check = (value) =>
+  Array.isArray(value) && value.length <= 5000 && value.every(isGridEvent);
 const isOptions: Check = (value) =>
   Array.isArray(value) &&
   value.length <= 100 &&
@@ -54,6 +93,8 @@ const SPECS: Record<string, Spec> = {
       columns: isColumns,
       onPress: isHandler,
       label: isText(120),
+      width: isInteger(40, 800),
+      scroll: isBool,
     },
     children: "any",
   },
@@ -77,12 +118,15 @@ const SPECS: Record<string, Spec> = {
       icon: oneOf(...Object.keys(PLUGIN_ICONS)),
       label: isText(120),
       onPress: isHandler,
+      selected: isBool,
     },
     children: "text",
   },
   Input: {
     props: {
-      type: oneOf("text", "date"),
+      type: oneOf("text", "date", "time"),
+      rows: isInteger(2, 20),
+      autoFocus: isBool,
       value: isText(10_000),
       placeholder: isText(200),
       label: isText(120),
@@ -108,6 +152,47 @@ const SPECS: Record<string, Spec> = {
     children: "none",
   },
   Link: { props: { href: isHref }, children: "text" },
+  Swatch: {
+    props: { color: isHex, label: isText(120), selected: isBool, onPress: isHandler },
+    children: "none",
+  },
+  CalendarGrid: {
+    props: {
+      view: oneOf("day", "3day", "week", "month"),
+      start: isDay,
+      days: isInteger(1, 42),
+      events: isGridEvents,
+      hourHeight: isInteger(24, 160),
+      snapMinutes: oneOf(5, 10, 15, 30, 60),
+      defaultDuration: isInteger(5, 1440),
+      workingHours: isRecordOf({ start: isInteger(0, 24), end: isInteger(0, 24) }, [
+        "start",
+        "end",
+      ]),
+      selectedId: isText(1024),
+      draft: isRecordOf(
+        {
+          start: isEventTime,
+          end: isEventTime,
+          allDay: isBool,
+          title: isText(1000),
+          color: isHex,
+        },
+        ["start", "end", "allDay"],
+      ),
+      label: isText(120),
+      onCreateRange: isHandler,
+      onMove: isHandler,
+      onResize: isHandler,
+      onSelect: isHandler,
+      onOpen: isHandler,
+      onKey: isHandler,
+      onDismiss: isHandler,
+      onDayPress: isHandler,
+    },
+    // What it holds is the popover shown beside the selected event or the draft.
+    children: "any",
+  },
   Divider: { props: {}, children: "none" },
   Icon: {
     props: { name: oneOf(...Object.keys(PLUGIN_ICONS)), tone: oneOf(...TONES) },

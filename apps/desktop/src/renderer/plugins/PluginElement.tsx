@@ -4,8 +4,14 @@ import { Button } from "../ui/Button";
 import { Checkbox } from "../ui/Checkbox";
 import { cn } from "../ui/cn";
 import { Input } from "../ui/Input";
+import { Textarea } from "../ui/Textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/Select";
 
+import {
+  CalendarGrid,
+  type CalendarGridEvent,
+  type CalendarGridView,
+} from "./calendar/CalendarGrid";
 import { PLUGIN_ICONS } from "./pluginIcons";
 import type { PluginNode } from "./protocol";
 
@@ -38,13 +44,42 @@ const ALIGN: Record<string, CSSProperties["alignItems"]> = {
 
 type Press = (handler: unknown, payload?: unknown) => void;
 
+const GRID_HANDLERS = [
+  "onCreateRange",
+  "onMove",
+  "onResize",
+  "onSelect",
+  "onOpen",
+  "onKey",
+  "onDismiss",
+  "onDayPress",
+] as const;
+const GRID_DAYS: Record<string, number> = { day: 1, "3day": 3, week: 7, month: 35 };
+
 function PluginInput({ props, press }: { props: Record<string, unknown>; press: Press }) {
   const value = typeof props.value === "string" ? props.value : "";
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
+  if (typeof props.rows === "number")
+    return (
+      <Textarea
+        aria-label={typeof props.label === "string" ? props.label : undefined}
+        placeholder={typeof props.placeholder === "string" ? props.placeholder : undefined}
+        disabled={props.disabled === true}
+        autoFocus={props.autoFocus === true}
+        rows={props.rows}
+        value={draft}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          press(props.onChange, event.target.value);
+        }}
+      />
+    );
   return (
     <Input
-      type={props.type === "date" ? "date" : "text"}
+      autoFocus={props.autoFocus === true}
+      type={props.type === "date" || props.type === "time" ? props.type : "text"}
+      step={props.type === "time" ? 300 : undefined}
       aria-label={typeof props.label === "string" ? props.label : undefined}
       placeholder={typeof props.placeholder === "string" ? props.placeholder : undefined}
       disabled={props.disabled === true}
@@ -64,6 +99,8 @@ function PluginInput({ props, press }: { props: Record<string, unknown>; press: 
     />
   );
 }
+
+const NO_EVENTS: CalendarGridEvent[] = [];
 
 const textOf = (children: (PluginNode | string)[]) =>
   children.filter((child): child is string => typeof child === "string").join("");
@@ -104,6 +141,9 @@ export function PluginElement({
         alignItems: ALIGN[props.align as string],
         justifyContent: JUSTIFY[props.justify as string],
         flexGrow: props.grow === true ? 1 : undefined,
+        ...(props.grow === true && { minHeight: 0 }),
+        ...(typeof props.width === "number" && { width: props.width, flexShrink: 0 }),
+        ...(props.scroll === true && { overflowY: "auto", minHeight: 0 }),
       };
       // A pressable box is one button, so a row of text can be picked as a whole.
       return props.onPress !== undefined ? (
@@ -169,7 +209,10 @@ export function PluginElement({
       const label = textOf(children) || (typeof props.label === "string" ? props.label : "");
       return (
         <Button
-          variant={(props.variant as "default") ?? "outline"}
+          variant={
+            props.selected === true ? "secondary" : ((props.variant as "default") ?? "outline")
+          }
+          aria-pressed={typeof props.selected === "boolean" ? props.selected : undefined}
           size={Icon && !textOf(children) ? "icon-sm" : ((props.size as "sm") ?? "sm")}
           disabled={props.disabled === true}
           aria-label={typeof props.label === "string" ? props.label : undefined}
@@ -230,6 +273,59 @@ export function PluginElement({
           {textOf(children) || (props.href as string)}
         </a>
       );
+    case "Swatch": {
+      const color = props.color as string;
+      const label = typeof props.label === "string" ? props.label : undefined;
+      const className = cn(
+        "inline-block size-3.5 shrink-0 rounded-full",
+        props.selected === true &&
+          "shadow-[0_0_0_2px_var(--app-surface),0_0_0_4px_var(--app-text)]",
+      );
+      return props.onPress !== undefined ? (
+        <button
+          type="button"
+          aria-label={label}
+          aria-pressed={props.selected === true}
+          title={label}
+          className={cn(
+            className,
+            "size-5 cursor-pointer border-0 p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--app-focus-ring)",
+          )}
+          style={{ background: color }}
+          onClick={() => press(props.onPress)}
+        />
+      ) : (
+        <span
+          className={className}
+          style={{ background: color }}
+          role={label ? "img" : undefined}
+          aria-label={label}
+          aria-hidden={label ? undefined : true}
+        />
+      );
+    }
+    case "CalendarGrid": {
+      const view = (props.view as CalendarGridView | undefined) ?? "week";
+      const handles = new Set<string>(GRID_HANDLERS.filter((name) => props[name] !== undefined));
+      return (
+        <CalendarGrid
+          view={view}
+          start={props.start as string}
+          days={typeof props.days === "number" ? props.days : GRID_DAYS[view]!}
+          events={(props.events as CalendarGridEvent[] | undefined) ?? NO_EVENTS}
+          hourHeight={typeof props.hourHeight === "number" ? props.hourHeight : 48}
+          snap={typeof props.snapMinutes === "number" ? props.snapMinutes : 15}
+          defaultDuration={typeof props.defaultDuration === "number" ? props.defaultDuration : 60}
+          workingHours={props.workingHours as { start: number; end: number } | undefined}
+          selectedId={typeof props.selectedId === "string" ? props.selectedId : undefined}
+          draft={props.draft as Parameters<typeof CalendarGrid>[0]["draft"]}
+          label={typeof props.label === "string" ? props.label : undefined}
+          popover={kids.length ? kids : null}
+          handles={handles}
+          emit={(name, payload) => press(props[name], payload)}
+        />
+      );
+    }
     case "Divider":
       return <hr className="my-1 border-0 border-t border-(--app-border)" />;
     case "Icon": {
