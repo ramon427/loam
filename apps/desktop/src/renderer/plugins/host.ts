@@ -10,6 +10,7 @@ import {
   createPluginContributions,
   type PluginCommand,
   type PluginPane,
+  type PluginPrompt,
   type PluginSlashItem,
 } from "./pluginContributions";
 import { createPluginInstance, type PluginInstance, type WorkerPort } from "./pluginInstance";
@@ -38,6 +39,7 @@ export type HostSnapshot = {
   commands: readonly PluginCommand[];
   slashItems: readonly PluginSlashItem[];
   panes: readonly PluginPane[];
+  prompt: PluginPrompt | null;
   status: Readonly<Record<string, Running["status"]>>;
   logs: Readonly<Record<string, readonly PluginLogEntry[]>>;
 };
@@ -101,6 +103,7 @@ export const createPluginHost = ({
     getPlugin: (pluginId) => running.get(pluginId),
     contributions,
     redraw,
+    press: (pluginId, handlerId) => running.get(pluginId)?.instance.press(handlerId, undefined),
   });
 
   const settingsOf = (info: BridgePluginInfo & { ok: true }) =>
@@ -221,7 +224,10 @@ export const createPluginHost = ({
       const observe = (event: string, e: unknown) => {
         if (host.hooks(event)) void host.dispatch(event, e, () => null);
       };
+      const focused = () => observe("app.focus", {});
+      window.addEventListener("focus", focused);
       const stops = [
+        () => window.removeEventListener("focus", focused),
         onBridgeEvent("plugins.changed", () => void reload()),
         onNoteSaved((noteId) => observe("note.saved", { noteId })),
         onBridgeEvent("notes.changed", (change) =>
@@ -323,6 +329,10 @@ export const createPluginHost = ({
       contributions.closePane(pluginId, id);
     },
 
+    closeViews() {
+      contributions.closeViews();
+    },
+
     log,
 
     pluginName(pluginId: string) {
@@ -348,6 +358,7 @@ export const createPluginHost = ({
         commands: contributions.commands,
         slashItems: contributions.slashItems,
         panes: contributions.panes,
+        prompt: contributions.prompt,
         status: Object.fromEntries([...running].map(([id, plugin]) => [id, plugin.status])),
         logs: Object.fromEntries(logs),
       };

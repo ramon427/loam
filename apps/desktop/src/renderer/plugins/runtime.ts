@@ -27,7 +27,7 @@ export type Register = (on: On, options: Record<string, unknown>) => unknown;
 /** The `$` paths a plugin may call; each becomes one message the window answers. */
 const API = {
   notes: ["get", "list", "search", "backlinks", "create", "setTitle", "append", "trash"],
-  ui: ["toast", "open", "close", "invalidate", "openNote"],
+  ui: ["toast", "open", "close", "invalidate", "openNote", "prompt", "choose"],
   commands: ["register"],
   editor: ["registerSlashItem"],
   state: ["get", "set"],
@@ -35,6 +35,7 @@ const API = {
   net: ["fetch"],
   settings: ["get"],
   app: ["activeNote"],
+  google: ["status", "signIn", "calendar"],
 } as const;
 
 export const ELEMENT_NAMES = [
@@ -48,9 +49,15 @@ export const ELEMENT_NAMES = [
   "Divider",
   "Icon",
   "Badge",
+  "Link",
+  "Swatch",
+  "CalendarGrid",
 ] as const;
 
 const Fragment = "Fragment";
+
+/** Deep enough for a drawing nested as far as validateTree allows (24 elements). */
+const MAX_PLAIN_DEPTH = 64;
 
 type Port = {
   post: (message: WorkerMessage) => void;
@@ -73,11 +80,12 @@ export const createRuntime = (port: Port) => {
   >();
   let settings: Record<string, unknown> = {};
 
+  // Functions in a call's arguments (a toast's action) become handler ids, as in a drawing.
   const call = (path: string, args: unknown[]) =>
     new Promise<unknown>((resolve, reject) => {
       const reqId = nextId("r");
       calls.set(reqId, { resolve, reject });
-      port.post({ t: "call", reqId, path, args });
+      port.post({ t: "call", reqId, path, args: plain(args) as unknown[] });
     });
 
   const $ = Object.freeze(
@@ -101,7 +109,9 @@ export const createRuntime = (port: Port) => {
 
   /** Replaces each function in a drawing's props with an id the window sends back on use. */
   const plain = (value: unknown, depth = 0): unknown => {
-    if (depth > 8) return null;
+    // Each element nests two levels (its children list, then the child), and a returned
+    // drawing is passed through again whole, so this allows the deepest tree the window takes.
+    if (depth > MAX_PLAIN_DEPTH) return null;
     if (typeof value === "function") {
       const handlerId = nextId("h");
       handlers.set(handlerId, value as (payload: unknown) => unknown);

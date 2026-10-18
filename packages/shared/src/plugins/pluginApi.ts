@@ -59,6 +59,8 @@ export const PLUGIN_OPS = Object.keys(PLUGIN_OP_PERMISSIONS) as PluginOp[];
 export type BridgePluginInfo = {
   /** The folder's name; the manifest's id once it reads. */
   folder: string;
+  /** It ships with the app rather than sitting in the plugins folder. */
+  bundled: boolean;
   /** Switched on, with these of its permissions granted. */
   enabled: boolean;
   granted: string[];

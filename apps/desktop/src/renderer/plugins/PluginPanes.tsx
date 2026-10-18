@@ -1,10 +1,17 @@
+import { useEffect, useRef, useState } from "react";
 import { XIcon } from "lucide-react";
 
 import { useShortcuts, type Shortcut } from "../keyboard/useShortcuts";
 import { parsePluginShortcut } from "../keyboard/shortcuts";
+import { NoteHeader } from "../note/NoteHeader";
+import { FormDialog } from "../settings/FormDialog";
+import { MainHeader } from "../shell/WindowChrome";
 import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";
+import { useNotesWorkspace } from "../workspace/NotesWorkspace";
 
 import { pluginHost } from "./host";
+import type { PluginPane, PluginPrompt } from "./pluginContributions";
 import { PluginSlot, usePluginHost } from "./PluginSlot";
 
 /**
@@ -12,7 +19,7 @@ import { PluginSlot, usePluginHost } from "./PluginSlot";
  * what its plugin's `ui.render` hook returns for `{ slot: "pane", props: { pane: id } }`.
  */
 export function PluginPanes() {
-  const { panes } = usePluginHost();
+  const panes = usePluginHost().panes.filter((pane) => pane.place === "side");
   if (panes.length === 0) return null;
   return (
     <aside
@@ -50,6 +57,63 @@ export function PluginPanes() {
   );
 }
 
+function ViewSurface({ view }: { view: PluginPane }) {
+  const ref = useRef<HTMLElement>(null);
+  // The view takes the keyboard as it opens, so its own keys (such as a calendar's) work.
+  useEffect(() => {
+    ref.current?.focus({ preventScroll: true });
+  }, [view.pluginId, view.id]);
+  return (
+    <section
+      ref={ref}
+      tabIndex={-1}
+      aria-label={view.title}
+      data-plugin-view={`${view.pluginId}:${view.id}`}
+      className="absolute inset-0 z-10 flex flex-col bg-(--app-page) font-(--font-body) text-(--app-text) outline-none"
+    >
+      <MainHeader>
+        <NoteHeader
+          title={<h1 className="truncate px-[13px] text-base font-medium">{view.title}</h1>}
+          actions={
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={`Close ${view.title}`}
+              onClick={() => pluginHost.closePane(view.pluginId, view.id)}
+            >
+              <XIcon aria-hidden />
+              Close
+            </Button>
+          }
+        />
+      </MainHeader>
+      <PluginSlot
+        name="view"
+        only={view.pluginId}
+        props={{ view: view.id }}
+        className="min-h-0 flex-1 flex-col items-stretch gap-0"
+      />
+    </section>
+  );
+}
+
+/**
+ * The view a plugin opened over the notes with `$.ui.open({ place: "main" })`, as a file
+ * opened from outside shows. Opening a note closes it, so the notes are one click away.
+ */
+export function PluginView() {
+  const view = usePluginHost().panes.find((pane) => pane.place === "main");
+  const { activeNoteId } = useNotesWorkspace();
+  const shownFor = useRef(activeNoteId);
+  useEffect(() => {
+    if (activeNoteId !== shownFor.current) {
+      shownFor.current = activeNoteId;
+      pluginHost.closeViews();
+    }
+  }, [activeNoteId]);
+  return view ? <ViewSurface key={`${view.pluginId}:${view.id}`} view={view} /> : null;
+}
+
 /** Runs plugin commands from the shortcuts they asked for. */
 export function PluginShortcuts({ enabled }: { enabled: boolean }) {
   const { commands } = usePluginHost();
@@ -70,4 +134,80 @@ export function PluginShortcuts({ enabled }: { enabled: boolean }) {
     }),
   );
   return null;
+}
+
+function PromptDialog({ prompt }: { prompt: PluginPrompt }) {
+  const [value, setValue] = useState(prompt.value ?? "");
+  const description = prompt.description ?? pluginHost.pluginName(prompt.pluginId);
+  if (prompt.choices) {
+    const [first, ...rest] = prompt.choices;
+    return (
+      <FormDialog
+        title={prompt.title}
+        description={description}
+        onClose={() => prompt.answer(null)}
+        onSubmit={() => prompt.answer(first!.value)}
+        footer={
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={() => prompt.answer(null)}>
+              Cancel
+            </Button>
+            {[...rest].reverse().map((choice) => (
+              <Button
+                key={choice.value}
+                type="button"
+                variant={choice.tone === "danger" ? "destructive" : "outline"}
+                size="sm"
+                onClick={() => prompt.answer(choice.value)}
+              >
+                {choice.label}
+              </Button>
+            ))}
+            <Button
+              type="submit"
+              size="sm"
+              variant={first!.tone === "danger" ? "destructive" : "default"}
+              autoFocus
+            >
+              {first!.label}
+            </Button>
+          </>
+        }
+      >
+        {null}
+      </FormDialog>
+    );
+  }
+  return (
+    <FormDialog
+      title={prompt.title}
+      description={description}
+      onClose={() => prompt.answer(null)}
+      onSubmit={() => prompt.answer(value)}
+      footer={
+        <>
+          <Button type="button" variant="outline" size="sm" onClick={() => prompt.answer(null)}>
+            Cancel
+          </Button>
+          <Button type="submit" size="sm" disabled={!value.trim()}>
+            OK
+          </Button>
+        </>
+      }
+    >
+      <Input
+        autoFocus
+        aria-label={prompt.title}
+        placeholder={prompt.placeholder}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+      />
+    </FormDialog>
+  );
+}
+
+/** The question a plugin asked with `$.ui.prompt` or `$.ui.choose`, one at a time. */
+export function PluginPromptDialog() {
+  const { prompt } = usePluginHost();
+  return prompt ? <PromptDialog key={prompt.id} prompt={prompt} /> : null;
 }

@@ -1,3 +1,9 @@
+import type {
+  BridgeGoogleStatus,
+  PluginGoogleCalendarRequest,
+  PluginGoogleCalendarResponse,
+  PluginGoogleStatus,
+} from "../google/googleAccount";
 import type { BridgePluginFetch, BridgePlugins, PluginOp } from "../plugins/pluginApi";
 import type { PluginSettingValue } from "../plugins/pluginManifest";
 import type { ThemeManifest } from "../themes/themeSchema";
@@ -343,6 +349,28 @@ type LoamBridgeRequests = {
   "plugins.storeGet": Request<{ id: string; key: string }, unknown>;
   /** Stores a value for the plugin; null removes it. */
   "plugins.storeSet": Request<{ id: string; key: string; value: unknown }, null>;
+  /**
+   * The Google account, for a plugin granted google:calendar: its state, signing in (which
+   * opens the browser), or a Calendar API request sent with the account's token.
+   */
+  "plugins.googleStatus": Request<{ id: string }, PluginGoogleStatus>;
+  "plugins.googleSignIn": Request<{ id: string }, PluginGoogleStatus>;
+  "plugins.googleCalendar": Request<
+    { id: string; request: PluginGoogleCalendarRequest },
+    PluginGoogleCalendarResponse
+  >;
+  /** The Google account plugins use; never returns a token or the client secret. */
+  "google.status": Request<NoParams, BridgeGoogleStatus>;
+  /** Saves the OAuth client; a secret left out keeps the saved one, null removes it. */
+  "google.configure": Request<
+    { clientId: string; clientSecret?: string | null },
+    BridgeGoogleStatus
+  >;
+  /** Signs in in the system browser; resolves once Google answers or it fails. */
+  "google.signIn": Request<NoParams, BridgeGoogleStatus>;
+  "google.cancelSignIn": Request<NoParams, null>;
+  /** Revokes the sign-in at Google and forgets its tokens. */
+  "google.signOut": Request<NoParams, BridgeGoogleStatus>;
   /** The window's answer to an `app.automation` event. */
   "app.automationResult": Request<{ requestId: string; result: BridgeResult<unknown> }, null>;
   "mcp.status": Request<NoParams, BridgeMcpStatus>;
@@ -510,6 +538,14 @@ const METHODS: Record<LoamBridgeMethod, true> = {
   "plugins.fetch": true,
   "plugins.storeGet": true,
   "plugins.storeSet": true,
+  "plugins.googleStatus": true,
+  "plugins.googleSignIn": true,
+  "plugins.googleCalendar": true,
+  "google.status": true,
+  "google.configure": true,
+  "google.signIn": true,
+  "google.cancelSignIn": true,
+  "google.signOut": true,
   "mcp.status": true,
   "mcp.configure": true,
   "mcp.connection": true,
@@ -582,6 +618,8 @@ export type LoamBridgeEvents = {
   "customizations.changed": null;
   /** A plugin's files, or what the user allowed plugins, changed. */
   "plugins.changed": null;
+  /** The Google account was signed in or out, or Google ended the sign-in. */
+  "google.status": BridgeGoogleStatus;
   /** A file a tab watches changed on disk. */
   "files.changed": { path: string };
   /** The system asked Loam to open files, such as with "Open with"; `files.takeOpened` has them. */
@@ -600,6 +638,7 @@ const EVENTS: Record<LoamBridgeEvent, true> = {
   "ai.event": true,
   "customizations.changed": true,
   "plugins.changed": true,
+  "google.status": true,
   "files.changed": true,
   "files.waiting": true,
 };

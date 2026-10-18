@@ -103,3 +103,23 @@ site), and before Claude Code reads files outside the chat's own folder or
 uses a tool Loam doesn't know. Codex can't stop to ask, so a supervised Codex
 searches only a cached web index. Loam's own page reader refuses addresses on
 this computer or its local network, including where a redirect leads.
+
+### Plugins and the Google account
+
+Plugins are off until you turn them on, and each asks for its permissions in a
+dialog first. A plugin runs in a worker with no DOM, Node.js or network of its
+own; everything it does goes through the main process, which checks each call
+against what you granted.
+
+The Google Calendar plugin can sign in to Google with an OAuth client you make
+in your own Google Cloud project. Sign-in happens in your browser, with PKCE
+and a random state; the answer comes back to a server on `127.0.0.1` that
+listens on a random port only until one answer arrives or five minutes pass.
+Loam asks only to see and change calendar events and to read your list of
+calendars. The refresh token and the client secret are sealed by the operating
+system's keychain (where it has none, Loam doesn't sign in) and kept in
+`google.json` in the data folder, outside notes, backups and sync. Tokens never
+reach the window or a plugin: a plugin with the `google:calendar` permission
+sends Calendar API requests that the main process passes on only to
+`https://www.googleapis.com/calendar/v3`, with the token added. Signing out
+revokes the token at Google and deletes it.

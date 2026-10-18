@@ -185,3 +185,165 @@ test("a theme applies before the first paint after a restart, and theme files jo
   );
   expect(["#2e3440", "#eceff4"]).toContain(background);
 });
+
+const CALENDAR_URL =
+  "https://calendar.google.com/calendar/ical/me%40example.com/private-0123abcd/basic.ics";
+
+test("the built-in calendar carries old iCal addresses over and shows them read-only by week, agenda and month", async ({
+  loam,
+}) => {
+  const settings = await turnOn(loam.window, "Calendar");
+  await expect(settings.getByTestId("plugin-status-google-calendar")).toHaveText("Running");
+  // The addresses moved into the calendar's own list; the old setting isn't shown.
+  await expect(settings.getByText("Secret iCal addresses")).toHaveCount(0);
+
+  // An older version kept them in that setting, separated by spaces.
+  await loam.quit();
+  const stateFile = join(loam.dataDirectory, "plugins.json");
+  const state = JSON.parse(readFileSync(stateFile, "utf8"));
+  state.plugins["google-calendar"].settings.urls = `${CALENDAR_URL} `;
+  writeFileSync(stateFile, JSON.stringify(state));
+  await loam.start();
+  const { window } = loam;
+  const fetches = await loam.answerFetches({
+    [CALENDAR_URL]: readFileSync(join(import.meta.dirname, "fixtures", "calendar.ics"), "utf8"),
+  });
+  await sidebar(window).getByRole("button", { name: "Calendar" }).click();
+
+  const view = window.getByRole("region", { name: "Calendar" }).first();
+  const standup = view.getByRole("button", { name: /^Daily standup,/ });
+  await expect(standup.first()).toBeVisible();
+  // The feed's own name replaces the one Loam gave the carried-over address.
+  await expect(view.getByRole("checkbox", { name: "Work" })).toBeChecked();
+  await expect
+    .poll(() => {
+      try {
+        return JSON.parse(
+          readFileSync(join(loam.dataDirectory, "plugin-data", "google-calendar.json"), "utf8"),
+        ).subscriptions.map((item: { url: string; name: string }) => [item.url, item.name]);
+      } catch {
+        return null;
+      }
+    })
+    .toEqual([[CALENDAR_URL, "Work"]]);
+  // A week of daily standups, which can't be changed without signing in.
+  await expect(standup).toHaveCount(7);
+  await expect(standup.first()).toHaveAttribute("data-readonly", "true");
+  await standup.first().click();
+  const popover = view.getByRole("dialog", { name: "Event" });
+  await expect(popover.getByText("Room 4", { exact: true })).toBeVisible();
+  await expect(popover.getByText("Bring your updates, please.")).toBeVisible();
+  await expect(popover.getByRole("button", { name: "Edit event" })).toHaveCount(0);
+
+  await view.getByRole("button", { name: "Next week" }).click();
+  await expect(standup).toHaveCount(7);
+  await view.getByRole("button", { name: "Agenda", exact: true }).click();
+  await expect(standup).toHaveCount(14);
+
+  await view.getByRole("button", { name: "Month", exact: true }).click();
+  await view.getByRole("button", { name: "Today", exact: true }).click();
+  const thisMonth = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  await expect(view.getByRole("heading", { name: thisMonth })).toBeVisible();
+  await view.getByRole("button", { name: "Next month" }).first().click();
+  await expect(view.getByRole("heading", { name: thisMonth })).toBeHidden();
+  await view.getByRole("button", { name: "Today", exact: true }).click();
+  await expect(view.getByRole("heading", { name: thisMonth })).toBeVisible();
+
+  const before = (await fetches())[CALENDAR_URL]!;
+  await view.getByRole("button", { name: "Refresh" }).click();
+  await expect.poll(async () => (await fetches())[CALENDAR_URL]).toBe(before + 1);
+
+  await createNote(window, { title: "Plan", body: "Today:" });
+  await appendToBody(window, "");
+  await window.keyboard.press("Enter");
+  await window.keyboard.type("/agenda");
+  await expect(
+    window.locator("#bn-suggestion-menu").getByRole("option", { name: /Today's agenda/ }),
+  ).toBeVisible();
+  await window.keyboard.press("Enter");
+  await expectSaved(window, "Plan", "Daily standup (Room 4)");
+});
+
+test("the built-in todo list adds, checks off, edits and deletes todos, and keeps them", async ({
+  loam,
+}) => {
+  const { window } = loam;
+  await turnOn(window, "Todos");
+  await backToNotes(window);
+
+  await sidebar(window).getByRole("button", { name: "Todos" }).click();
+  const pane = () => loam.window.getByRole("region", { name: "Todos" });
+  const add = pane().getByRole("textbox", { name: "New todo", exact: true });
+  await add.fill("Buy milk");
+  await add.press("Enter");
+  await expect(pane().getByRole("checkbox", { name: "Buy milk" })).toBeVisible();
+  await expect(add).toHaveValue("");
+  await pane().getByLabel("Due date for the new todo").fill("2030-01-02");
+  await add.fill("File taxes");
+  await add.press("Enter");
+  await expect(pane().getByRole("checkbox", { name: "File taxes" })).toBeVisible();
+
+  await pane().getByRole("checkbox", { name: "Buy milk" }).click();
+  await expect(pane().getByRole("button", { name: "Done (1)" })).toBeVisible();
+  await expect(pane().getByRole("checkbox", { name: "Buy milk" })).toBeHidden();
+  await pane().getByRole("button", { name: "Done (1)" }).click();
+  await expect(pane().getByRole("checkbox", { name: "Buy milk" })).toBeChecked();
+
+  await pane().getByRole("button", { name: "Edit File taxes" }).click();
+  const text = pane().getByRole("textbox", { name: "Todo", exact: true });
+  await text.fill("File the taxes");
+  await pane().getByRole("button", { name: "Save" }).click();
+  await expect(pane().getByRole("checkbox", { name: "File the taxes" })).toBeVisible();
+
+  await window.keyboard.press("ControlOrMeta+Shift+P");
+  const palette = window.getByRole("dialog", { name: "Commands" });
+  await palette.getByRole("combobox", { name: "Search commands" }).fill("Add todo");
+  await window.keyboard.press("Enter");
+  const question = window.getByRole("dialog", { name: "Add todo" });
+  await question.getByRole("textbox", { name: "Add todo" }).fill("Call Sam");
+  await window.keyboard.press("Enter");
+  await expect(question).toBeHidden();
+  await expect(pane().getByRole("checkbox", { name: "Call Sam" })).toBeVisible();
+
+  await expect
+    .poll(() => {
+      try {
+        const saved = JSON.parse(
+          readFileSync(join(loam.dataDirectory, "plugin-data", "todos.json"), "utf8"),
+        );
+        return saved.todos.map((todo: { text: string; done: boolean; due: string | null }) => [
+          todo.text,
+          todo.done,
+          todo.due,
+        ]);
+      } catch {
+        return null;
+      }
+    })
+    .toEqual([
+      ["Buy milk", true, null],
+      ["File the taxes", false, "2030-01-02"],
+      ["Call Sam", false, null],
+    ]);
+
+  await createNote(window, { title: "Today", body: "To do:" });
+  await appendToBody(window, "");
+  await window.keyboard.press("Enter");
+  await window.keyboard.type("/todos");
+  await expect(
+    window.locator("#bn-suggestion-menu").getByRole("option", { name: /Open todos/ }),
+  ).toBeVisible();
+  await window.keyboard.press("Enter");
+  await expectSaved(window, "Today", "File the taxes (due 2030-01-02)");
+  await expectSaved(window, "Today", "Call Sam");
+
+  await pane().getByRole("button", { name: "Delete Call Sam" }).click();
+  await expect(pane().getByRole("checkbox", { name: "Call Sam" })).toBeHidden();
+  await pane().getByRole("button", { name: "Clear done" }).click();
+  await expect(pane().getByRole("button", { name: /^Done/ })).toBeHidden();
+
+  await loam.restart();
+  await sidebar(loam.window).getByRole("button", { name: "Todos" }).click();
+  await expect(pane().getByRole("checkbox", { name: "File the taxes" })).toBeVisible();
+  await expect(pane().getByRole("checkbox", { name: "Buy milk" })).toBeHidden();
+});

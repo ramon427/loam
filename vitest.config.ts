@@ -8,6 +8,10 @@ export default defineConfig({
     environment: "node",
     setupFiles: ["apps/desktop/src/renderer/testing/vitestSetup.ts"],
     testTimeout: 30_000,
-    include: ["packages/*/src/**/*.test.{ts,tsx}", "apps/*/src/**/*.test.{ts,tsx}"],
+    include: [
+      "packages/*/src/**/*.test.{ts,tsx}",
+      "apps/*/src/**/*.test.{ts,tsx}",
+      "apps/*/plugins/*/src/**/*.test.ts",
+    ],
   },
 });

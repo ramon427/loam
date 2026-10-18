@@ -55,6 +55,7 @@ const spawn = (pluginId: string): WorkerPort => {
 
 const info = (id: string, permissions: string[] = []): BridgePluginInfo => ({
   folder: id,
+  bundled: false,
   enabled: true,
   granted: permissions,
   settings: {},
@@ -77,6 +78,11 @@ const start = async (...list: BridgePluginInfo[]) => {
     "plugins.list": () => ({ restrictedMode: false, plugins: list }),
     "plugins.source": () => ({ code: "" }),
     "plugins.call": ({ op, params }: { op: string; params: unknown }) => ({ op, params }),
+    "plugins.googleCalendar": ({ request }: { request: unknown }) => ({
+      status: 200,
+      headers: {},
+      body: JSON.stringify(request),
+    }),
   }).invoke;
   host = createPluginHost({ spawn });
   stop = host.start();
@@ -182,6 +188,134 @@ describe("plugin host", () => {
     );
   });
 
+  it("asks for a line of text for a plugin granted ui, one question at a time", async () => {
+    const answers = vi.fn();
+    plugins.set("asker", async (on) => {
+      on("command.run", ($: Api) => {
+        void $.ui.prompt({ title: "Add todo", placeholder: "What?" }).then(answers);
+        void $.ui.prompt({ title: "Second" }).then(answers);
+      });
+    });
+    await start(info("asker", ["ui"]));
+    await host.dispatch("command.run", { command: "add" }, () => null);
+
+    await vi.waitFor(() =>
+      expect(host.snapshot().prompt).toMatchObject({
+        pluginId: "asker",
+        title: "Add todo",
+        placeholder: "What?",
+      }),
+    );
+    host.snapshot().prompt!.answer("Buy milk");
+    await vi.waitFor(() => expect(host.snapshot().prompt?.title).toBe("Second"));
+    host.snapshot().prompt!.answer(null);
+    await vi.waitFor(() => expect(answers.mock.calls).toEqual([["Buy milk"], [null]]));
+    expect(host.snapshot().prompt).toBeNull();
+  });
+
+  it("offers a plugin's choices, and gives its toasts an action that calls the plugin back", async () => {
+    const answers = vi.fn();
+    const undone = vi.fn();
+    plugins.set("calendar", async (on) => {
+      on("command.run", ($: Api) => {
+        void $.ui
+          .choose({
+            title: "Change recurring event",
+            choices: [
+              { value: "this", label: "This event" },
+              { value: "all", label: "All events" },
+            ],
+          })
+          .then(answers);
+        void $.ui.toast("Event moved", { action: { label: "Undo", onPress: undone } });
+      });
+    });
+    await start(info("calendar", ["ui"]));
+    await host.dispatch("command.run", { command: "x" }, () => null);
+
+    await vi.waitFor(() =>
+      expect(host.snapshot().prompt).toMatchObject({
+        title: "Change recurring event",
+        choices: [
+          { value: "this", label: "This event" },
+          { value: "all", label: "All events" },
+        ],
+      }),
+    );
+    host.snapshot().prompt!.answer("all");
+    await vi.waitFor(() => expect(answers).toHaveBeenCalledWith("all"));
+
+    await vi.waitFor(() => expect(toasts.toastInfo).toHaveBeenCalled());
+    const options = toasts.toastInfo.mock.calls[0]![1] as {
+      action: { label: string; onClick: () => void };
+    };
+    expect(options.action.label).toBe("Undo");
+    options.action.onClick();
+    await vi.waitFor(() => expect(undone).toHaveBeenCalledTimes(1));
+  });
+
+  it("opens one view over the notes at a time, beside its side panes", async () => {
+    plugins.set("calendar", async (on) => {
+      on("command.run", async ($: Api) => {
+        await $.ui.open({ id: "agenda", title: "Agenda" });
+        await $.ui.open({ id: "week", title: "Calendar", place: "main" });
+        await $.ui.open({ id: "month", title: "Month", place: "main" });
+      });
+    });
+    await start(info("calendar", ["ui"]));
+    await host.dispatch("command.run", { command: "open" }, () => null);
+    await vi.waitFor(() => expect(host.snapshot().panes).toHaveLength(2));
+    expect(host.snapshot().panes.map((pane) => [pane.id, pane.place])).toEqual([
+      ["agenda", "side"],
+      ["month", "main"],
+    ]);
+    host.closeViews();
+    expect(host.snapshot().panes.map((pane) => pane.id)).toEqual(["agenda"]);
+  });
+
+  it("sends Calendar API requests only for a plugin granted google:calendar", async () => {
+    const results = vi.fn();
+    const request = { method: "patch", path: "/calendars/primary/events/e1", body: "{}" };
+    const plugin: Register = async (on) => {
+      on("command.run", async ($: Api) => {
+        results(
+          await $.google!.calendar!(request).then(
+            (response) => (response as { status: number }).status,
+            (error: Error) => error.message,
+          ),
+        );
+      });
+    };
+    plugins.set("calendar", plugin);
+    plugins.set("other", plugin);
+    await start(info("calendar", ["google:calendar"]), info("other", ["ui"]));
+    await host.dispatch("command.run", { command: "x" }, () => null, "calendar");
+    await host.dispatch("command.run", { command: "x" }, () => null, "other");
+
+    await vi.waitFor(() => expect(results).toHaveBeenCalledTimes(2));
+    expect(results.mock.calls).toEqual([
+      [200],
+      ["The plugin was not granted the google:calendar permission."],
+    ]);
+    expect(calls).toHaveBeenCalledWith("plugins.googleCalendar", {
+      id: "calendar",
+      request: { method: "PATCH", path: "/calendars/primary/events/e1", body: "{}" },
+    });
+  });
+
+  it("answers a stopped plugin's open question with null", async () => {
+    const answers = vi.fn();
+    plugins.set("asker", async (on) => {
+      on("command.run", ($: Api) => void $.ui.prompt({ title: "Name?" }).then(answers));
+    });
+    await start(info("asker", ["ui"]));
+    await host.dispatch("command.run", { command: "ask" }, () => null);
+    await vi.waitFor(() => expect(host.snapshot().prompt).not.toBeNull());
+
+    stop();
+    expect(host.snapshot().prompt).toBeNull();
+  });
+
   it("parses Markdown before creating a note through the main process", async () => {
     plugins.set("writer", async (on) => {
       on("command.run", async ($: Api) => $.notes.create({ title: "Hi", markdown: "# Hello" }));
@@ -222,6 +356,30 @@ describe("plugin host", () => {
     expect(await host.renderPart("note.header", "r1", { noteId: "n1" }, "counter")).toMatchObject({
       children: ["Clicked 1"],
     });
+  });
+
+  it("keeps the handlers of a deeply nested drawing", async () => {
+    const pressed = vi.fn();
+    plugins.set("nested", async (on) => {
+      on("ui.render", async () => {
+        let tree: unknown = { type: "Button", props: { onPress: pressed }, children: ["Deep"] };
+        for (let level = 0; level < 10; level += 1)
+          tree = { type: "Box", props: {}, children: [tree] };
+        return tree;
+      });
+    });
+    await start(info("nested"));
+
+    let node = (await host.renderPart("pane", "r1", {}, "nested")) as {
+      props: Record<string, unknown>;
+      children: unknown[];
+    };
+    while (node.children[0] && typeof node.children[0] === "object")
+      node = node.children[0] as typeof node;
+    const handler = node.props.onPress as { __handler: string };
+    expect(handler.__handler).toEqual(expect.any(String));
+    host.press("nested", handler.__handler, undefined);
+    await vi.waitFor(() => expect(pressed).toHaveBeenCalledTimes(1));
   });
 
   it("draws again only the parts of the plugin whose state changed", async () => {

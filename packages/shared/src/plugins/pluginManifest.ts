@@ -16,6 +16,8 @@ export const PLUGIN_PERMISSIONS = {
   "notes:read": "Read your notes",
   "notes:write": "Create, change and trash notes",
   ui: "Show panels, buttons and notifications in the window",
+  "google:calendar":
+    "See and change the events in your Google calendars, once you sign in to Google",
 } as const;
 
 export type PluginPermission = keyof typeof PLUGIN_PERMISSIONS | `network:${string}`;
@@ -56,6 +58,8 @@ const settingSchema = z.discriminatedUnion("type", [
     type: z.literal("string"),
     label: z.string().min(1).max(80),
     description: z.string().max(300).optional(),
+    /** Kept so a plugin can still read an old value it has moved elsewhere; not shown. */
+    hidden: z.boolean().optional(),
     default: z.string().max(10_000).optional(),
   }),
   z.object({
@@ -63,6 +67,7 @@ const settingSchema = z.discriminatedUnion("type", [
     type: z.literal("number"),
     label: z.string().min(1).max(80),
     description: z.string().max(300).optional(),
+    hidden: z.boolean().optional(),
     default: z.number().finite().optional(),
   }),
   z.object({
@@ -70,6 +75,7 @@ const settingSchema = z.discriminatedUnion("type", [
     type: z.literal("boolean"),
     label: z.string().min(1).max(80),
     description: z.string().max(300).optional(),
+    hidden: z.boolean().optional(),
     default: z.boolean().optional(),
   }),
   z.object({
@@ -77,6 +83,7 @@ const settingSchema = z.discriminatedUnion("type", [
     type: z.literal("select"),
     label: z.string().min(1).max(80),
     description: z.string().max(300).optional(),
+    hidden: z.boolean().optional(),
     options: z
       .array(z.object({ value: z.string().max(200), label: z.string().max(80) }))
       .min(1)
