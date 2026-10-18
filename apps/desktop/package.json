@@ -10,7 +10,8 @@
     "dev": "node scripts/dev.mjs",
     "build": "vite build && node scripts/build-electron.mjs",
     "start": "electron .",
-    "package:win": "npm run build && electron-builder --win --publish never"
+    "package:win": "npm run build && electron-builder --win --publish never",
+    "package:mac": "npm run build && electron-builder --mac --publish never"
   },
   "type": "module",
   "dependencies": {

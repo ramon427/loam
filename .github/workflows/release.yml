@@ -1,6 +1,6 @@
-# Builds the Windows installer for a version tag (v1.2.3) and publishes it as a
-# GitHub Release. Auto release calls it for every merged pull request; pushing a
-# tag by hand runs it too.
+# Builds the Windows installer and the macOS disk images for a version tag (v1.2.3) and
+# publishes them as one GitHub Release. Auto release calls it for every merged pull request;
+# pushing a tag by hand runs it too.
 name: Release
 
 on:
@@ -16,14 +16,42 @@ on:
 permissions:
   contents: read
 
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
 jobs:
-  windows:
-    runs-on: windows-latest
-    # Creates the draft release and uploads the installer to it.
+  # electron-builder uploads its files in parallel, from both builds; with no release yet, each
+  # upload would create its own draft.
+  draft:
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-    env:
-      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Check the tag matches the app version
+        run: |
+          version=$(node -p "require('./apps/desktop/package.json').version")
+          if [ "v$version" != "$TAG" ]; then
+            echo "Tag $TAG does not match apps/desktop/package.json version $version"
+            exit 1
+          fi
+
+      - name: Create the draft release
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 ||
+            gh release create "$TAG" --draft --title "${TAG#v}" --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  windows:
+    needs: draft
+    runs-on: windows-latest
+    # Uploads the installer to the draft release.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -34,47 +62,75 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      - name: Check the tag matches the app version
-        shell: bash
-        run: |
-          version=$(node -p "require('./apps/desktop/package.json').version")
-          if [ "v$version" != "$TAG" ]; then
-            echo "Tag $TAG does not match apps/desktop/package.json version $version"
-            exit 1
-          fi
-
       - run: npm ci
 
       - run: npm run build
 
-      # electron-builder uploads its files in parallel; with no release yet, each
-      # upload would create its own draft.
-      - name: Create the draft release
-        shell: bash
-        run: |
-          gh release view "$TAG" >/dev/null 2>&1 ||
-            gh release create "$TAG" --draft --title "${TAG#v}" --generate-notes
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       # Auto release runs from a pull_request_target event, which electron-builder
       # otherwise takes for a pull request build and skips uploading.
-      - name: Package and upload to a draft release
+      - name: Package and upload to the draft release
         working-directory: apps/desktop
         run: npx electron-builder --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PUBLISH_FOR_PULL_REQUEST: "true"
 
-      # Published only once every file is up, so installed copies never see a
-      # release without its installer.
-      - name: Publish the release
-        shell: bash
+  mac:
+    needs: draft
+    runs-on: macos-latest
+    # Uploads the disk images and update zips to the draft release.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # Signed ad hoc (see electron-builder.yml), which needs no certificate or secret. A pull
+      # request build would skip signing, and Auto release looks like one to electron-builder.
+      - name: Package and upload to the draft release
+        working-directory: apps/desktop
+        run: npx electron-builder --mac --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLISH_FOR_PULL_REQUEST: "true"
+          CSC_FOR_PULL_REQUEST: "true"
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      # An unsigned app opens as "damaged" on Apple silicon.
+      - name: Check both apps are signed
+        working-directory: apps/desktop/release
         run: |
-          if ! gh release view "$TAG" --json assets -q '.assets[].name' | grep -qx latest.yml; then
-            echo "The $TAG draft has no latest.yml, so installed copies could not update from it"
-            exit 1
-          fi
-          gh release edit "$TAG" --draft=false --latest
+          for app in mac*/Loam.app; do
+            codesign --verify --deep --strict --verbose=2 "$app"
+          done
+
+  # Published only once every file is up, so installed copies never see a release without its
+  # installer.
+  publish:
+    needs: [windows, mac]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the release
+        run: |
+          assets=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name')
+          for file in latest.yml latest-mac.yml; do
+            if ! grep -qx "$file" <<<"$assets"; then
+              echo "The $TAG draft has no $file, so installed copies could not update from it"
+              exit 1
+            fi
+          done
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

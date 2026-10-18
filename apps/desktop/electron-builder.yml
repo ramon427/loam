@@ -1,4 +1,5 @@
-# Packages the built app into a Windows installer and publishes it to GitHub Releases.
+# Packages the built app into a Windows installer and macOS disk images, and publishes them to
+# GitHub Releases.
 # Main, preload, and renderer are fully bundled, so no node_modules ship in the app.
 appId: io.github.ramon427.loam
 productName: Loam
@@ -38,6 +39,25 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+
+# The zip is what installed copies read updates from (latest-mac.yml lists it).
+mac:
+  icon: build/icon.icns
+  category: public.app-category.productivity
+  artifactName: Loam-${version}-${arch}.${ext}
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  # There is no Apple Developer certificate, so the app is signed ad hoc: Apple silicon runs
+  # only signed code, and an unsigned app there reads as "damaged". The hardened runtime is for
+  # notarized apps; without notarization it only adds library checks an ad hoc app can fail.
+  identity: "-"
+  hardenedRuntime: false
+
+dmg:
+  artifactName: Loam-${version}-${arch}.${ext}
 
 publish:
   provider: github

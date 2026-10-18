@@ -32,6 +32,7 @@ LOAM_DATA_DIR=/tmp/loam-scratch npm run dev
 | `npm run format`      | Formats everything with Prettier.                               |
 | `npm run bench`       | Times the store, export, backup and import at 10,000 notes.     |
 | `npm run package:win` | Builds a Windows installer into `apps/desktop/release/`.        |
+| `npm run package:mac` | Builds the macOS disk images (on a Mac) into the same folder.   |
 
 ## Find your way around
 
@@ -136,18 +137,28 @@ database itself.
 
 ## Releasing
 
-Releases are Windows-only for now, and every merged pull request makes one:
-the Auto release workflow bumps the patch version in
-`apps/desktop/package.json`, commits `Release x.y.z` to `main` and tags it, then
-the Release workflow builds the installer and publishes it as a GitHub Release.
-For a minor or major version, set `version` in the pull request; a version not
-released yet is released as it is. Auto release can also be run by hand from
-the Actions tab.
+Every merged pull request makes a release: the Auto release workflow bumps the
+patch version in `apps/desktop/package.json`, commits `Release x.y.z` to `main`
+and tags it, then the Release workflow builds the Windows installer and the
+macOS disk images (Apple silicon and Intel) and publishes them as one GitHub
+Release, once both builds are up. For a minor or major version, set `version`
+in the pull request; a version not released yet is released as it is. Auto
+release can also be run by hand from the Actions tab.
+
+The Mac build workflow builds the disk images without releasing them, for pull
+requests that change the packaging, or by hand from the Actions tab for any
+branch; they are kept as a workflow artifact for a week.
+
+There is no Apple Developer certificate, so the Mac app is signed ad hoc (Apple
+silicon runs only signed code) and not notarized; the README says how to open
+it the first time.
 
 Installed copies check for updates 15 seconds after launch and then hourly
-(`apps/desktop/src/main/updates.ts`), download in the background, and offer
-"Restart to update" in the sidebar; an update also installs the next time the
-app quits. Drafts are never offered.
+(`apps/desktop/src/main/updates.ts`). On Windows they download in the
+background and offer "Restart to update" in the sidebar; an update also
+installs the next time the app quits. macOS installs only signed updates, so
+the Mac app shows the new version in the sidebar and links to its release
+page. Drafts are never offered.
 
 ## Security
 

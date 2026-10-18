@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Measure">
+  <!-- icon.svg on the macOS icon grid: an 824px rounded square, leaving room for the system's shadow.
+       icon.icns holds it as PNGs from 16 to 1024 pixels; rebuild that after changing it. -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#ffffff"/>
+  <g fill="#000000" transform="translate(100 100) scale(1.609375)">
+    <rect x="96" y="218.5" width="32" height="75" rx="16"/>
+    <rect x="168" y="172" width="32" height="168" rx="16"/>
+    <rect x="240" y="116" width="32" height="280" rx="16"/>
+    <rect x="312" y="172" width="32" height="168" rx="16"/>
+    <rect x="384" y="218.5" width="32" height="75" rx="16"/>
+  </g>
+</svg>

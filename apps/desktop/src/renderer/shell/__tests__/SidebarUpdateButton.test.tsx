@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { BridgeUpdateStatus } from "@loam/shared/bridge/loamBridge";
 
@@ -90,6 +90,31 @@ describe("SidebarUpdateButton", () => {
       await screen.findByRole("button", { name: "Could not check for updates. Check again" }),
     );
     await waitFor(() => expect(invoke).toHaveBeenCalledWith("updates.check", {}));
+  });
+
+  it("opens the release page for a version it can't install itself", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    const { invoke } = renderButton({
+      ...READY,
+      state: "available",
+      version: "0.4.0",
+      releaseNotes: [{ version: "0.4.0", items: ["A Mac menu bar"], totalItems: 1 }],
+    });
+    const button = await screen.findByRole("button", {
+      name: "Download version 0.4.0 from GitHub",
+    });
+    fireEvent.pointerEnter(button);
+    expect(await screen.findByText("A Mac menu bar")).toBeTruthy();
+
+    fireEvent.click(button);
+    expect(open).toHaveBeenCalledWith(
+      "https://github.com/ramon427/loam/releases/tag/v0.4.0",
+      "_blank",
+      "noopener",
+    );
+    expect(invoke).not.toHaveBeenCalledWith("updates.check", {});
+    expect(invoke).not.toHaveBeenCalledWith("updates.install", {});
+    open.mockRestore();
   });
 
   it("shows nothing in a copy that doesn't update itself", async () => {
