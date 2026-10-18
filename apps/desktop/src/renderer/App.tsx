@@ -136,6 +136,9 @@ function Workspace() {
     const focusSearch = () => document.getElementById("notes-search-input")?.focus();
     return [
       { id: "app.settings", allowInEditable: true, run: openSettings },
+      // Outside a text field or the editor, select all would select the whole window: every
+      // sidebar row, label and button. Text fields, the editor and canvases keep their own.
+      { id: "edit.select-all", run: () => undefined },
       { id: "app.sidebar.toggle", enabled: !settingsOpen, run: toggleSidebar },
       {
         id: "app.chat.toggle",

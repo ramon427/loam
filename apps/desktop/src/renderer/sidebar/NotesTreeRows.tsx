@@ -353,8 +353,9 @@ export function ProjectRow({
 }
 
 /**
- * A place where dropping a note or folder moves it to the top level: the strip under the
- * top-level notes, and the empty space under the whole list.
+ * A place where dropping a note or folder moves it to the top level: the strip above the
+ * top-level notes when projects show over them, the strip under them, and the empty space
+ * under the whole list.
  */
 export const RootDropZone = ({
   zoneProps,

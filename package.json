@@ -17,6 +17,7 @@
     "start": "npm --prefix apps/desktop run build && npm --prefix apps/desktop run start",
     "mcp": "node apps/desktop/dist-electron/mcp.cjs",
     "package:win": "npm --prefix apps/desktop run package:win",
+    "package:mac": "npm --prefix apps/desktop run package:mac",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p apps/desktop/tsconfig.node.json --noEmit && tsc -p apps/desktop/tsconfig.renderer.json --noEmit && tsc -p examples/plugins --noEmit && tsc -p apps/desktop/plugins --noEmit",
     "lint": "eslint . --max-warnings 0",
     "knip": "knip --no-progress --no-config-hints",

@@ -163,6 +163,27 @@ test("dragging a note shows a line where it will land", async ({ loam }) => {
   await expect(tree.getByRole("button")).toHaveText(["Staying", "Moving"]);
 });
 
+test("a note drags above the first note to the top", async ({ loam }) => {
+  const { window } = loam;
+  await createNote(window, { title: "First", body: "Body" });
+  await createNote(window, { title: "Second", body: "Body" });
+  await createNote(window, { title: "Third", body: "Body" });
+  const target = noteRow(window, "First");
+
+  const drag = await holdDragOver(noteRow(window, "Third"), target, "before");
+  await expect.poll(() => dropIndicator(target)).not.toBe("none");
+  await target.dispatchEvent("drop", { dataTransfer: drag.dataTransfer, ...drag.point });
+  const tree = sidebar(window).getByRole("navigation", { name: "Notes" });
+  await expect(tree.getByRole("button")).toHaveText(["Third", "First", "Second"]);
+  await expect
+    .poll(async () =>
+      (await storedLibrary(window)).notes
+        .sort((left, right) => (left.position ?? 0) - (right.position ?? 0))
+        .map((note) => note.title),
+    )
+    .toEqual(["Third", "First", "Second"]);
+});
+
 test("toolbar and keyboard creation keep the selected folder and restart reopens the last note", async ({
   loam,
 }) => {

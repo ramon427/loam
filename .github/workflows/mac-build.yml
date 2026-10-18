@@ -1,0 +1,59 @@
+# Builds the macOS disk images without releasing them, and keeps them as a workflow artifact for
+# a week. It runs for pull requests that change the packaging, and by hand from the Actions tab
+# for any branch. Releases build their own copies (release.yml).
+name: Mac build
+
+on:
+  pull_request:
+    paths:
+      - apps/desktop/electron-builder.yml
+      - apps/desktop/build/**
+      - .github/workflows/mac-build.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mac-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # Signed ad hoc (see electron-builder.yml); a pull request build would skip signing.
+      - name: Package
+        working-directory: apps/desktop
+        run: npx electron-builder --mac --publish never
+        env:
+          CSC_FOR_PULL_REQUEST: "true"
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      # An unsigned app opens as "damaged" on Apple silicon.
+      - name: Check both apps are signed
+        working-directory: apps/desktop/release
+        run: |
+          for app in mac*/Loam.app; do
+            codesign --verify --deep --strict --verbose=2 "$app"
+            codesign --display --verbose=2 "$app" 2>&1 | grep -E "^(Identifier|Signature)="
+          done
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: loam-mac
+          path: apps/desktop/release/*.dmg
+          if-no-files-found: error
+          retention-days: 7

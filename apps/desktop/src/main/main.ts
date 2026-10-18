@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { app, BrowserWindow, dialog, protocol, safeStorage, session, shell } from "electron";
+import { app, BrowserWindow, dialog, Menu, protocol, safeStorage, session, shell } from "electron";
 import { autoUpdater } from "electron-updater";
 
 import {
@@ -10,6 +10,7 @@ import {
 } from "@loam/shared/bridge/loamBridge";
 
 import { buildContentSecurityPolicy } from "../shared/contentSecurityPolicy";
+import { macAppMenuTemplate } from "./appMenu";
 import { createAiBrowser } from "./ai/browser";
 import { createChatTools } from "./ai/chatTools";
 import { createAiService, type AiService } from "./ai/service";
@@ -123,6 +124,16 @@ const restartAfterRestore = async () => {
 const start = async () => {
   await app.whenReady();
   app.setAppUserModelId(APP_ID);
+  if (process.platform === "darwin")
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate(
+        macAppMenuTemplate({
+          appName: app.name,
+          developerTools: !app.isPackaged,
+          openExternal: (url) => void shell.openExternal(url).catch(() => undefined),
+        }),
+      ),
+    );
   let encryption: EncryptionManager;
   let libraryGate: LibraryGate;
   try {
@@ -156,10 +167,15 @@ const start = async () => {
     return;
   }
 
-  // Only the Windows installer can update itself; development runs never do.
-  const updater = app.isPackaged && process.platform === "win32" ? autoUpdater : null;
+  // The Windows installer updates itself. macOS installs only signed updates, so the unsigned
+  // Mac app looks for them and links to the download. Development runs never look.
+  const updater =
+    app.isPackaged && (process.platform === "win32" || process.platform === "darwin")
+      ? autoUpdater
+      : null;
   const updates = createUpdateService({
     updater,
+    installs: process.platform === "win32",
     onStatus: (status) => mainWindow.send("updates.status", status),
   });
   let tools: readonly ToolDefinition[] = [];

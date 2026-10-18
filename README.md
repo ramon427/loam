@@ -29,9 +29,25 @@ study, all on your machine. No account, no server.
 
 ## Download
 
-Windows installers are on the [Releases](https://github.com/ramon427/loam/releases)
-page and update themselves (unsigned for now, so SmartScreen warns on first
-run). On macOS and Linux, build from source.
+Windows installers and macOS disk images are on the
+[Releases](https://github.com/ramon427/loam/releases) page. On Linux, build
+from source.
+
+**Windows:** the installer updates itself. It is unsigned for now, so
+SmartScreen warns on first run.
+
+**macOS:** download `Loam-<version>-arm64.dmg` for Apple silicon (M1 and
+later) or `Loam-<version>-x64.dmg` for Intel, open it and drag Loam into
+Applications. The app isn't notarized by Apple, so macOS blocks the first
+launch. Either:
+
+- open Loam once, then go to System Settings > Privacy & Security and click
+  **Open Anyway** (on macOS 14 and earlier, Control-click Loam in Applications
+  and choose **Open** instead), or
+- run `xattr -dr com.apple.quarantine /Applications/Loam.app` in Terminal.
+
+macOS installs only signed updates, so Loam on a Mac tells you when a new
+version is out and links to its download; install it the same way.
 
 ## Build from source
 

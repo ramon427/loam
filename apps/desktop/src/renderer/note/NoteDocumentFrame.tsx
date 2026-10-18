@@ -65,7 +65,7 @@ function CanvasBackdrop() {
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <div className={page.backdrop} data-testid="notes-canvas-backdrop">
+        <div className={page.backdrop} data-testid="notes-canvas-backdrop" data-text-margin>
           {background === "plain" ? null : <CanvasGridBackground pattern={background} />}
         </div>
       </ContextMenuTrigger>

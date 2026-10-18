@@ -71,10 +71,14 @@ export const deleteCandidateFromKeys = (
 
 const DRAG_PREFIX = "notes-tree:";
 export const NOTES_TREE_ROOT_DROP_ID = "notes-tree-root";
+/** The strip between the projects and the top-level notes; a note dropped there goes first. */
+export const NOTES_TREE_START_DROP_ID = "notes-tree-start";
 /** The empty space under the list; a drop there also goes to the top level. */
 export const NOTES_TREE_END_DROP_ID = "notes-tree-end";
 const isTopLevelDropId = (id: string) =>
-  id === NOTES_TREE_ROOT_DROP_ID || id === NOTES_TREE_END_DROP_ID;
+  id === NOTES_TREE_ROOT_DROP_ID ||
+  id === NOTES_TREE_START_DROP_ID ||
+  id === NOTES_TREE_END_DROP_ID;
 
 export const noteDragId = (noteId: string) => `${DRAG_PREFIX}note:${noteId}`;
 export const folderDragId = (folderId: string) => `${DRAG_PREFIX}folder:${folderId}`;
@@ -84,6 +88,15 @@ const parseDragId = (id: string) => parseKey(id, DRAG_PREFIX);
 export const containerFromDragId = (id: string) => {
   const entry = parseDragId(id);
   return entry?.kind === "folder" || entry?.kind === "project" ? entry : null;
+};
+/**
+ * Whether a drop on `targetId` puts `sourceId` inside it, whichever half it lands on: a note
+ * onto a folder or project, or a folder onto a project. A project among projects, or a folder
+ * among folders, moves beside it instead.
+ */
+export const dropsInsideNotesTreeTarget = (sourceId: string, targetId: string) => {
+  const container = containerFromDragId(targetId);
+  return container !== null && parseDragId(sourceId)?.kind !== container.kind;
 };
 
 // Places: where each note and folder sits.
@@ -229,7 +242,8 @@ const numbered = <TItem extends { position: number }>(items: readonly TItem[]) =
 
 /**
  * The flat list of rows the sidebar renders: each project followed by its notes and folders
- * while it is open, then the top-level notes, the strip that takes drops to the top level,
+ * while it is open, then the top-level notes (under a strip that takes notes to the top of
+ * them, when projects show above), the strip that takes drops to the top level,
  * and each folder followed by its notes while it is open. Every row has a fixed height, so
  * the virtual list and the drag rectangle place rows without measuring them.
  */
@@ -266,8 +280,19 @@ export type NotesTreeRow =
       /** The last row shown inside the open note, where a drop "after" it is drawn. */
       lastChildKey: string | null;
     }
-  | { kind: "root-drop"; key: string }
+  | {
+      kind: "root-drop";
+      key: string;
+      /** The drop id: the top of the top-level notes, or after them. */
+      dropId: typeof NOTES_TREE_START_DROP_ID | typeof NOTES_TREE_ROOT_DROP_ID;
+    }
   | { kind: "creating-folder"; key: string; depth: 0 | 1 };
+
+const rootDropRow: NotesTreeRow = {
+  kind: "root-drop",
+  key: "root-drop",
+  dropId: NOTES_TREE_ROOT_DROP_ID,
+};
 
 export const notesTreeRowHeight = (row: NotesTreeRow) => (row.kind === "root-drop" ? 16 : 34);
 
@@ -368,7 +393,7 @@ export const buildNotesTreeRows = ({
   };
 
   if (typeof folderScopeId === "string") {
-    rows.push({ kind: "root-drop", key: "root-drop" });
+    rows.push(rootDropRow);
     const folder = places.sortedFolders.find((entry) => entry.id === folderScopeId);
     if (folder) addFolder(folder, 0, true);
     addCreatingFolder(null, 0);
@@ -376,7 +401,7 @@ export const buildNotesTreeRows = ({
   }
   if (folderScopeId === null) {
     for (const note of groups.get(TOP_GROUP)!) addNote(note, 0, true);
-    rows.push({ kind: "root-drop", key: "root-drop" });
+    rows.push(rootDropRow);
     addCreatingFolder(null, 0);
     return { rows, keys, scopeKeys };
   }
@@ -404,8 +429,13 @@ export const buildNotesTreeRows = ({
     row.lastChildKey = rows.length > first ? rows.at(-1)!.key : null;
   }
   if (!projectScope || projectScope.has(null)) {
-    for (const note of groups.get(TOP_GROUP)!) addNote(note, 0, true);
-    rows.push({ kind: "root-drop", key: "root-drop" });
+    const topNotes = groups.get(TOP_GROUP)!;
+    // Under a project, the first note's top edge is a thin target beside the project's own
+    // drop; the strip gives the top of the top-level notes a place of its own.
+    if (rows.length > 0 && topNotes.length > 0)
+      rows.push({ kind: "root-drop", key: "root-drop-start", dropId: NOTES_TREE_START_DROP_ID });
+    for (const note of topNotes) addNote(note, 0, true);
+    rows.push(rootDropRow);
     for (const folder of foldersOf(null)) addFolder(folder, 0, true);
     addCreatingFolder(null, 0);
   }
@@ -581,13 +611,15 @@ export const applyNotesTreeMove = <
       siblings.splice(half === "before" ? overIndex : overIndex + 1, 0, sourceNote);
     }
   } else {
-    // Onto a folder, a project or the top-level strip: the note goes last there.
+    // Onto a folder, a project or the top-level strip: the note goes last there; onto the
+    // strip above the top-level notes, first.
     const targetGroup = !target
       ? TOP_GROUP
       : target.kind === "folder"
         ? folderGroup(target.id)
         : projectGroup(target.id);
-    groups.get(targetGroup)!.push(sourceNote);
+    if (targetId === NOTES_TREE_START_DROP_ID) groups.get(targetGroup)!.unshift(sourceNote);
+    else groups.get(targetGroup)!.push(sourceNote);
   }
   return { kind: "notes", notes: flattenGroups(groups, places) };
 };

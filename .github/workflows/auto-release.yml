@@ -1,6 +1,6 @@
 # Releases every merged pull request: bumps the patch version (unless the pull
-# request set an unreleased one), commits and tags it on main, then builds and publishes the Windows installer through the
-# Release workflow. Pushes made with GITHUB_TOKEN start no other workflows, so
+# request set an unreleased one), commits and tags it on main, then builds and publishes the
+# Windows installer and the macOS disk images through the Release workflow. Pushes made with GITHUB_TOKEN start no other workflows, so
 # the version commit doesn't release again.
 name: Auto release
 

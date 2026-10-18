@@ -23,10 +23,11 @@ const fakeUpdater = (script: (updater: EventEmitter) => void | Promise<void>) =>
 };
 
 const services: UpdateService[] = [];
-const start = (updater: ReturnType<typeof fakeUpdater> | null) => {
+const start = (updater: ReturnType<typeof fakeUpdater> | null, installs = true) => {
   const statuses: BridgeUpdateStatus[] = [];
   const service = createUpdateService({
     updater: updater as never,
+    installs,
     onStatus: (status) => statuses.push(status),
     timing: { startupDelayMs: 60_000, pollMs: 60_000 },
   });
@@ -120,6 +121,33 @@ describe("update service", () => {
     });
     reachable = true;
     expect(await service.check()).toMatchObject({ state: "idle", error: null });
+  });
+
+  it("only reports a new version where it can't install one", async () => {
+    const updater = fakeUpdater((emitter) => {
+      emitter.emit("update-available", {
+        version: "0.4.0",
+        releaseNotes: [{ version: "0.4.0", note: "<ul><li>A Mac menu bar</li></ul>" }],
+      });
+    });
+    const { service, statuses } = start(updater, false);
+    expect(updater.autoDownload).toBe(false);
+    expect(updater.autoInstallOnAppQuit).toBe(false);
+
+    expect(await service.check()).toMatchObject({
+      state: "available",
+      version: "0.4.0",
+      progress: null,
+      error: null,
+      releaseNotes: [{ version: "0.4.0", items: ["A Mac menu bar"], totalItems: 1 }],
+    });
+    expect(statuses.map((status) => status.state)).toEqual(["checking", "available"]);
+
+    // It keeps looking, in case an even newer version comes out, and never installs.
+    await service.check();
+    expect(updater.checkForUpdates).toHaveBeenCalledTimes(2);
+    service.install();
+    expect(updater.quitAndInstall).not.toHaveBeenCalled();
   });
 
   it("doesn't install before an update is ready", () => {
