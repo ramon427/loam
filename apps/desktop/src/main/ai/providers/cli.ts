@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { access, constants, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
-import { basename, delimiter, isAbsolute, join, relative, sep } from "node:path";
+import { basename, delimiter, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { createInterface } from "node:readline";
 
 import type { AiToolAccess } from "@loam/shared/ai/aiChat";
@@ -106,6 +106,21 @@ export const findCli = async (name: CliName): Promise<string | null> => {
   return null;
 };
 
+/**
+ * The PATH a CLI runs with. An app opened from the Dock or Finder gets macOS's bare default PATH,
+ * so a CLI installed with npm (`#!/usr/bin/env node`) wouldn't find Node next to it; its own
+ * folder and the usual install folders follow the app's PATH. Windows finds Node through npm's
+ * .cmd shims.
+ */
+const cliEnvironment = (path: string): Record<string, string> =>
+  process.platform === "win32"
+    ? {}
+    : {
+        PATH: [process.env.PATH ?? "", dirname(path), ...extraDirectories()]
+          .filter(Boolean)
+          .join(delimiter),
+      };
+
 /** Runs `path` with `args`, giving it `input` on stdin, and calls `onLine` with each line it prints. */
 export const run = (
   path: string,
@@ -127,7 +142,7 @@ export const run = (
   new Promise<{ code: number | null; stderr: string }>((resolve, reject) => {
     const child = spawn(path, args, {
       cwd,
-      env: { ...process.env, ...env },
+      env: { ...process.env, ...cliEnvironment(path), ...env },
       // Windows runs npm's .cmd shims only through the shell, which reads the
       // arguments as written: values from settings or history are checked
       // against AI_MODEL_ID and SESSION_ID first, and JSON goes in files.
