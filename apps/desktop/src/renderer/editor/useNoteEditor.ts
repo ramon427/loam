@@ -12,6 +12,7 @@ import { columnDropCursorHooks } from "./columns/columnDropTarget";
 import { columnResizeExtension } from "./columns/columnResize";
 import { createDefaultBlocks } from "./blocknote/editorTabTemplates";
 import { useReleaseSelectedImage } from "./useReleaseSelectedImage";
+import { useMarginSelection } from "./useMarginSelection";
 import { handleNoteEditorKeyDown, handleNoteEditorTextInput } from "./editorKeyRules";
 import { handleEditorLinkClick } from "./editorLinks";
 import { handleEditorPaste } from "./editorPaste";
@@ -100,6 +101,7 @@ export function useNoteEditor({
   }, [createDecorations, editor]);
 
   useReleaseSelectedImage(editor);
+  useMarginSelection(editor);
 
   return editor;
 }
