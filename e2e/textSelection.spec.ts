@@ -82,6 +82,28 @@ test("a drag or click in the margins around the note's text acts on the nearest 
   await expectSaved(window, "Lines", `Then ${LINES[1]}`);
 });
 
+test("a drag across the note's tabs selects none of their labels", async ({ loam }) => {
+  const { window } = loam;
+  await createThreeLineNote(window);
+  const strip = (await window.locator("[data-note-tab-strip]").boundingBox())!;
+  const first = await lineBox(window, 0);
+  const y = strip.y + strip.height / 2;
+  const tabLabels = /Notes|Add video|resize/;
+
+  // Along the strip, from its empty end back over the tabs.
+  await drag(window, { x: strip.x + strip.width - 5, y }, { x: strip.x + 1, y });
+  expect(await selectedText(window)).not.toMatch(tabLabels);
+
+  // From the strip down into the note.
+  await window.evaluate(() => document.getSelection()?.removeAllRanges());
+  await drag(
+    window,
+    { x: strip.x + strip.width / 2, y },
+    { x: first.x + 30, y: first.y + first.height / 2 },
+  );
+  expect(await selectedText(window)).not.toMatch(tabLabels);
+});
+
 test("select all takes the line first, then the note, and never the window around it", async ({
   loam,
 }) => {
