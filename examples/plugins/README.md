@@ -35,7 +35,9 @@ export const register: Register = (on, options) => {
   hosts its manifest names (`network:api.example.com`). Each `$` call is checked against the
   permissions the user granted when switching the plugin on.
 - Drawings are plain element trees (`Box`, `Text`, `Heading`, `Badge`, `Button`, `Input`,
-  `Checkbox`, `Select`, `Divider`, `Icon`) the window maps onto its own components, so plugins
+  `Checkbox`, `Select`, `Link`, `Divider`, `Icon`) the window maps onto its own components, so plugins
   follow the theme. Functions in props stay in the worker; the window sends presses back.
 - Slots: `note.header`, `sidebar.footer`, and `pane` for panes opened with `$.ui.open`.
+- The plugins that ship with Loam, in `apps/desktop/plugins`, are larger examples: a Google
+  Calendar pane read from an iCal feed, and a todo list kept in `$.store`.
 - Plugin files reload as you save them.

@@ -1,0 +1,9 @@
+{
+  "id": "todos",
+  "name": "Todos",
+  "version": "1.0.0",
+  "description": "A todo list in a pane, with due dates. Add one from the palette, or insert the open ones into a note as a checklist.",
+  "author": "Loam",
+  "apiVersion": 1,
+  "permissions": ["ui"]
+}

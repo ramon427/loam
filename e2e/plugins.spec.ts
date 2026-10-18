@@ -258,3 +258,87 @@ test("the built-in calendar shows a Google Calendar feed as an agenda, a week an
   await window.keyboard.press("Enter");
   await expectSaved(window, "Plan", "Daily standup (Room 4)");
 });
+
+test("the built-in todo list adds, checks off, edits and deletes todos, and keeps them", async ({
+  loam,
+}) => {
+  const { window } = loam;
+  await turnOn(window, "Todos");
+  await backToNotes(window);
+
+  await sidebar(window).getByRole("button", { name: "Todos" }).click();
+  const pane = () => loam.window.getByRole("region", { name: "Todos" });
+  const add = pane().getByRole("textbox", { name: "New todo", exact: true });
+  await add.fill("Buy milk");
+  await add.press("Enter");
+  await expect(pane().getByRole("checkbox", { name: "Buy milk" })).toBeVisible();
+  await expect(add).toHaveValue("");
+  await pane().getByLabel("Due date for the new todo").fill("2030-01-02");
+  await add.fill("File taxes");
+  await add.press("Enter");
+  await expect(pane().getByRole("checkbox", { name: "File taxes" })).toBeVisible();
+
+  await pane().getByRole("checkbox", { name: "Buy milk" }).click();
+  await expect(pane().getByRole("button", { name: "Done (1)" })).toBeVisible();
+  await expect(pane().getByRole("checkbox", { name: "Buy milk" })).toBeHidden();
+  await pane().getByRole("button", { name: "Done (1)" }).click();
+  await expect(pane().getByRole("checkbox", { name: "Buy milk" })).toBeChecked();
+
+  await pane().getByRole("button", { name: "Edit File taxes" }).click();
+  const text = pane().getByRole("textbox", { name: "Todo", exact: true });
+  await text.fill("File the taxes");
+  await pane().getByRole("button", { name: "Save" }).click();
+  await expect(pane().getByRole("checkbox", { name: "File the taxes" })).toBeVisible();
+
+  await window.keyboard.press("ControlOrMeta+Shift+P");
+  const palette = window.getByRole("dialog", { name: "Commands" });
+  await palette.getByRole("combobox", { name: "Search commands" }).fill("Add todo");
+  await window.keyboard.press("Enter");
+  const question = window.getByRole("dialog", { name: "Add todo" });
+  await question.getByRole("textbox", { name: "Add todo" }).fill("Call Sam");
+  await window.keyboard.press("Enter");
+  await expect(question).toBeHidden();
+  await expect(pane().getByRole("checkbox", { name: "Call Sam" })).toBeVisible();
+
+  await expect
+    .poll(() => {
+      try {
+        const saved = JSON.parse(
+          readFileSync(join(loam.dataDirectory, "plugin-data", "todos.json"), "utf8"),
+        );
+        return saved.todos.map((todo: { text: string; done: boolean; due: string | null }) => [
+          todo.text,
+          todo.done,
+          todo.due,
+        ]);
+      } catch {
+        return null;
+      }
+    })
+    .toEqual([
+      ["Buy milk", true, null],
+      ["File the taxes", false, "2030-01-02"],
+      ["Call Sam", false, null],
+    ]);
+
+  await createNote(window, { title: "Today", body: "To do:" });
+  await appendToBody(window, "");
+  await window.keyboard.press("Enter");
+  await window.keyboard.type("/todos");
+  await expect(
+    window.locator("#bn-suggestion-menu").getByRole("option", { name: /Open todos/ }),
+  ).toBeVisible();
+  await window.keyboard.press("Enter");
+  await expectSaved(window, "Today", "File the taxes (due 2030-01-02)");
+  await expectSaved(window, "Today", "Call Sam");
+
+  await pane().getByRole("button", { name: "Delete Call Sam" }).click();
+  await expect(pane().getByRole("checkbox", { name: "Call Sam" })).toBeHidden();
+  await pane().getByRole("button", { name: "Clear done" }).click();
+  await expect(pane().getByRole("button", { name: /^Done/ })).toBeHidden();
+
+  await loam.restart();
+  await sidebar(loam.window).getByRole("button", { name: "Todos" }).click();
+  await expect(pane().getByRole("checkbox", { name: "File the taxes" })).toBeVisible();
+  await expect(pane().getByRole("checkbox", { name: "Buy milk" })).toBeHidden();
+});
