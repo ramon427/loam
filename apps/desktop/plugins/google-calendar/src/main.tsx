@@ -4,7 +4,6 @@ import { createChanges, type Target } from "./changes";
 import { civilDate, dayNumber, localDay, localMidnight, weekdayOf } from "./dates";
 import { editorView, type EditorState } from "./editorView";
 import { draftChanges, draftForNew, draftFromEvent, draftProblem } from "./eventDraft";
-import { feedProblem, feedUrls } from "./feeds";
 import { createGoogleApi, GoogleApiError } from "./googleApi";
 import {
   calendarColor,
@@ -12,12 +11,10 @@ import {
   canWrite,
   eventColor,
   isEditable,
-  meetLink,
   selfAttendee,
   type GCalendar,
   type GEvent,
 } from "./googleEvents";
-import { parseIcs, type IcsEvent } from "./ics";
 import {
   agendaMarkdown,
   dayOfIso,
@@ -26,6 +23,7 @@ import {
   gridEvent,
   isDeclined,
   isoDay,
+  joinLinkOf,
   localIso,
   meetingNoteMarkdown,
   meetingNoteTitle,
@@ -39,7 +37,16 @@ import {
   type Entry,
   type ViewName,
 } from "./model";
-import { occurrencesBetween } from "./recurrence";
+import { createSubscriptionFeeds } from "./subscriptionFeeds";
+import {
+  addSubscription,
+  defaultName,
+  migrateSubscriptions,
+  normalizeUrl,
+  SUBSCRIPTION_COLORS,
+  urlProblem,
+  type Subscription,
+} from "./subscriptions";
 import { createSyncEngine, syncSpan, type CalendarSync } from "./sync";
 
 /*
@@ -47,11 +54,12 @@ import { createSyncEngine, syncSpan, type CalendarSync } from "./sync";
  * month and agenda views; events made by dragging or with C, moved and resized by dragging,
  * opened in a full editor; recurring events changed one, from one on, or all at once; and a
  * meeting note from any event. Signed in to Google (in the plugin's settings), it reads and
- * writes through $.google.calendar. Without signing in, the secret iCal addresses in the
- * settings are shown read-only.
+ * writes through $.google.calendar. Beside it, any number of calendars subscribed to by their
+ * ICS address (Outlook's published calendars, Google's secret addresses) show read-only.
  *
- * The plugin store keeps `hidden` (ids of calendars switched off) and `sync:<calendarId>`
- * (that calendar's events and sync token, see sync.ts).
+ * The plugin store keeps `hidden` (ids of calendars switched off, `sub:<id>` for a
+ * subscription), `sync:<calendarId>` (that calendar's events and sync token, see sync.ts),
+ * `subscriptions` (see subscriptions.ts) and `feed:<id>` (a subscription's last good copy).
  */
 
 const VIEW = "calendar";
@@ -60,6 +68,9 @@ const FOCUS_SYNC_MS = 30_000;
 const STATUS_MS = 10_000;
 const CALENDARS_MS = 30 * 60_000;
 const FEEDS_MS = 15 * 60_000;
+const FOCUS_FEEDS_MS = 2 * 60_000;
+const SAVE_DELAY_MS = 600;
+const DOCS_URL = "https://github.com/ramon427/loam/blob/main/docs/calendars.md";
 const SLASH_WAIT_MS = 4_000;
 const HOUR_HEIGHT = 48;
 
@@ -75,10 +86,30 @@ const SHORTCUTS =
   "C new event · T today · D day · X 3 days · W week · M month · A agenda · J/K or ←/→ previous and next · R refresh · Enter open · Delete delete · Ctrl+Z undo · Esc close";
 
 type Quick = { start: string; end: string; allDay: boolean; title: string; calendarId: string };
-type Feed = { url: string; name: string; events: IcsEvent[]; error: string | null };
+
+/** How a subscribed calendar's event shows the time: Outlook's free/busy status. */
+const BUSY_TEXT: Record<string, string> = {
+  BUSY: "Busy",
+  FREE: "Free",
+  TENTATIVE: "Tentative",
+  OOF: "Out of office",
+  WORKINGELSEWHERE: "Working elsewhere",
+};
 
 const format = (day: number, options: Intl.DateTimeFormatOptions) =>
   new Date(localMidnight(day)).toLocaleDateString("en-US", options);
+
+/** Shortens a long link in the details to its host, since the text can't be clicked anyway. */
+function shortLinks(line: string): string {
+  return line.replace(/https?:\/\/[^\s)]+/g, (url) => {
+    if (url.length <= 48) return url;
+    try {
+      return `${new URL(url).host}/…`;
+    } catch {
+      return url;
+    }
+  });
+}
 
 const describeError = (error: unknown) => {
   if (error instanceof GoogleApiError)
@@ -90,7 +121,7 @@ const describeError = (error: unknown) => {
 };
 
 export const register: Register = (on, options) => {
-  const urls = feedUrls(options.urls);
+  const cancelledEvents = options.cancelledEvents === "hide" ? "hide" : "show";
   const weekStart = weekStartDay(options.weekStart);
   const workStart = Math.min(23, Math.max(0, Math.round(Number(options.workingHoursStart ?? 9))));
   const workEnd = Math.min(
@@ -119,8 +150,16 @@ export const register: Register = (on, options) => {
   let lastSync = 0;
   let covered: { from: number; to: number } | null = null;
   let lastViewRender = 0;
-  let feeds: Feed[] = [];
-  let feedsAt = 0;
+  let subscriptions: Subscription[] = [];
+  let subscriptionsRead: Promise<void> | null = null;
+  /** The subscribed calendars' settings are open in place of the calendar. */
+  let managing = false;
+  let newAddress = "";
+  let adding = false;
+  let addProblem: string | null = null;
+  let saveTimer: ReturnType<typeof setTimeout> | undefined;
+  /** New links typed into a subscription's field and not yet used, by subscription id. */
+  const pendingUrls = new Map<string, string>();
   /** The entries drawn last, by the key the grid knows them by. */
   let drawn = new Map<string, Entry>();
 
@@ -152,6 +191,17 @@ export const register: Register = (on, options) => {
       ...(undo && { action: { label: "Undo", onPress: undo }, duration: 8 }),
     });
 
+  const feeds = createSubscriptionFeeds({
+    fetch: (url, init) => {
+      if (!app) throw new Error("The calendar isn't ready yet.");
+      return app.net.fetch(url, init);
+    },
+    store: {
+      get: <T,>(key: string) => app?.store.get<T>(key) ?? Promise.resolve(null),
+      set: (key, value) => app?.store.set(key, value) ?? Promise.resolve(null),
+    },
+  });
+
   const changes = createChanges({
     api,
     engine,
@@ -179,110 +229,124 @@ export const register: Register = (on, options) => {
     calendars.forEach((calendar, index) => calendarKeys.set(calendar.id, `c${index}`));
   };
 
-  /** The events to show, from Google when signed in, else from the iCal addresses. */
-  const entries = (from: number, to: number): Entry[] => {
-    if (signedIn())
-      return entriesIn(
-        visibleCalendars().flatMap((calendar) =>
-          engine
-            .events(calendar.id)
-            .filter((event) => showDeclined || !isDeclined(event))
-            .map((event) => ({
-              key: `${calendarKeys.get(calendar.id)}/${event.id}`,
-              calendarId: calendar.id,
-              calendar,
-              event,
-            })),
+  const subscriptionShown = (subscription: Subscription) => !hidden.has(`sub:${subscription.id}`);
+
+  /**
+   * The events to show: the Google account's (editable) and the subscribed calendars'
+   * (read-only), merged into one list.
+   */
+  const entries = (from: number, to: number): Entry[] =>
+    entriesIn(
+      [
+        ...(signedIn()
+          ? visibleCalendars().flatMap((calendar) =>
+              engine
+                .events(calendar.id)
+                .filter((event) => showDeclined || !isDeclined(event))
+                .map((event) => ({
+                  key: `${calendarKeys.get(calendar.id)}/${event.id}`,
+                  calendarId: calendar.id,
+                  calendar,
+                  event,
+                })),
+            )
+          : []),
+        ...feeds.entries(
+          subscriptions,
+          subscriptionShown,
+          localMidnight(from),
+          localMidnight(to),
+          cancelledEvents,
         ),
-        from,
-        to,
+      ],
+      from,
+      to,
+    );
+
+  /** Reads the subscriptions once, carrying over the old setting, and their cached copies. */
+  const readSubscriptions = ($: Api) =>
+    (subscriptionsRead ??= (async () => {
+      const { list, changed } = migrateSubscriptions(
+        await $.store.get("subscriptions").catch(() => null),
+        options.urls,
       );
-    return feeds.flatMap((feed, index) => {
-      const calendar: GCalendar = { id: feed.url, summary: feed.name, accessRole: "reader" };
-      return occurrencesBetween(feed.events, localMidnight(from), localMidnight(to)).map((item) => {
-        const event: GEvent = {
-          id: `${item.event.uid}@${item.start}`,
-          summary: item.event.summary,
-          location: item.event.location,
-          description: item.event.description,
-          start: item.allDay
-            ? { date: isoDay(localDay(item.start)) }
-            : { dateTime: new Date(item.start).toISOString() },
-          end: item.allDay
-            ? { date: isoDay(Math.max(localDay(item.end), localDay(item.start) + 1)) }
-            : { dateTime: new Date(Math.max(item.end, item.start)).toISOString() },
-        };
-        return { key: `i${index}/${event.id}`, calendarId: feed.url, calendar, event };
-      });
-    });
+      subscriptions = list;
+      if (changed) await $.store.set("subscriptions", list).catch(() => undefined);
+      hidden = new Set((await $.store.get<string[]>("hidden").catch(() => null)) ?? hidden);
+      await feeds.restore(list);
+      redraw();
+    })());
+
+  const saveSubscriptions = ($: Api, { now = false } = {}) => {
+    clearTimeout(saveTimer);
+    const save = () => void $.store.set("subscriptions", subscriptions).catch(() => undefined);
+    if (now) save();
+    else saveTimer = setTimeout(save, SAVE_DELAY_MS);
   };
 
-  const loadFeeds = async ($: Api) => {
-    feeds = await Promise.all(
-      urls.map(async (url): Promise<Feed> => {
-        const reason = feedProblem(url);
-        if (reason) return { url, name: "", events: [], error: reason };
-        try {
-          const response = await $.net.fetch(url, { headers: { Accept: "text/calendar" } });
-          if (response.status !== 200)
-            return {
-              url,
-              name: "",
-              events: [],
-              error: `Google Calendar answered ${response.status}. Check the address.`,
-            };
-          const calendar = parseIcs(response.body);
-          return { url, name: calendar.name, events: calendar.events, error: null };
-        } catch {
-          return { url, name: "", events: [], error: "Google Calendar could not be reached." };
-        }
-      }),
-    );
-    feedsAt = Date.now();
+  /** Fetches the subscriptions that are due, then names the ones still named by Loam. */
+  const refreshSubscriptions = async ($: Api, maxAge: number) => {
+    await readSubscriptions($);
+    await feeds.refresh(subscriptions, { maxAge });
+    let renamed = false;
+    subscriptions = subscriptions.map((subscription) => {
+      const name = feeds.state(subscription.id)?.name;
+      if (!subscription.autoName || !name || feeds.state(subscription.id)?.error)
+        return subscription;
+      renamed = true;
+      return { ...subscription, name: defaultName(subscription.url, name), autoName: undefined };
+    });
+    if (renamed) saveSubscriptions($, { now: true });
   };
 
   /** Brings the calendars up to date for the days in view; one sync at a time. */
-  const refresh = ($: Api, { manual = false } = {}) => {
+  const refresh = ($: Api, { manual = false, focus = false } = {}) => {
     syncing ??= (async () => {
       redraw();
-      try {
-        status = await $.google.status();
-        if (signedIn()) {
-          if (!calendars.length || manual || Date.now() - calendarsAt > CALENDARS_MS) {
-            calendars = await api.calendars();
-            calendarsAt = Date.now();
-            assignKeys();
-            const saved = await $.store.get<string[]>("hidden");
-            hidden = new Set(
-              saved ?? calendars.filter((calendar) => calendar.selected === false).map((c) => c.id),
-            );
-          }
-          const range = currentRange();
-          const from = localMidnight(range.first);
-          const to = localMidnight(range.first + range.days);
-          await Promise.all(
-            visibleCalendars().map(async (calendar) => {
-              await engine.restore(calendar.id);
-              await engine.sync(calendar.id, from, to);
-            }),
-          );
-          const span = syncSpan(from, to);
-          covered = { from: Date.parse(span.from), to: Date.parse(span.to) };
-          problem = null;
-        } else if (urls.length && (manual || Date.now() - feedsAt > FEEDS_MS)) {
-          await loadFeeds($);
-          problem = feeds.find((feed) => feed.error)?.error ?? null;
-        }
-      } catch (error) {
-        problem = describeError(error);
-        status = await $.google.status().catch(() => status);
-        if (manual) toast(problem, "error");
-      }
+      await Promise.all([
+        syncGoogle($, manual),
+        refreshSubscriptions($, manual ? 0 : focus ? FOCUS_FEEDS_MS : FEEDS_MS).catch(
+          () => undefined,
+        ),
+      ]);
       lastSync = Date.now();
       syncing = null;
       redraw();
     })();
     return syncing;
+  };
+
+  /** Syncs the Google account's calendars for the days in view, when signed in. */
+  const syncGoogle = async ($: Api, manual: boolean) => {
+    try {
+      status = await $.google.status();
+      problem = null;
+      if (!signedIn()) return;
+      if (!calendars.length || manual || Date.now() - calendarsAt > CALENDARS_MS) {
+        calendars = await api.calendars();
+        calendarsAt = Date.now();
+        assignKeys();
+        const saved = await $.store.get<string[]>("hidden");
+        hidden = new Set(
+          saved ?? calendars.filter((calendar) => calendar.selected === false).map((c) => c.id),
+        );
+      }
+      const range = currentRange();
+      const from = localMidnight(range.first);
+      const to = localMidnight(range.first + range.days);
+      await Promise.all(
+        visibleCalendars().map(async (calendar) => {
+          await engine.restore(calendar.id);
+          await engine.sync(calendar.id, from, to);
+        }),
+      );
+      const span = syncSpan(from, to);
+      covered = { from: Date.parse(span.from), to: Date.parse(span.to) };
+    } catch (error) {
+      problem = describeError(error);
+      status = await $.google.status().catch(() => status);
+      if (manual) toast(problem, "error");
+    }
   };
 
   /** Syncs when the days in view are outside what was synced. */
@@ -342,7 +406,13 @@ export const register: Register = (on, options) => {
   };
 
   const openEditorFor = async (entry: Entry) => {
-    if (!editable(entry)) return;
+    // A read-only event opens in its details, which is all there is to see.
+    if (!editable(entry)) {
+      quick = null;
+      selected = entry.key;
+      redraw();
+      return;
+    }
     let recurrence = entry.event.recurrence;
     if (entry.event.recurringEventId) {
       const master = await api
@@ -431,7 +501,7 @@ export const register: Register = (on, options) => {
     try {
       const note = await $.notes.create({
         title: meetingNoteTitle(entry.event),
-        markdown: meetingNoteMarkdown(entry.event),
+        markdown: meetingNoteMarkdown(entry),
       });
       await $.ui.openNote(note.id);
     } catch (error) {
@@ -444,6 +514,91 @@ export const register: Register = (on, options) => {
     if (!entry || !editable(entry)) return;
     selected = null;
     void changes.remove(target(entry));
+  };
+
+  // Subscribed calendars.
+
+  const updateSubscription = ($: Api, id: string, patch: Partial<Subscription>, again = true) => {
+    subscriptions = subscriptions.map((subscription) =>
+      subscription.id === id ? { ...subscription, ...patch } : subscription,
+    );
+    saveSubscriptions($);
+    if (again) redraw();
+  };
+
+  const subscribe = async ($: Api) => {
+    const url = normalizeUrl(newAddress);
+    const reason = url ? urlProblem(url) : "Paste the calendar's ICS link first.";
+    if (reason) {
+      addProblem = reason;
+      redraw();
+      return;
+    }
+    if (subscriptions.some((subscription) => subscription.url === url)) {
+      addProblem = "That calendar is already in the list.";
+      redraw();
+      return;
+    }
+    adding = true;
+    addProblem = null;
+    redraw();
+    await readSubscriptions($);
+    subscriptions = addSubscription(subscriptions, url, defaultName(url, ""), true);
+    const added = subscriptions.at(-1)!;
+    saveSubscriptions($, { now: true });
+    hidden.delete(`sub:${added.id}`);
+    await refreshSubscriptions($, 0);
+    adding = false;
+    newAddress = "";
+    const state = feeds.state(added.id);
+    toast(
+      state?.error
+        ? `Added ${subscriptions.find((item) => item.id === added.id)?.name ?? "the calendar"}, but it couldn't be loaded yet.`
+        : `Added ${subscriptions.find((item) => item.id === added.id)?.name ?? "the calendar"}.`,
+      state?.error ? "error" : "success",
+    );
+    redraw();
+  };
+
+  const changeAddress = async ($: Api, subscription: Subscription, input: string) => {
+    const url = normalizeUrl(input);
+    if (url === subscription.url) return;
+    const reason = urlProblem(url);
+    if (reason) {
+      toast(reason, "error");
+      redraw();
+      return;
+    }
+    updateSubscription($, subscription.id, { url });
+    saveSubscriptions($, { now: true });
+    await feeds.forget(subscription.id);
+    await refreshSubscriptions($, 0);
+    redraw();
+  };
+
+  const unsubscribe = async ($: Api, subscription: Subscription) => {
+    const answer = await $.ui.choose({
+      title: `Remove ${subscription.name}?`,
+      description: "Its events leave Loam's calendar. The calendar itself isn't changed.",
+      choices: [
+        { value: "remove", label: "Remove", tone: "danger" },
+        { value: "keep", label: "Keep" },
+      ],
+    });
+    if (answer !== "remove") return;
+    subscriptions = subscriptions.filter((item) => item.id !== subscription.id);
+    saveSubscriptions($, { now: true });
+    await feeds.forget(subscription.id);
+    redraw();
+  };
+
+  const openManager = ($: Api) => {
+    managing = true;
+    editor = null;
+    selected = null;
+    quick = null;
+    void readSubscriptions($);
+    redraw();
   };
 
   const go = (next: Partial<{ view: ViewName; cursor: number }>) => {
@@ -692,17 +847,92 @@ export const register: Register = (on, options) => {
           </Button>
         </Box>
       )}
+      {otherCalendars($)}
     </Box>
   );
 
+  /** The subscribed calendars, each with its color, a switch, and why it failed if it did. */
+  const otherCalendars = ($: Api) => {
+    const shown = subscriptions.filter((subscription) => subscription.enabled);
+    return (
+      <Box gap={1}>
+        <Box direction="row" align="center" gap={0}>
+          <Box grow>
+            <Text size="sm" weight="medium">
+              Other calendars
+            </Text>
+          </Box>
+          <Button
+            size="sm"
+            variant="ghost"
+            icon="plus"
+            label="Add a calendar by link"
+            onPress={() => openManager($)}
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            icon="settings"
+            label="Subscribed calendars"
+            onPress={() => openManager($)}
+          />
+        </Box>
+        {shown.length ? (
+          shown.map((subscription) => {
+            const error = feeds.state(subscription.id)?.error;
+            return (
+              <Box gap={0}>
+                <Box direction="row" align="center" gap={2}>
+                  <Swatch color={subscription.color} />
+                  <Box grow>
+                    <Checkbox
+                      label={subscription.name}
+                      checked={subscriptionShown(subscription)}
+                      onChange={async (checked) => {
+                        const key = `sub:${subscription.id}`;
+                        hidden = new Set(hidden);
+                        if (checked) hidden.delete(key);
+                        else hidden.add(key);
+                        redraw();
+                        await $.store.set("hidden", [...hidden]);
+                      }}
+                    />
+                  </Box>
+                  {error ? <Icon name="warning" tone="warning" /> : null}
+                </Box>
+                {error ? (
+                  <Text size="xs" tone="warning">
+                    {error}
+                  </Text>
+                ) : null}
+              </Box>
+            );
+          })
+        ) : (
+          <Text size="xs" tone="muted">
+            Add your Outlook work calendar, or any other, by its ICS link.
+          </Text>
+        )}
+      </Box>
+    );
+  };
+
   const details = ($: Api, entry: Entry, inline = false): Element => {
-    const { event, calendar } = entry;
+    const { event, calendar, extra } = entry;
     const canEdit = editable(entry);
-    const meet = meetLink(event);
+    const join = joinLinkOf(entry);
     const self = selfAttendee(event);
     const guests = (event.attendees ?? []).filter((attendee) => !attendee.resource);
     const description = event.description ? plainText(event.description) : "";
-    const lines = description.split("\n").slice(0, 12);
+    const lines = description.split("\n").slice(0, 12).map(shortLinks);
+    const busy = extra ? BUSY_TEXT[extra.busyStatus] : undefined;
+    const calendarLine = [
+      calendar ? calendarName(calendar) : "",
+      ...(extra ? ["Read-only"] : []),
+      ...(busy ? [`Shows as ${busy}`] : []),
+    ]
+      .filter(Boolean)
+      .join(" · ");
     return (
       <Box gap={2} padding={inline ? 2 : 0} surface={inline}>
         <Box direction="row" justify="end" gap={0}>
@@ -752,10 +982,19 @@ export const register: Register = (on, options) => {
             ) : null}
           </Box>
         </Box>
-        {meet ? (
+        {extra?.cancelled ? (
           <Box direction="row" gap={2} align="center">
-            <Icon name="play" tone="accent" />
-            <Link href={meet}>Join with Google Meet</Link>
+            <Badge tone="danger">Cancelled</Badge>
+            <Text size="xs" tone="muted">
+              The organizer called this meeting off.
+            </Text>
+          </Box>
+        ) : null}
+        {join && !extra?.cancelled ? (
+          <Box direction="row">
+            <Button variant="default" icon="video" href={join.url}>
+              {join.label}
+            </Button>
           </Box>
         ) : null}
         {event.location ? (
@@ -763,6 +1002,19 @@ export const register: Register = (on, options) => {
             <Icon name="map-pin" tone="muted" />
             <Text size="sm">{event.location.split("\n")[0]!}</Text>
           </Box>
+        ) : null}
+        {extra?.private ? (
+          <Box direction="row" gap={2} align="center">
+            <Icon name="lock" tone="muted" />
+            <Text size="xs" tone="muted">
+              Private: the calendar shares only that this time is taken.
+            </Text>
+          </Box>
+        ) : null}
+        {extra && event.organizer?.displayName ? (
+          <Text size="xs" tone="muted">
+            {`Organizer: ${event.organizer.displayName}`}
+          </Text>
         ) : null}
         {guests.length ? (
           <Box gap={0}>
@@ -787,14 +1039,14 @@ export const register: Register = (on, options) => {
         {description ? (
           <Box gap={0}>
             {lines.map((line) => (
-              <Text size="xs">{line || " "}</Text>
+              <Text size="xs">{line || " "}</Text>
             ))}
           </Box>
         ) : null}
         <Box direction="row" gap={2} align="center">
           <Icon name="calendar" tone="muted" />
           <Text size="xs" tone="muted">
-            {calendar ? calendarName(calendar) : ""}
+            {calendarLine}
           </Text>
         </Box>
         {self && !self.organizer && signedIn() ? (
@@ -1026,7 +1278,7 @@ export const register: Register = (on, options) => {
   };
 
   const banner = ($: Api) => {
-    if (signedIn() || urls.length) {
+    if (signedIn() || subscriptions.length) {
       if (!problem) return null;
       return (
         <Box direction="row" gap={2} align="center" padding={2}>
@@ -1043,36 +1295,229 @@ export const register: Register = (on, options) => {
           <Text weight="medium">
             {status.state === "expired"
               ? "Google signed you out of Loam"
-              : "Connect your Google Calendar"}
+              : "Connect your calendars"}
           </Text>
           <Text size="sm" tone="muted">
             {status.state === "expired"
               ? "Sign in again. If your Google Cloud app is in Testing, Google ends the sign-in after 7 days; publish it to Production to keep it."
-              : "Paste your Google Cloud Client ID and secret in Settings, Plugins, Google Calendar, then sign in. Or add a secret iCal address there to see a calendar read-only."}
+              : "Sign in with Google to see and change your events (add your Google Cloud Client ID in Settings, Plugins, Calendar first). Add your Outlook or Microsoft 365 calendar by its ICS link to see it beside them."}
           </Text>
-          <Box direction="row" gap={2}>
+          <Box direction="row" gap={2} align="center" wrap>
             <Button onPress={() => signIn($)} disabled={status.state === "signing-in"}>
               Sign in with Google
             </Button>
-            <Link href="https://github.com/ramon427/loam/blob/main/docs/google-calendar.md">
-              How to set it up
-            </Link>
+            <Button variant="outline" icon="plus" onPress={() => openManager($)}>
+              Add a calendar by link
+            </Button>
+            <Link href={DOCS_URL}>How to set it up</Link>
           </Box>
         </Box>
       </Box>
     );
   };
 
+  /** The colors to pick from, as a row of swatches. */
+  const colorPicker = ($: Api, subscription: Subscription) => (
+    <Box direction="row" gap={1} align="center">
+      {SUBSCRIPTION_COLORS.map((color) => (
+        <Swatch
+          color={color}
+          label={`Color ${SUBSCRIPTION_COLORS.indexOf(color) + 1} for ${subscription.name}`}
+          selected={subscription.color === color}
+          onPress={() => updateSubscription($, subscription.id, { color })}
+        />
+      ))}
+    </Box>
+  );
+
+  const subscriptionCard = ($: Api, subscription: Subscription): Element => {
+    const state = feeds.state(subscription.id);
+    const loading = feeds.loading(subscription.id);
+    const count = state?.events.length ?? 0;
+    const pendingUrl = pendingUrls.get(subscription.id);
+    return (
+      <Box surface padding={3} gap={2}>
+        <Box direction="row" gap={3} align="center">
+          <Swatch color={subscription.color} />
+          <Box grow>
+            <Input
+              label={`Name of ${subscription.name}`}
+              value={subscription.name}
+              onChange={(name) =>
+                updateSubscription(
+                  $,
+                  subscription.id,
+                  { name: name.slice(0, 100) || "Calendar", autoName: undefined },
+                  false,
+                )
+              }
+              onSubmit={() => redraw()}
+            />
+          </Box>
+          <Checkbox
+            label="Show"
+            checked={subscription.enabled}
+            onChange={(enabled) => {
+              updateSubscription($, subscription.id, { enabled });
+              saveSubscriptions($, { now: true });
+              if (enabled) void refreshSubscriptions($, 0).then(redraw);
+            }}
+          />
+        </Box>
+        <Box gap={1}>
+          <Text size="xs" tone="muted">
+            ICS link (press Enter to use a new one)
+          </Text>
+          <Box direction="row" gap={2} align="center">
+            <Box grow>
+              <Input
+                label={`ICS link of ${subscription.name}`}
+                value={subscription.url}
+                onChange={(url) => {
+                  const changed = normalizeUrl(url) !== subscription.url;
+                  if (changed !== pendingUrls.has(subscription.id)) {
+                    if (changed) pendingUrls.set(subscription.id, url);
+                    else pendingUrls.delete(subscription.id);
+                    redraw();
+                  } else if (changed) pendingUrls.set(subscription.id, url);
+                }}
+                onSubmit={(url) => {
+                  pendingUrls.delete(subscription.id);
+                  void changeAddress($, subscription, url);
+                }}
+              />
+            </Box>
+            {pendingUrl !== undefined ? (
+              <Button
+                size="sm"
+                onPress={() => {
+                  pendingUrls.delete(subscription.id);
+                  void changeAddress($, subscription, pendingUrl);
+                }}
+              >
+                Use this link
+              </Button>
+            ) : null}
+          </Box>
+        </Box>
+        {colorPicker($, subscription)}
+        <Box direction="row" gap={2} align="center" wrap>
+          {state?.error ? <Icon name="warning" tone="warning" /> : null}
+          <Box grow>
+            <Text size="xs" tone={state?.error ? "warning" : "muted"}>
+              {loading
+                ? "Loading…"
+                : !subscription.enabled
+                  ? "Hidden from the calendar, and not loaded."
+                  : (state?.error ??
+                    (state?.fetchedAt
+                      ? `Updated ${new Date(state.fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} · ${count === 1 ? "1 event" : `${count} events`}`
+                      : "Not loaded yet."))}
+            </Text>
+          </Box>
+          <Button
+            size="sm"
+            variant="ghost"
+            icon="refresh"
+            label={`Refresh ${subscription.name}`}
+            disabled={loading || !subscription.enabled}
+            onPress={async () => {
+              const pending = feeds.refresh([subscription], { maxAge: 0 });
+              redraw();
+              await pending;
+              redraw();
+            }}
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            icon="trash"
+            label={`Remove ${subscription.name}`}
+            onPress={() => unsubscribe($, subscription)}
+          />
+        </Box>
+      </Box>
+    );
+  };
+
+  /** The subscribed calendars' settings, drawn in place of the calendar. */
+  const manager = ($: Api): Element => (
+    <Box grow scroll padding={6} gap={4}>
+      <Box direction="row" align="center" gap={2}>
+        <Button
+          variant="ghost"
+          icon="x"
+          label="Close subscribed calendars"
+          onPress={() => {
+            managing = false;
+            redraw();
+          }}
+        />
+        <Heading level={2}>Subscribed calendars</Heading>
+      </Box>
+      <Box gap={1}>
+        <Text size="sm" tone="muted">
+          See another calendar beside your own, read-only, by its ICS link. For Outlook or Microsoft
+          365 (your Teams meetings): Outlook on the web, Settings, Calendar, Shared calendars,
+          Publish a calendar, then copy the ICS link.
+        </Text>
+        <Link href={DOCS_URL}>How to get the link</Link>
+      </Box>
+      <Box gap={1}>
+        <Box direction="row" gap={2} align="center">
+          <Box grow>
+            <Input
+              label="Calendar's ICS link"
+              placeholder="https://outlook.office365.com/owa/calendar/…/calendar.ics"
+              value={newAddress}
+              disabled={adding}
+              onChange={(value) => {
+                newAddress = value;
+              }}
+              onSubmit={(value) => {
+                newAddress = value;
+                void subscribe($);
+              }}
+            />
+          </Box>
+          <Button icon="plus" disabled={adding} onPress={() => subscribe($)}>
+            {adding ? "Adding…" : "Subscribe"}
+          </Button>
+        </Box>
+        {addProblem ? (
+          <Text size="sm" tone="danger">
+            {addProblem}
+          </Text>
+        ) : null}
+      </Box>
+      {subscriptions.length ? (
+        subscriptions.map((subscription) => subscriptionCard($, subscription))
+      ) : (
+        <Text size="sm" tone="muted">
+          No subscribed calendars yet.
+        </Text>
+      )}
+      <Text size="xs" tone="muted">
+        Outlook updates a published calendar now and then, sometimes hours after a change; Loam
+        reads it every 15 minutes while the calendar is open. Check that your organisation allows
+        copying work calendars before you add one.
+      </Text>
+    </Box>
+  );
+
   on("app.ready", async ($) => {
     app = $;
     status = await $.google.status().catch(() => status);
     await $.commands.register({ id: "open", title: "Open calendar" });
+    await $.commands.register({ id: "subscribe", title: "Add a calendar by link" });
     await $.editor.registerSlashItem({
       id: "agenda",
       title: "Today's agenda",
-      subtext: "Insert today's events from Google Calendar.",
+      subtext: "Insert today's events from your calendars.",
       aliases: ["agenda", "calendar", "events"],
     });
+    // The cached copies, so the calendar shows something before the first fetch.
+    void readSubscriptions($);
     setInterval(() => {
       if (app && Date.now() - lastViewRender < POLL_MS + 60_000) void refresh(app);
     }, POLL_MS);
@@ -1081,11 +1526,17 @@ export const register: Register = (on, options) => {
   on("app.focus", async ($) => {
     app = $;
     if (Date.now() - lastViewRender < POLL_MS && Date.now() - lastSync > FOCUS_SYNC_MS)
-      void refresh($);
+      void refresh($, { focus: true });
   });
 
   on("command.run", { command: "open" }, async ($) => {
     app = $;
+    await openView($);
+  });
+
+  on("command.run", { command: "subscribe" }, async ($) => {
+    app = $;
+    openManager($);
     await openView($);
   });
 
@@ -1115,25 +1566,27 @@ export const register: Register = (on, options) => {
         <Box direction="row" grow gap={0}>
           {sidebar($)}
           <Box grow gap={0}>
-            {editor
-              ? editorView({
-                  state: editor,
-                  calendars,
-                  saving,
-                  set: (patch, again) => {
-                    if (!editor) return;
-                    editor = { ...editor, draft: { ...editor.draft, ...patch }, problem: null };
-                    if (again) redraw();
-                  },
-                  save: () => void saveEditor(),
-                  close: () => {
-                    editor = null;
-                    redraw();
-                  },
-                })
-              : view === "agenda"
-                ? agenda($, range.first, range.days)
-                : grid($, range)}
+            {managing
+              ? manager($)
+              : editor
+                ? editorView({
+                    state: editor,
+                    calendars,
+                    saving,
+                    set: (patch, again) => {
+                      if (!editor) return;
+                      editor = { ...editor, draft: { ...editor.draft, ...patch }, problem: null };
+                      if (again) redraw();
+                    },
+                    save: () => void saveEditor(),
+                    close: () => {
+                      editor = null;
+                      redraw();
+                    },
+                  })
+                : view === "agenda"
+                  ? agenda($, range.first, range.days)
+                  : grid($, range)}
           </Box>
         </Box>
       </Box>
@@ -1154,8 +1607,7 @@ export const register: Register = (on, options) => {
         Date.now() - lastSync > POLL_MS
       )
         await Promise.race([refresh($), wait()]);
-    } else if (urls.length && Date.now() - feedsAt > FEEDS_MS)
-      await Promise.race([refresh($), wait()]);
+    } else await Promise.race([readSubscriptions($).then(() => refresh($)), wait()]);
     const title = `Agenda for ${format(today, { weekday: "long", month: "long", day: "numeric" })}`;
     return {
       markdown: agendaMarkdown(

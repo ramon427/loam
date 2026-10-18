@@ -189,37 +189,43 @@ test("a theme applies before the first paint after a restart, and theme files jo
 const CALENDAR_URL =
   "https://calendar.google.com/calendar/ical/me%40example.com/private-0123abcd/basic.ics";
 
-test("the built-in calendar shows a Google Calendar feed read-only by week, agenda and month", async ({
+test("the built-in calendar carries old iCal addresses over and shows them read-only by week, agenda and month", async ({
   loam,
 }) => {
+  const settings = await turnOn(loam.window, "Calendar");
+  await expect(settings.getByTestId("plugin-status-google-calendar")).toHaveText("Running");
+  // The addresses moved into the calendar's own list; the old setting isn't shown.
+  await expect(settings.getByText("Secret iCal addresses")).toHaveCount(0);
+
+  // An older version kept them in that setting, separated by spaces.
+  await loam.quit();
+  const stateFile = join(loam.dataDirectory, "plugins.json");
+  const state = JSON.parse(readFileSync(stateFile, "utf8"));
+  state.plugins["google-calendar"].settings.urls = `${CALENDAR_URL} `;
+  writeFileSync(stateFile, JSON.stringify(state));
+  await loam.start();
   const { window } = loam;
   const fetches = await loam.answerFetches({
     [CALENDAR_URL]: readFileSync(join(import.meta.dirname, "fixtures", "calendar.ics"), "utf8"),
   });
-  const settings = await turnOn(window, "Google Calendar");
-  await expect(settings.getByTestId("plugin-status-google-calendar")).toHaveText("Running");
-  const address = settings.getByRole("textbox", { name: "Secret iCal addresses" });
-  await address.fill(CALENDAR_URL);
-  await address.press("Tab");
-  await expect
-    .poll(
-      () =>
-        JSON.parse(readFileSync(join(loam.dataDirectory, "plugins.json"), "utf8")).plugins[
-          "google-calendar"
-        ].settings.urls,
-    )
-    .toBe(CALENDAR_URL);
-  await backToNotes(window);
+  await sidebar(window).getByRole("button", { name: "Calendar" }).click();
 
   const view = window.getByRole("region", { name: "Calendar" }).first();
   const standup = view.getByRole("button", { name: /^Daily standup,/ });
-  // The new setting restarts the plugin, closing a view the old one opened, so open it again
-  // until the restarted one shows the feed.
-  await expect(async () => {
-    if (!(await view.isVisible()))
-      await sidebar(window).getByRole("button", { name: "Calendar" }).click();
-    await expect(standup.first()).toBeVisible({ timeout: 2_000 });
-  }).toPass();
+  await expect(standup.first()).toBeVisible();
+  // The feed's own name replaces the one Loam gave the carried-over address.
+  await expect(view.getByRole("checkbox", { name: "Work" })).toBeChecked();
+  await expect
+    .poll(() => {
+      try {
+        return JSON.parse(
+          readFileSync(join(loam.dataDirectory, "plugin-data", "google-calendar.json"), "utf8"),
+        ).subscriptions.map((item: { url: string; name: string }) => [item.url, item.name]);
+      } catch {
+        return null;
+      }
+    })
+    .toEqual([[CALENDAR_URL, "Work"]]);
   // A week of daily standups, which can't be changed without signing in.
   await expect(standup).toHaveCount(7);
   await expect(standup.first()).toHaveAttribute("data-readonly", "true");
