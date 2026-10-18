@@ -1,5 +1,13 @@
 import { expect, test } from "./app";
-import { createNote, createProject, noteRow, sidebar, storedLibrary } from "./notes";
+import {
+  createNote,
+  createProject,
+  dropIndicator,
+  holdDragOver,
+  noteRow,
+  sidebar,
+  storedLibrary,
+} from "./notes";
 
 test("projects hold folders and notes, and the filter shows any mix of them", async ({ loam }) => {
   const { window } = loam;
@@ -79,4 +87,46 @@ test("removing a project keeps what it held, and undo puts it back", async ({ lo
       return library.notes.find((note) => note.title === "Press kit")?.projectId;
     })
     .toBe((await storedLibrary(window)).projects[0]?.id);
+});
+
+test("a note drags to the top of the notes outside projects, and out of a project there", async ({
+  loam,
+}) => {
+  const { window } = loam;
+  await createProject(window, "Launch");
+  await createNote(window, { title: "Press kit", body: "In the project.", folder: "Launch" });
+  await createNote(window, { title: "First", body: "Outside." });
+  await createNote(window, { title: "Second", body: "Outside." });
+  const topLevel = async () => {
+    const { notes } = await storedLibrary(window);
+    return notes
+      .filter((note) => !note.projectId)
+      .sort((left, right) => (left.position ?? 0) - (right.position ?? 0))
+      .map((note) => note.title);
+  };
+
+  // Over a project, a note goes inside it on either half, so the project is outlined rather
+  // than lined above or below as if the note would land beside it.
+  const project = noteRow(window, "Launch");
+  await holdDragOver(noteRow(window, "Second"), project, "after");
+  await expect.poll(() => dropIndicator(project)).toMatch(/0px 0px 0px [\d.]+px inset/);
+  await noteRow(window, "Second").dispatchEvent("dragend");
+  await expect.poll(() => dropIndicator(project)).toBe("none");
+
+  // The strip between the projects and the notes outside them takes a note to the top.
+  const top = sidebar(window).locator('[data-native-sortable-zone="notes-tree-start"]');
+  const drag = await holdDragOver(noteRow(window, "Second"), top, "inside");
+  await expect.poll(() => dropIndicator(top)).not.toBe("none");
+  await top.dispatchEvent("drop", { dataTransfer: drag.dataTransfer, ...drag.point });
+  await expect.poll(topLevel).toEqual(["Second", "First"]);
+  const tree = sidebar(window).getByRole("navigation", { name: "Notes" });
+  await expect(tree.getByRole("button", { name: /^(Press kit|First|Second)$/ })).toHaveText([
+    "Press kit",
+    "Second",
+    "First",
+  ]);
+
+  const out = await holdDragOver(noteRow(window, "Press kit"), top, "inside");
+  await top.dispatchEvent("drop", { dataTransfer: out.dataTransfer, ...out.point });
+  await expect.poll(topLevel).toEqual(["Press kit", "Second", "First"]);
 });

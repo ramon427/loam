@@ -31,10 +31,11 @@ import {
   canNestNotesTreeTarget,
   containerFromDragId,
   deleteCandidateFromKeys,
+  dropsInsideNotesTreeTarget,
   folderDragId,
   noteDragId,
   NOTES_TREE_END_DROP_ID,
-  NOTES_TREE_ROOT_DROP_ID,
+  NOTES_TREE_START_DROP_ID,
   notesTreeRowHeight,
   projectDragId,
   scopedProjectOf,
@@ -153,11 +154,17 @@ export function NotesTree({ folderScopeId, projectScope, onOpenHistory }: NotesT
     commands.requestDelete(candidate);
   };
 
+  const marker = sortable.marker;
+  // A note dropped on a folder or project goes inside it on either half, so the row is
+  // outlined rather than lined above or below, where the line would promise a place beside it.
+  const dropsInside =
+    marker !== null &&
+    sortable.sourceId !== null &&
+    dropsInsideNotesTreeTarget(sortable.sourceId, marker.targetId);
   // A drop after an open folder, project or note lands after what it holds, so the line is
   // drawn under its last row.
-  const marker = sortable.marker;
   const dropAfterKey =
-    marker?.half === "after" && !marker.inside
+    marker?.half === "after" && !marker.inside && !dropsInside
       ? tree.rows.find(
           (row): row is Extract<NotesTreeRow, { kind: "folder" | "project" | "note" }> =>
             "lastChildKey" in row && dragIdOf(row) === marker.targetId,
@@ -165,6 +172,7 @@ export function NotesTree({ folderScopeId, projectScope, onOpenHistory }: NotesT
       : null;
   const dropMarkerOf = (row: NotesTreeRow, marked: "before" | "after" | "inside" | undefined) => {
     if (row.key === dropAfterKey) return "after";
+    if (marked && dropsInside) return "inside";
     if (!("lastChildKey" in row) || !row.lastChildKey) return marked;
     // Before or inside an open note still marks the note; folders and projects take drops whole.
     return row.kind === "note" && marked !== "after" ? marked : undefined;
@@ -179,7 +187,9 @@ export function NotesTree({ folderScopeId, projectScope, onOpenHistory }: NotesT
   const renderRow = (row: NotesTreeRow) => {
     const animateEntry = tree.enteringKeys.has(row.key);
     if (row.kind === "root-drop") {
-      return <RootDropZone zoneProps={sortable.zoneProps(NOTES_TREE_ROOT_DROP_ID, "before")} />;
+      // The strip above the top-level notes draws its line against the first of them.
+      const placement = row.dropId === NOTES_TREE_START_DROP_ID ? "after" : "before";
+      return <RootDropZone zoneProps={sortable.zoneProps(row.dropId, placement)} />;
     }
     if (row.kind === "creating-folder") {
       return (
