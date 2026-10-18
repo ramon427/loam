@@ -35,9 +35,15 @@ export const register: Register = (on, options) => {
   hosts its manifest names (`network:api.example.com`). Each `$` call is checked against the
   permissions the user granted when switching the plugin on.
 - Drawings are plain element trees (`Box`, `Text`, `Heading`, `Badge`, `Button`, `Input`,
-  `Checkbox`, `Select`, `Link`, `Divider`, `Icon`) the window maps onto its own components, so plugins
-  follow the theme. Functions in props stay in the worker; the window sends presses back.
-- Slots: `note.header`, `sidebar.footer`, and `pane` for panes opened with `$.ui.open`.
-- The plugins that ship with Loam, in `apps/desktop/plugins`, are larger examples: a Google
-  Calendar pane read from an iCal feed, and a todo list kept in `$.store`.
+  `Checkbox`, `Select`, `Link`, `Swatch`, `CalendarGrid`, `Divider`, `Icon`) the window maps onto
+  its own components, so plugins follow the theme. Functions in props stay in the worker; the
+  window sends presses back. `CalendarGrid` is a whole day, week or month the window draws and
+  runs (dragging, resizing, keys), reporting each change with ISO times.
+- Slots: `note.header`, `sidebar.footer`, `pane` for panes opened with `$.ui.open`, and `view`
+  for a view over the notes opened with `$.ui.open({ place: "main" })`.
+- With the `google:calendar` permission, `$.google.calendar` sends requests to the Google
+  Calendar API once the user signs in to Google in the plugin's settings. The main process adds
+  the token; the plugin never sees it, and can reach nothing but `/calendar/v3`.
+- The plugins that ship with Loam, in `apps/desktop/plugins`, are larger examples: Google
+  Calendar (signed in, or read-only from an iCal feed), and a todo list kept in `$.store`.
 - Plugin files reload as you save them.
