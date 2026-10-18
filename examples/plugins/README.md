@@ -39,6 +39,10 @@ export const register: Register = (on, options) => {
   its own components, so plugins follow the theme. Functions in props stay in the worker; the
   window sends presses back. `CalendarGrid` is a whole day, week or month the window draws and
   runs (dragging, resizing, keys), reporting each change with ISO times.
+- A setting marked `"hidden": true` isn't shown in Settings but still reaches the plugin, so a
+  plugin that moves a setting elsewhere can read the old value and carry it over.
+- When an update asks for a permission the user hasn't granted, Settings offers to review it;
+  until then the plugin runs with what it had.
 - Slots: `note.header`, `sidebar.footer`, `pane` for panes opened with `$.ui.open`, and `view`
   for a view over the notes opened with `$.ui.open({ place: "main" })`.
 - With the `google:calendar` permission, `$.google.calendar` sends requests to the Google

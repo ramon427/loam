@@ -196,6 +196,9 @@ function PluginRow({ plugin, restricted }: { plugin: BridgePluginInfo; restricte
       : (STATUS[host.status[manifest.id] ?? ""] ?? "Off")
     : "Off";
   const log = host.logs[manifest.id] ?? [];
+  // Permissions an update added, which the user hasn't allowed yet.
+  const missing = manifest.permissions.filter((permission) => !plugin.granted.includes(permission));
+  const shownSettings = manifest.settings.filter((setting) => !setting.hidden);
 
   return (
     <SettingsRow
@@ -227,9 +230,19 @@ function PluginRow({ plugin, restricted }: { plugin: BridgePluginInfo; restricte
       {plugin.enabled && plugin.granted.includes("google:calendar") ? (
         <GoogleAccountSettings />
       ) : null}
-      {plugin.enabled && manifest.settings.length ? (
+      {plugin.enabled && missing.length && !restricted ? (
+        <div className="flex items-center justify-between gap-4 pt-1">
+          <div className="text-xs text-(--status-warning)">
+            {`This version asks for more: ${missing.map((permission) => describePermission(permission as PluginPermission)).join(", ")}.`}
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setAsking(true)}>
+            Review
+          </Button>
+        </div>
+      ) : null}
+      {plugin.enabled && shownSettings.length ? (
         <div className="flex flex-col gap-2 pt-1">
-          {manifest.settings.map((setting) => (
+          {shownSettings.map((setting) => (
             <div key={setting.key} className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <div className="text-xs text-(--app-text)">{setting.label}</div>
