@@ -17,6 +17,8 @@ import {
   notePlaceOf,
   noteDragId,
   NOTES_TREE_ROOT_DROP_ID,
+  NOTES_TREE_START_DROP_ID,
+  dropsInsideNotesTreeTarget,
   projectContents,
   projectDragId,
   returnToPlaces,
@@ -91,13 +93,14 @@ describe("notes tree rows", () => {
       creatingFolderIn,
     });
 
-  it("lists projects with what they hold, then the top-level notes, drop strip and folders", () => {
+  it("lists projects with what they hold, then the top-level notes, drop strips and folders", () => {
     expect(build({ open: ["planning", "assets"] }).rows.map((row) => row.key)).toEqual([
       "project:launch",
       "note:pitch",
       "folder:assets",
       "note:logo",
       "project:garden",
+      "root-drop-start",
       "note:root-first",
       "note:root-later",
       "root-drop",
@@ -155,11 +158,36 @@ describe("notes tree rows", () => {
     ]);
     expect(build({ projectScope: new Set([null, "garden"]) }).rows.map((row) => row.key)).toEqual([
       "project:garden",
+      "root-drop-start",
       "note:root-first",
       "note:root-later",
       "root-drop",
       "folder:planning",
       "folder:archive",
+    ]);
+  });
+
+  it("puts a strip above the top-level notes only when projects show over them", () => {
+    const keys = (scope: Set<string | null>) =>
+      build({ projectScope: scope }).rows.map((row) => row.key);
+    expect(keys(new Set([null]))[0]).toBe("note:root-first");
+    expect(build({ folderScopeId: null }).rows[0]?.key).toBe("note:root-first");
+    const withoutLooseNotes = buildNotesTreeRows({
+      notes: [note("pitch", { projectId: "launch" })],
+      folders: [],
+      projects,
+      folderScopeId: undefined,
+      projectScope: undefined,
+      openFolderIds: new Set(),
+      openNoteIds: new Set(),
+      closedProjectIds: new Set(),
+      creatingFolderIn: undefined,
+    });
+    expect(withoutLooseNotes.rows.map((row) => row.key)).toEqual([
+      "project:launch",
+      "note:pitch",
+      "project:garden",
+      "root-drop",
     ]);
   });
 
@@ -220,6 +248,37 @@ describe("moving in the notes tree by drag and drop", () => {
     expect(movedNotes(move(noteDragId("logo"), projectDragId("launch")))).toContain(
       "logo in launch",
     );
+  });
+
+  it("puts a note dropped on the strip above the top-level notes first among them", () => {
+    expect(movedNotes(move(noteDragId("root-later"), NOTES_TREE_START_DROP_ID))).toEqual([
+      "root-later in top",
+      "root-first in top",
+      "pitch in launch",
+      "folder-first in planning",
+      "folder-second in planning",
+      "logo in assets",
+    ]);
+    // Out of a project, too.
+    expect(movedNotes(move(noteDragId("pitch"), NOTES_TREE_START_DROP_ID))?.[0]).toBe(
+      "pitch in top",
+    );
+  });
+
+  it("drops inside a folder or project on either half, unless reordering its own kind", () => {
+    expect(dropsInsideNotesTreeTarget(noteDragId("pitch"), projectDragId("launch"))).toBe(true);
+    expect(dropsInsideNotesTreeTarget(noteDragId("pitch"), folderDragId("planning"))).toBe(true);
+    expect(dropsInsideNotesTreeTarget(folderDragId("planning"), projectDragId("launch"))).toBe(
+      true,
+    );
+    expect(dropsInsideNotesTreeTarget(folderDragId("planning"), folderDragId("archive"))).toBe(
+      false,
+    );
+    expect(dropsInsideNotesTreeTarget(projectDragId("garden"), projectDragId("launch"))).toBe(
+      false,
+    );
+    expect(dropsInsideNotesTreeTarget(noteDragId("pitch"), noteDragId("root-first"))).toBe(false);
+    expect(dropsInsideNotesTreeTarget(noteDragId("pitch"), NOTES_TREE_START_DROP_ID)).toBe(false);
   });
 
   it("reorders notes, and moves a note dropped beside one in another group there", () => {

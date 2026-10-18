@@ -158,6 +158,8 @@ export const useNativeSortableList = ({
   return {
     /** The hovered drop target and side, while a drag is over one. */
     marker,
+    /** The item being dragged, while a drag from this list goes on. */
+    sourceId,
     itemProps: (itemId: string, canDrag = !disabled) => ({
       draggable: canDrag,
       "data-native-sortable-id": itemId,
