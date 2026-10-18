@@ -1,6 +1,6 @@
 import { civilDate, dayNumber, toInstant } from "./dates";
 import { instantOf, type GDate, type GEvent } from "./googleEvents";
-import { parseIcsDate, parseRRule, type IcsDate, type IcsEvent } from "./ics";
+import { blankEvent, parseIcsDate, parseRRule, type IcsDate, type IcsEvent } from "./ics";
 import { occurrencesBetween } from "./recurrence";
 import { localZone, wallTime, zonedInstant } from "./zones";
 
@@ -157,21 +157,7 @@ export const instancesBefore = (master: Pick<GEvent, "recurrence" | "start">, pi
   const rule = (master.recurrence ?? []).map(parseLine).find((line) => line.name === "RRULE");
   const rrule = rule ? parseRRule(rule.value) : null;
   if (!rrule || !master.start) return 0;
-  const event: IcsEvent = {
-    uid: "series",
-    summary: "",
-    description: "",
-    location: "",
-    url: "",
-    start: icsStart(master.start),
-    end: null,
-    duration: 0,
-    rrule,
-    exdates: [],
-    rdates: [],
-    recurrenceId: null,
-    status: "",
-  };
+  const event: IcsEvent = { ...blankEvent(icsStart(master.start)), uid: "series", rrule };
   return occurrencesBetween([event], instantOf(master.start), instantOf(pivot)).filter(
     (item) => item.start < instantOf(pivot),
   ).length;

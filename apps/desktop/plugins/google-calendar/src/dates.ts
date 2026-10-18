@@ -1,4 +1,5 @@
 import type { IcsDate } from "./ics";
+import { rulesInstant, zoneRules } from "./vtimezone";
 
 /*
  * Calendar arithmetic on days counted from 1970-01-01, which has no time zones or daylight
@@ -39,7 +40,7 @@ const formatterFor = (zone: string) => {
         }),
       );
     } catch {
-      // Not a zone the runtime knows (such as a Windows zone name): read the time as local.
+      // Not a zone the runtime knows (the feed reader maps the ones it can): read it as local.
       formatters.set(zone, null);
     }
   }
@@ -70,6 +71,10 @@ export const toInstant = (date: IcsDate): number => {
   if (date.kind === "date") return new Date(date.y, date.m - 1, date.d).getTime();
   const { y, m, d, h, mi, s, zone } = date;
   if (zone === "utc") return Date.UTC(y, m - 1, d, h, mi, s);
+  if (zone.startsWith("vtz:")) {
+    const rules = zoneRules(zone);
+    if (rules) return rulesInstant(rules, { y, m, d, h, mi, s });
+  }
   const format = zone === "floating" ? null : formatterFor(zone);
   if (!format) return new Date(y, m - 1, d, h, mi, s).getTime();
   const wall = Date.UTC(y, m - 1, d, h, mi, s);
