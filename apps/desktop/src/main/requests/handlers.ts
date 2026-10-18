@@ -9,6 +9,7 @@ import type { AiService } from "../ai/service";
 import type { Customizations } from "../customizations";
 import type { Dialogs } from "../dialogs";
 import type { EncryptionManager } from "../encryption/encryption";
+import type { GoogleAccount } from "../google/googleAccount";
 import type { LibraryGate } from "../libraryGate";
 import type { McpService } from "../mcp/service";
 import type { Plugins } from "../plugins/plugins";
@@ -28,6 +29,7 @@ export type AppServices = {
   gate: LibraryGate;
   mcp: McpService;
   ai: AiService;
+  google: GoogleAccount;
   plugins: Plugins;
   updates: UpdateService;
   workspace: WorkspaceRequests;
@@ -168,6 +170,18 @@ export const createHandlers = (app: AppServices): Handlers => {
     "plugins.fetch": async ({ id, ...request }) => app.plugins.fetch(id, request),
     "plugins.storeGet": async ({ id, key }) => app.plugins.storeGet(id, key),
     "plugins.storeSet": async ({ id, key, value }) => app.plugins.storeSet(id, key, value),
+    "plugins.googleStatus": async ({ id }) => app.plugins.googleStatus(id),
+    "plugins.googleSignIn": async ({ id }) => app.plugins.googleSignIn(id),
+    "plugins.googleCalendar": async ({ id, request }) => app.plugins.googleCalendar(id, request),
+
+    "google.status": async () => app.google.status(),
+    "google.configure": async (client) => app.google.configure(client),
+    "google.signIn": async () => app.google.signIn(),
+    "google.cancelSignIn": async () => {
+      app.google.cancelSignIn();
+      return null;
+    },
+    "google.signOut": async () => app.google.signOut(),
 
     "mcp.status": async () => app.mcp.status(),
     "mcp.configure": async (settings) => app.mcp.configure(settings),

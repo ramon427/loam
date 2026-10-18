@@ -35,10 +35,11 @@ const writePlugin = async (
   await writeFile(join(folder, "main.js"), code || "export const register = () => {};");
 };
 
-const create = () =>
+const create = (google?: Parameters<typeof createPlugins>[0]["google"]) =>
   createPlugins({
     dataDirectory,
     bundledDirectory: join(dataDirectory, "bundled"),
+    google,
     library: () => {
       if (locked) throw new Error("Your notes are locked.");
       return { store } as unknown as OpenLibrary;
@@ -230,6 +231,45 @@ describe("plugins", () => {
     await plugins.storeSet("counter", "count", 3);
     expect(await create().storeGet("counter", "count")).toBe(3);
     expect(await plugins.storeGet("other", "count")).toBeNull();
+  });
+
+  it("lets only plugins granted google:calendar reach the Google account", async () => {
+    const google = {
+      status: vi.fn(async () => ({
+        state: "signed-in" as const,
+        email: "me@gmail.com",
+        clientId: "secret-client",
+        hasClientSecret: true,
+        error: null,
+        canEncrypt: true,
+      })),
+      signIn: vi.fn(),
+      calendar: vi.fn(async () => ({ status: 200, headers: {}, body: "{}" })),
+    };
+    await writePlugin("calendar", { permissions: ["google:calendar"] });
+    await writePlugin("other", { permissions: ["ui"] });
+    const plugins = create(google);
+    await plugins.setRestricted(false);
+    await plugins.setEnabled("calendar", true, ["google:calendar"]);
+    await plugins.setEnabled("other", true, ["ui"]);
+
+    // A plugin learns whether it is signed in, never the client.
+    await expect(plugins.googleStatus("calendar")).resolves.toEqual({
+      state: "signed-in",
+      email: "me@gmail.com",
+    });
+    await plugins.googleCalendar("calendar", { path: "/users/me/calendarList" });
+    expect(google.calendar).toHaveBeenCalledWith({ path: "/users/me/calendarList" });
+    await expect(
+      plugins.googleCalendar("other", { path: "/users/me/calendarList" }),
+    ).rejects.toMatchObject({
+      code: "PLUGIN_NOT_ALLOWED",
+    });
+    await expect(plugins.googleSignIn("other")).rejects.toMatchObject({
+      code: "PLUGIN_NOT_ALLOWED",
+    });
+    expect(google.calendar).toHaveBeenCalledTimes(1);
+    expect(google.signIn).not.toHaveBeenCalled();
   });
 
   it("saves a setting only when the manifest declares it with that type", async () => {

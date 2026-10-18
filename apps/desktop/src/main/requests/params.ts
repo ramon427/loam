@@ -151,6 +151,36 @@ export const BRIDGE_PARAMS: { [M in LoamBridgeMethod]: z.ZodType<LoamBridgeParam
     key: z.string().min(1).max(200),
     value: z.unknown(),
   }),
+  "plugins.googleStatus": z.strictObject({ id: pluginIdSchema }),
+  "plugins.googleSignIn": z.strictObject({ id: pluginIdSchema }),
+  "plugins.googleCalendar": z.strictObject({
+    id: pluginIdSchema,
+    request: z.strictObject({
+      method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]).optional(),
+      path: z.string().min(1).max(2048),
+      query: z
+        .record(
+          z.string().max(100),
+          z.union([
+            z.string().max(4096),
+            z.number().finite(),
+            z.boolean(),
+            z.array(z.union([z.string().max(4096), z.number().finite()])).max(50),
+          ]),
+        )
+        .optional(),
+      body: z.string().optional(),
+      headers: z.record(z.string().max(100), z.string().max(1024)).optional(),
+    }),
+  }),
+  "google.status": noParams,
+  "google.configure": z.strictObject({
+    clientId: z.string().max(500),
+    clientSecret: secretSchema.nullable().optional(),
+  }),
+  "google.signIn": noParams,
+  "google.cancelSignIn": noParams,
+  "google.signOut": noParams,
   "app.automationResult": z.strictObject({
     requestId: idSchema,
     result: z.custom<BridgeResult<unknown>>(isBridgeResult),

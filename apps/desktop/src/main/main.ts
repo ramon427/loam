@@ -18,12 +18,15 @@ import { createWorkspaceRequests } from "./workspaceRequests";
 import { createCustomizations } from "./customizations";
 import { createDialogs } from "./dialogs";
 import { loadEncryption, type EncryptionManager } from "./encryption/encryption";
+import { createGoogleAccount, type GoogleAccount } from "./google/googleAccount";
+import { endpointsAt, GOOGLE_ENDPOINTS } from "./google/googleOAuth";
 import { openLibrary } from "./library";
 import { createLibraryGate, type LibraryGate } from "./libraryGate";
 import { createMcpService, type McpService } from "./mcp/service";
 import { createMcpTools, type ToolDefinition } from "./mcp/tools";
 import { createPlugins } from "./plugins/plugins";
 import { createRendererProtocolHandler } from "./rendererProtocol";
+import { createSecretBox } from "./sealedSecrets";
 import { installSessionPolicies } from "./sessionPolicies";
 import { openablePathsIn } from "./tabFiles";
 import { createDispatch, installIpc, type Dispatch } from "./requests/dispatch";
@@ -61,6 +64,11 @@ const automatedRun = !app.isPackaged && process.env.LOAM_E2E === "1";
 // A display-less Linux has no keychain; the tests' side chat keys may be stored in plain text.
 const plainTextKeys = automatedRun && process.platform === "linux";
 if (plainTextKeys) safeStorage.setUsePlainTextEncryption(true);
+// End-to-end tests sign in to a fake Google on this computer; no other run can move Google.
+const googleEndpoints =
+  automatedRun && process.env.LOAM_E2E_GOOGLE_URL
+    ? endpointsAt(process.env.LOAM_E2E_GOOGLE_URL)
+    : GOOGLE_ENDPOINTS;
 
 const aiBrowser = createAiBrowser();
 const mainWindow = createMainWindow({
@@ -95,6 +103,7 @@ const workspace = createWorkspaceRequests({
 let gate: LibraryGate | null = null;
 let mcp: McpService | null = null;
 let ai: AiService | null = null;
+let google: GoogleAccount | null = null;
 // Set while the app restarts after a restore, so closing the window doesn't quit early.
 let restarting = false;
 
@@ -191,10 +200,18 @@ const start = async () => {
   });
   void customizations.start();
   app.on("will-quit", () => customizations.close());
+  google = createGoogleAccount({
+    dataDirectory,
+    endpoints: googleEndpoints,
+    secrets: createSecretBox({ plainText: plainTextKeys }),
+    openBrowser: (url) => shell.openExternal(url),
+    onStatus: (status) => mainWindow.send("google.status", status),
+  });
   const plugins = createPlugins({
     dataDirectory,
     bundledDirectory: join(__dirname, "plugins"),
     library: () => libraryGate.library(),
+    google,
     onChange: () => mainWindow.send("plugins.changed", null),
   });
   void plugins.start();
@@ -209,6 +226,7 @@ const start = async () => {
     gate: libraryGate,
     mcp,
     ai,
+    google,
     plugins,
     updates,
     workspace,
@@ -265,6 +283,7 @@ app.on("will-quit", (event) => {
     workspace.close();
     await mcp?.close().catch(() => undefined);
     await ai?.close().catch(() => undefined);
+    google?.close();
     // Publish the last edits first, so other devices have them while this one is off.
     await gate
       ?.current()

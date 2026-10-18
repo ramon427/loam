@@ -16,6 +16,8 @@ export const PLUGIN_PERMISSIONS = {
   "notes:read": "Read your notes",
   "notes:write": "Create, change and trash notes",
   ui: "Show panels, buttons and notifications in the window",
+  "google:calendar":
+    "See and change the events in your Google calendars, once you sign in to Google",
 } as const;
 
 export type PluginPermission = keyof typeof PLUGIN_PERMISSIONS | `network:${string}`;

@@ -16,6 +16,7 @@ import {
 import { StoreError } from "@loam/storage/storeError";
 
 import { readJsonFile, writeJsonFile } from "../jsonFiles";
+import { canSealSecrets } from "../sealedSecrets";
 import { DEFAULT_MODELS } from "./providers/catalog";
 
 const settingsSchema = z.object({
@@ -35,14 +36,6 @@ const withoutEmpty = <K extends string>(record: Partial<Record<K, string | undef
   Object.fromEntries(Object.entries(record).filter(([, value]) => value)) as Partial<
     Record<K, string>
   >;
-
-/**
- * Whether the operating system can seal a key. On Linux without a keyring,
- * Electron's "basic_text" backend seals with a key built into Chromium,
- * which is as good as plain text.
- */
-const canSealKeys = () =>
-  safeStorage.isEncryptionAvailable() && safeStorage.getSelectedStorageBackend?.() !== "basic_text";
 
 /** Keys sealed by the operating system's keychain, base64; never sent to the window. */
 const keysSchema = z.partialRecord(z.enum(AI_KEY_PROVIDER_IDS), z.string().max(20_000));
@@ -119,7 +112,7 @@ export const loadAiSettings = async (
     },
     async setKey(provider: AiKeyProviderId, key: string | null) {
       const trimmed = key?.trim() ?? "";
-      if (trimmed && !plainTextKeys && !canSealKeys())
+      if (trimmed && !plainTextKeys && !canSealSecrets())
         throw new StoreError(
           "This computer can't encrypt the key. Use a CLI provider instead.",
           "UNAVAILABLE",
