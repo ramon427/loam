@@ -224,6 +224,30 @@ describe("plugin host", () => {
     });
   });
 
+  it("keeps the handlers of a deeply nested drawing", async () => {
+    const pressed = vi.fn();
+    plugins.set("nested", async (on) => {
+      on("ui.render", async () => {
+        let tree: unknown = { type: "Button", props: { onPress: pressed }, children: ["Deep"] };
+        for (let level = 0; level < 10; level += 1)
+          tree = { type: "Box", props: {}, children: [tree] };
+        return tree;
+      });
+    });
+    await start(info("nested"));
+
+    let node = (await host.renderPart("pane", "r1", {}, "nested")) as {
+      props: Record<string, unknown>;
+      children: unknown[];
+    };
+    while (node.children[0] && typeof node.children[0] === "object")
+      node = node.children[0] as typeof node;
+    const handler = node.props.onPress as { __handler: string };
+    expect(handler.__handler).toEqual(expect.any(String));
+    host.press("nested", handler.__handler, undefined);
+    await vi.waitFor(() => expect(pressed).toHaveBeenCalledTimes(1));
+  });
+
   it("draws again only the parts of the plugin whose state changed", async () => {
     plugins.set("ticker", async (on) => {
       on("command.run", async ($: Api) => $.state.set("tick", Date.now()));

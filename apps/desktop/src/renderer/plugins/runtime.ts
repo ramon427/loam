@@ -52,6 +52,9 @@ export const ELEMENT_NAMES = [
 
 const Fragment = "Fragment";
 
+/** Deep enough for a drawing nested as far as validateTree allows (24 elements). */
+const MAX_PLAIN_DEPTH = 64;
+
 type Port = {
   post: (message: WorkerMessage) => void;
   listen: (handler: (message: HostMessage) => void) => void;
@@ -101,7 +104,9 @@ export const createRuntime = (port: Port) => {
 
   /** Replaces each function in a drawing's props with an id the window sends back on use. */
   const plain = (value: unknown, depth = 0): unknown => {
-    if (depth > 8) return null;
+    // Each element nests two levels (its children list, then the child), and a returned
+    // drawing is passed through again whole, so this allows the deepest tree the window takes.
+    if (depth > MAX_PLAIN_DEPTH) return null;
     if (typeof value === "function") {
       const handlerId = nextId("h");
       handlers.set(handlerId, value as (payload: unknown) => unknown);
