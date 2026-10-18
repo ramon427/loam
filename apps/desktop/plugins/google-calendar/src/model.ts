@@ -12,6 +12,7 @@ import {
   type GDate,
   type GEvent,
 } from "./googleEvents";
+import { joinLinkIn, type JoinLink } from "./meetingLinks";
 import { localZone } from "./zones";
 
 /*
@@ -92,12 +93,33 @@ export const dayOfIso = (value: string) => {
   return dayNumber(y!, m!, d!);
 };
 
+/** What a subscribed calendar's event says beyond Google's fields. */
+export type EntryExtra = {
+  cancelled: boolean;
+  private: boolean;
+  /** Outlook's free/busy status, such as BUSY or OOF. */
+  busyStatus: string;
+  joinUrl: string;
+};
+
 /** One event as the view keeps it: which calendar it is in, and the key the grid knows it by. */
 export type Entry = {
   key: string;
   calendarId: string;
   calendar: GCalendar | undefined;
   event: GEvent;
+  extra?: EntryExtra;
+};
+
+/** The video call to join: Google's Meet link, else a Teams, Meet or Zoom link in the event. */
+export const joinLinkOf = (entry: Pick<Entry, "event" | "extra">): JoinLink | null => {
+  const meet = meetLink(entry.event);
+  return joinLinkIn(
+    entry.extra?.joinUrl,
+    meet,
+    entry.event.location,
+    entry.event.description ? plainText(entry.event.description) : "",
+  );
 };
 
 export const isDeclined = (event: GEvent) => selfAttendee(event)?.responseStatus === "declined";
@@ -137,6 +159,7 @@ export const gridEvent = (entry: Entry): CalendarEvent => {
     color: eventColor(event, calendar),
     ...(!isEditable(event, calendar) && { readOnly: true }),
     ...(self?.responseStatus === "declined" && { declined: true }),
+    ...(entry.extra?.cancelled && { cancelled: true }),
     ...((self?.responseStatus === "tentative" ||
       self?.responseStatus === "needsAction" ||
       event.status === "tentative") && {
@@ -220,14 +243,29 @@ export const plainText = (html: string) =>
 export const meetingNoteTitle = (event: GEvent) =>
   `${event.summary || "Meeting"} – ${format(localDay(instantOf(event.start)), { month: "short", day: "numeric", year: "numeric" })}`;
 
-/** A meeting note's first lines: when, who, the Meet link, the description, and a link back. */
-export const meetingNoteMarkdown = (event: GEvent) => {
+const MEETING_NAMES: Record<JoinLink["kind"], string> = {
+  teams: "Microsoft Teams",
+  meet: "Google Meet",
+  zoom: "Zoom",
+};
+
+/**
+ * A meeting note's first lines: when, who, the link to join, the description, and a link
+ * back. Works for any event, a subscribed calendar's included.
+ */
+export const meetingNoteMarkdown = (entry: Pick<Entry, "event" | "extra">) => {
+  const { event } = entry;
   const lines = [`**When:** ${whenText(event)}`];
   if (event.location) lines.push(`**Where:** ${event.location.split("\n")[0]}`);
+  if (event.organizer?.displayName && !event.organizer.self)
+    lines.push(`**Organizer:** ${event.organizer.displayName}`);
   const guests = people(event);
   if (guests.length) lines.push(`**Attendees:** ${guests.join(", ")}`);
-  const meet = meetLink(event);
-  if (meet) lines.push(`**Google Meet:** [${meet.replace(/^https:\/\//, "")}](${meet})`);
+  const join = joinLinkOf(entry);
+  if (join)
+    lines.push(
+      `**${MEETING_NAMES[join.kind]}:** [${join.kind === "teams" ? "Join the meeting" : join.url.replace(/^https:\/\//, "")}](${join.url})`,
+    );
   if (event.htmlLink) lines.push(`[Open in Google Calendar](${event.htmlLink})`);
   const description = event.description ? plainText(event.description) : "";
   return [
@@ -240,10 +278,15 @@ export const meetingNoteMarkdown = (event: GEvent) => {
 
 /** A day's events as a Markdown list, for "Today's agenda" in the slash menu. */
 export const agendaMarkdown = (title: string, entries: Entry[], day: number) => {
-  const lines = entries.map(({ event }) => {
+  const lines = entries.map((entry) => {
+    const { event } = entry;
     const where = event.location ? ` (${event.location.split("\n")[0]})` : "";
-    const meet = meetLink(event);
-    return `- ${timesText(event, day)} ${event.summary || "(No title)"}${where}${meet ? ` · [Meet](${meet})` : ""}`;
+    const join = joinLinkOf(entry);
+    const link = join
+      ? ` · [${join.kind === "teams" ? "Teams" : join.kind === "meet" ? "Meet" : "Zoom"}](${join.url})`
+      : "";
+    const cancelled = entry.extra?.cancelled ? "~~" : "";
+    return `- ${timesText(event, day)} ${cancelled}${event.summary || "(No title)"}${cancelled}${where}${link}`;
   });
   return `**${title}**\n\n${lines.length ? lines.join("\n") : "- No events"}\n`;
 };

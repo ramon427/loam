@@ -166,10 +166,11 @@ export class LoamApp {
   }
 
   /**
-   * Answers the main process's requests to these addresses with these bodies, so nothing goes
-   * to the network. Returns a reader for how many requests each address had.
+   * Answers the main process's requests to these addresses with these bodies (or a status and
+   * body), so nothing goes to the network. Returns a reader for how many requests each
+   * address had.
    */
-  async answerFetches(bodies: Record<string, string>) {
+  async answerFetches(bodies: Record<string, string | { status: number; body?: string }>) {
     await this.running!.app.evaluate((_, answers) => {
       const counts: Record<string, number> = {};
       const real = globalThis.fetch;
@@ -178,8 +179,9 @@ export class LoamApp {
         const url = String(input instanceof Request ? input.url : input);
         if (!(url in answers)) return real(input, init);
         counts[url] = (counts[url] ?? 0) + 1;
-        return new Response(answers[url], {
-          status: 200,
+        const answer = answers[url]!;
+        return new Response(typeof answer === "string" ? answer : (answer.body ?? ""), {
+          status: typeof answer === "string" ? 200 : answer.status,
           headers: { "content-type": "text/calendar; charset=utf-8" },
         });
       }) as typeof fetch;

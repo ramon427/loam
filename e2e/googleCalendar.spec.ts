@@ -2,12 +2,14 @@ import type { Locator, Page } from "@playwright/test";
 
 import { expect, test, type LoamApp } from "./app";
 import { startFakeGoogle } from "./fakeGoogle";
-import { openSettings, sidebar } from "./notes";
+import { OUTLOOK_CALENDAR } from "../apps/desktop/plugins/google-calendar/src/testing/outlookCalendar";
+import { expectSaved, openSettings, sidebar } from "./notes";
 
 /*
- * The Google Calendar plugin signed in to a fake Google on a local port (LOAM_E2E_GOOGLE_URL):
+ * The calendar plugin signed in to a fake Google on a local port (LOAM_E2E_GOOGLE_URL):
  * sign-in, the calendar toggles, and making, moving, resizing, editing and deleting events,
- * with undo and a recurring event changed from one instance on.
+ * with undo and a recurring event changed from one instance on; and an Outlook calendar,
+ * subscribed to by its ICS link, shown read-only beside Google's.
  */
 
 let google: Awaited<ReturnType<typeof startFakeGoogle>>;
@@ -52,8 +54,8 @@ const signIn = async (loam: LoamApp) => {
   const restricted = settings.getByRole("checkbox", { name: "Restricted mode" });
   await expect(restricted).toBeEnabled();
   if ((await restricted.getAttribute("data-state")) === "checked") await restricted.click();
-  await settings.getByRole("checkbox", { name: "Turn on Google Calendar" }).click();
-  const consent = window.getByRole("dialog", { name: "Turn on Google Calendar?" });
+  await settings.getByRole("checkbox", { name: "Turn on Calendar" }).click();
+  const consent = window.getByRole("dialog", { name: "Turn on Calendar?" });
   await expect(
     consent.getByText(/See and change the events in your Google calendars/),
   ).toBeVisible();
@@ -200,4 +202,84 @@ test("edits an event in the full editor, and changes a recurring one from an ins
       .filter((event) => event.summary === "Planning" || event.summary === "Standup")
       .map((event) => event.summary),
   ).toEqual(["Standup", "Standup", "Planning", "Planning", "Planning"]);
+});
+
+const WORK =
+  "https://outlook.office365.com/owa/calendar/0f1e2d3c4b5a@contoso.example/a1b2c3d4e5f6/calendar.ics";
+const OLD_LINK = "https://calendar.google.com/calendar/ical/old%40example.com/private-9/basic.ics";
+
+test("shows an Outlook calendar beside Google's, read-only, with its Teams links", async ({
+  loam,
+}) => {
+  google.calendar.add(ME, { summary: "Dentist", start: todayAt(10), end: todayAt(11) });
+  const view = await signIn(loam);
+  const { window } = loam;
+  await loam.answerFetches({
+    [WORK]: OUTLOOK_CALENDAR,
+    [OLD_LINK]: { status: 404, body: "Not Found" },
+  });
+  const dentist = eventIn(view, "Dentist");
+  await expect(dentist).toBeVisible();
+
+  // Subscribe to the work calendar by its webcal link, and to an old link that has stopped working.
+  await view.getByRole("button", { name: "Add a calendar by link" }).click();
+  const address = view.getByRole("textbox", { name: "Calendar's ICS link" });
+  await address.fill(WORK.replace("https://", "webcal://"));
+  await address.press("Enter");
+  await expect(view.getByRole("textbox", { name: "Name of Work calendar" })).toHaveValue(
+    "Work calendar",
+  );
+  await expect(address).toHaveValue("");
+  await address.fill(OLD_LINK);
+  await view.getByRole("button", { name: "Subscribe", exact: true }).click();
+  await expect(view.getByText(/^Couldn't load Google calendar\./).first()).toBeVisible();
+  await view.getByRole("button", { name: "Close subscribed calendars" }).click();
+
+  // Both accounts' events in one week; the work ones can't be changed.
+  const standup = eventIn(view, "Daily standup");
+  await expect(standup.first()).toBeVisible();
+  await expect(standup.first()).toHaveAttribute("data-readonly", "true");
+  await expect(dentist).toHaveAttribute("data-readonly", "false");
+  // The failing calendar says why in the sidebar, without hiding the others.
+  await expect(view.getByText(/^Couldn't load Google calendar\./)).toBeVisible();
+
+  // Dragging a work meeting leaves it where it was.
+  await showAtTop(standup.first());
+  const label = await standup.first().getAttribute("aria-label");
+  const box = (await standup.first().boundingBox())!;
+  const x = box.x + box.width / 2;
+  await drag(window, { x, y: box.y + 4 }, { x, y: box.y + 4 + HOUR });
+  await expect(standup.first()).toHaveAttribute("aria-label", label!);
+  // The press selected it; close that, so the next click opens it afresh.
+  await window.keyboard.press("Escape");
+  await expect(view.getByRole("dialog", { name: "Event" })).toBeHidden();
+
+  // Its details are read-only, with a button to join on Teams.
+  await standup.first().click();
+  const popover = view.getByRole("dialog", { name: "Event" });
+  await expect(popover.getByRole("link", { name: "Join Teams meeting" })).toHaveAttribute(
+    "href",
+    /^https:\/\/teams\.microsoft\.com\/l\/meetup-join\//,
+  );
+  await expect(popover.getByText("Work calendar · Read-only · Shows as Busy")).toBeVisible();
+  await expect(popover.getByRole("button", { name: "Edit event" })).toHaveCount(0);
+
+  // A meeting note works from a work meeting too.
+  await popover.getByRole("button", { name: "Create meeting note" }).click();
+  // The first standup in view is Monday's.
+  const day = mondayAt(9);
+  await expectSaved(
+    window,
+    `Daily standup – ${day.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
+    "Microsoft Teams",
+  );
+
+  // Switching the work calendar off and on in the sidebar.
+  await sidebar(window).getByRole("button", { name: "Calendar" }).click();
+  const toggle = view.getByRole("checkbox", { name: "Work calendar" });
+  await toggle.click();
+  await expect(standup).toHaveCount(0);
+  await expect(dentist).toBeVisible();
+  await toggle.click();
+  await expect(standup.first()).toBeVisible();
 });

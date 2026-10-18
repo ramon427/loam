@@ -210,10 +210,16 @@ const overlaps = (item: Occurrence, from: number, to: number) =>
 
 /**
  * Every occurrence of `events` that overlaps [from, to), in order, all-day ones first on each
- * day. An event with a RECURRENCE-ID takes the place of the occurrence it names; a cancelled
- * one removes it.
+ * day. An event with a RECURRENCE-ID takes the place of the occurrence it names. Cancelled
+ * events and occurrences are left out, unless `cancelled` is "show" (Outlook keeps a
+ * cancelled meeting in the calendar until it is removed).
  */
-export const occurrencesBetween = (events: IcsEvent[], from: number, to: number) => {
+export const occurrencesBetween = (
+  events: IcsEvent[],
+  from: number,
+  to: number,
+  { cancelled = "hide" }: { cancelled?: "show" | "hide" } = {},
+) => {
   const replaced = new Map<string, IcsDate[]>();
   for (const event of events)
     if (event.recurrenceId)
@@ -221,9 +227,8 @@ export const occurrencesBetween = (events: IcsEvent[], from: number, to: number)
 
   const found: Occurrence[] = [];
   for (const event of events) {
-    if (event.status === "CANCELLED" && !event.recurrenceId) continue;
+    if (event.cancelled && cancelled === "hide") continue;
     if (event.recurrenceId) {
-      if (event.status === "CANCELLED") continue;
       const item = occurrence(event, event.start);
       if (overlaps(item, from, to)) found.push(item);
       continue;

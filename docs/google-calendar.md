@@ -1,13 +1,12 @@
 # Google Calendar
 
-The Google Calendar plugin shows your calendars in Loam and lets you make, move and change
-events. To sign in, it uses an OAuth client that you create in your own Google Cloud project.
+Loam's calendar shows your Google calendars and lets you make, move and change events. To sign in, it uses an OAuth client that you create in your own Google Cloud project.
 It takes about ten minutes, and you only do it once. Loam has no server, so nobody else sees
 your sign-in.
 
-If you only want to see a calendar, you can skip all this: paste the calendar's "Secret address
-in iCal format" (Google Calendar › Settings › your calendar) into the plugin's settings instead.
-That way is read-only.
+If you only want to see a calendar, you can skip all this and subscribe to it by link instead,
+read-only. That's also how you add an Outlook or Microsoft 365 calendar beside Google's; see
+[Calendars](calendars.md).
 
 ## 1. Create a Google Cloud project
 
@@ -44,7 +43,7 @@ colors. It can't reach your mail, contacts or calendar settings.
 ## 5. Sign in from Loam
 
 1. In Loam, open **Settings › Plugins**, switch off restricted mode if it's on, and turn on
-   **Google Calendar**. Allow what it asks for.
+   **Calendar**. Allow what it asks for.
 2. Under **Google account**, paste the Client ID, then paste the Client secret and select
    **Save**.
 3. Select **Sign in with Google**. Your browser opens Google's sign-in page.

@@ -17,6 +17,9 @@ describe("validateTree", () => {
       node("Input", { type: "date", value: "2026-10-14", onChange: { __handler: "h2" } }),
       node("Input", { clearOnSubmit: true, onSubmit: { __handler: "h3" } }),
       node("Link", { href: "https://meet.google.com/abc" }, ["Join"]),
+      node("Button", { href: "https://teams.microsoft.com/l/meetup-join/1", icon: "video" }, [
+        "Join Teams meeting",
+      ]),
       node("Icon", { name: "chevron-left" }),
     ]);
     expect(validateTree(tree)).toBeNull();
@@ -35,6 +38,9 @@ describe("validateTree", () => {
     );
     expect(validateTree(node("Link", { href: "file:///etc/passwd" }, ["x"]))).toBe(
       "Link's href is not a value it takes.",
+    );
+    expect(validateTree(node("Button", { href: "javascript:alert(1)" }, ["x"]))).toBe(
+      "Button's href is not a value it takes.",
     );
     expect(validateTree(node("Link", { href: "https://x.test" }, [node("Text")]))).toBe(
       "Only text goes inside this element.",
@@ -57,6 +63,7 @@ describe("validateTree", () => {
     expect(
       validateTree(
         grid({
+          events: [{ ...event, cancelled: true, readOnly: true }],
           onMove: { __handler: "h1" },
           draft: { start: "2026-10-20", end: "2026-10-21", allDay: true },
           workingHours: { start: 9, end: 17 },

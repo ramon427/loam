@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
-import { Button } from "../ui/Button";
+import { Button, buttonVariants } from "../ui/Button";
 import { Checkbox } from "../ui/Checkbox";
 import { cn } from "../ui/cn";
 import { Input } from "../ui/Input";
@@ -174,7 +174,8 @@ export function PluginElement({
                 ? "font-medium"
                 : undefined,
             props.mono === true && "font-mono",
-            props.truncate === true && "min-w-0 truncate",
+            // A long link in plugin text wraps rather than widening its popover.
+            props.truncate === true ? "min-w-0 truncate" : "[overflow-wrap:anywhere]",
           )}
         >
           {textOf(children)}
@@ -207,6 +208,24 @@ export function PluginElement({
     case "Button": {
       const Icon = typeof props.icon === "string" ? PLUGIN_ICONS[props.icon] : undefined;
       const label = textOf(children) || (typeof props.label === "string" ? props.label : "");
+      // A button that opens an address goes out through the window's check, as a link does.
+      if (typeof props.href === "string")
+        return (
+          <a
+            href={props.href}
+            target="_blank"
+            rel="noreferrer noopener"
+            aria-label={typeof props.label === "string" ? props.label : undefined}
+            title={typeof props.label === "string" ? props.label : undefined}
+            className={buttonVariants({
+              variant: (props.variant as "default") ?? "outline",
+              size: Icon && !textOf(children) ? "icon-sm" : ((props.size as "sm") ?? "sm"),
+            })}
+          >
+            {Icon ? <Icon aria-hidden /> : null}
+            {textOf(children) || (Icon ? null : label)}
+          </a>
+        );
       return (
         <Button
           variant={

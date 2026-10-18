@@ -53,6 +53,8 @@ export type CalendarGridEvent = {
   readOnly?: boolean;
   declined?: boolean;
   tentative?: boolean;
+  /** Called off but still in the calendar, as Outlook keeps it: drawn struck through. */
+  cancelled?: boolean;
   location?: string;
 };
 
@@ -117,6 +119,10 @@ type Shape = { s: number; e: number; allDay: boolean };
 
 const MOVE_THRESHOLD = 4;
 const MIN_EVENT_MINUTES = 22;
+/** Pixels of an earlier event left showing above a later one, enough for its title to cascade. */
+const CASCADE_PIXELS = 24;
+/** Narrower than this, an event drops its time and keeps only its title. */
+const NARROW_PIXELS = 64;
 const KEYS = new Set(["c", "t", "d", "w", "m", "a", "x", "j", "k", "n", "p", "r", "?"]);
 const SPECIAL_KEYS = new Set(["ArrowLeft", "ArrowRight", "Escape", "Delete", "Backspace", "Enter"]);
 
@@ -619,6 +625,18 @@ export function CalendarGrid(props: Props) {
     return () => observer.disconnect();
   }, [view]);
 
+  // A day's width, so events too narrow for their time can show their title alone.
+  const [dayWidth, setDayWidth] = useState(0);
+  useLayoutEffect(() => {
+    const columns = colsRef.current;
+    if (!columns) return;
+    const measure = () => setDayWidth(columns.clientWidth / Math.max(1, props.days));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(columns);
+    return () => observer.disconnect();
+  }, [view, props.days]);
+
   /* ---------- the popover's place ---------- */
 
   const [popoverAt, setPopoverAt] = useState<{ left: number; top: number } | null>(null);
@@ -726,7 +744,7 @@ export function CalendarGrid(props: Props) {
     const when = event.allDay
       ? `${longDayFormat.format(event.s)}, all day`
       : `${longDayFormat.format(event.s)}, ${timeRange(event.s, event.e)}`;
-    return `${event.title || "(No title)"}, ${when}${event.declined ? ", declined" : ""}${event.location ? `, ${event.location}` : ""}`;
+    return `${event.title || "(No title)"}, ${when}${event.cancelled ? ", cancelled" : ""}${event.declined ? ", declined" : ""}${event.location ? `, ${event.location}` : ""}`;
   };
 
   const elementProps = (event: Parsed & { ghost?: boolean; origin?: boolean }) => {
@@ -738,12 +756,15 @@ export function CalendarGrid(props: Props) {
         tabIndex: 0,
         "aria-label": eventLabel(event),
         "aria-pressed": props.selectedId === event.id,
+        // The whole title and time on hover, for an event drawn too narrow to read.
+        title: eventLabel(event),
         onKeyDown: (keyEvent: ReactKeyboardEvent<HTMLElement>) => onEventKeyDown(keyEvent, event),
       }),
       "data-selected": props.selectedId === event.id,
       "data-readonly": event.readOnly === true,
       "data-declined": event.declined === true,
       "data-tentative": event.tentative === true,
+      "data-cancelled": event.cancelled === true,
       "data-ghost": event.ghost === true,
       "data-origin": event.origin === true,
       "data-draft": event.id === "\u0000draft" ? "true" : undefined,
@@ -1007,6 +1028,7 @@ export function CalendarGrid(props: Props) {
               const placements = layoutDay(
                 segments.filter((segment) => !segment.id.endsWith("\u0000ghost")),
                 MIN_EVENT_MINUTES,
+                (CASCADE_PIXELS / hourHeight) * 60,
               );
               const working = props.workingHours;
               return (
@@ -1027,10 +1049,14 @@ export function CalendarGrid(props: Props) {
                     const segment = segments[position]!;
                     const ghost = event.id.endsWith("\u0000ghost") || event.id === "\u0000draft";
                     const placement = ghost
-                      ? { left: 0, width: 1 }
-                      : (placements.get(event.id) ?? { left: 0, width: 1 });
+                      ? { left: 0, width: 1, order: 0 }
+                      : (placements.get(event.id) ?? { left: 0, width: 1, order: 0 });
                     const height = ((segment.end - segment.start) / 60) * hourHeight;
                     const compact = height < 34;
+                    const reachesEdge = placement.left + placement.width >= 0.999;
+                    const narrow =
+                      dayWidth > 0 &&
+                      placement.width * dayWidth - (reachesEdge ? 8 : 3) < NARROW_PIXELS;
                     const showResize =
                       !event.readOnly &&
                       !ghost &&
@@ -1041,14 +1067,18 @@ export function CalendarGrid(props: Props) {
                         key={event.id}
                         className={styles.event}
                         data-compact={compact}
+                        data-narrow={narrow}
                         {...elementProps(event)}
-                        style={{
-                          ...eventStyle(event.color),
-                          top: (segment.start / 60) * hourHeight + 1,
-                          height: Math.max(height - 2, 16),
-                          left: `calc(${placement.left * 100}% + 1px)`,
-                          width: `calc(${placement.width * 100}% - ${placement.left + placement.width >= 0.999 ? 8 : 3}px)`,
-                        }}
+                        style={
+                          {
+                            ...eventStyle(event.color),
+                            "--event-order": placement.order,
+                            top: (segment.start / 60) * hourHeight + 1,
+                            height: Math.max(height - 2, 16),
+                            left: `calc(${placement.left * 100}% + 1px)`,
+                            width: `calc(${placement.width * 100}% - ${reachesEdge ? 8 : 3}px)`,
+                          } as CSSProperties
+                        }
                       >
                         <span className={styles.title}>{event.title || "(No title)"}</span>
                         <span className={styles.meta}>

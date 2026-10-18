@@ -6,6 +6,11 @@
  * Shaw): each event goes into the first level (column) where it collides with nothing,
  * colliding events form groups (here with a union-find), and an event widens to the right
  * until the next level that holds an event it collides with.
+ *
+ * On top of that it cascades as Google Calendar does: an event that starts well after another
+ * (by `cascadeMinutes`) doesn't stop that one widening, but is drawn over it, so the earlier
+ * event keeps its whole width, and its title, above where the later one starts. Only events
+ * that start at about the same time share the width side by side.
  */
 
 export const DAY_MINUTES = 24 * 60;
@@ -13,17 +18,27 @@ export const DAY_MINUTES = 24 * 60;
 /** An event's place in one day, in minutes from that day's midnight. */
 export type DaySegment = { id: string; start: number; end: number };
 
-/** Its horizontal place in the day's column, each as a fraction of the column's width. */
-export type SegmentPlacement = { left: number; width: number; level: number; levels: number };
+/**
+ * Its horizontal place in the day's column, each as a fraction of the column's width, and its
+ * stacking order: an event that starts later is drawn over the ones it overlaps.
+ */
+export type SegmentPlacement = {
+  left: number;
+  width: number;
+  level: number;
+  levels: number;
+  order: number;
+};
 
 const byStartThenLength = (a: DaySegment, b: DaySegment) =>
   a.start - b.start || b.end - b.start - (a.end - a.start) || a.id.localeCompare(b.id);
 
 /**
- * Side-by-side places for a day's timed events. `minMinutes` is the shortest an event is
- * drawn, so a five-minute event still collides with what its box covers.
+ * Places for a day's timed events. `minMinutes` is the shortest an event is drawn, so a
+ * five-minute event still collides with what its box covers; events that start at least
+ * `cascadeMinutes` apart overlap instead of splitting the width (0 splits it always).
  */
-export const layoutDay = (segments: readonly DaySegment[], minMinutes = 0) => {
+export const layoutDay = (segments: readonly DaySegment[], minMinutes = 0, cascadeMinutes = 0) => {
   const sorted = segments
     .map((segment) => ({ ...segment, end: Math.max(segment.end, segment.start + minMinutes) }))
     .sort(byStartThenLength);
@@ -42,6 +57,7 @@ export const layoutDay = (segments: readonly DaySegment[], minMinutes = 0) => {
     for (let b = a + 1; b < sorted.length && sorted[b]!.start < sorted[a]!.end; b += 1)
       if (collide(sorted[a]!, sorted[b]!)) parent[find(b)] = find(a);
 
+  const orderOf = new Map(sorted.map((segment, index) => [segment, index]));
   const groups = new Map<number, DaySegment[]>();
   sorted.forEach((segment, index) => {
     const root = find(index);
@@ -58,12 +74,17 @@ export const layoutDay = (segments: readonly DaySegment[], minMinutes = 0) => {
       levels[level]!.push(segment);
       levelOf.set(segment, level);
     }
+    // An event to the right stops this one widening if it collides and starts about the same
+    // time or earlier; one that starts well after is drawn over it instead.
+    const blocks = (segment: DaySegment, other: DaySegment) =>
+      collide(segment, other) &&
+      (cascadeMinutes <= 0 || other.start < segment.start + cascadeMinutes);
     for (const segment of group) {
       const level = levelOf.get(segment)!;
       let span = 1;
       while (
         level + span < levels.length &&
-        !levels[level + span]!.some((other) => collide(segment, other))
+        !levels[level + span]!.some((other) => blocks(segment, other))
       )
         span += 1;
       placements.set(segment.id, {
@@ -71,6 +92,7 @@ export const layoutDay = (segments: readonly DaySegment[], minMinutes = 0) => {
         width: span / levels.length,
         level,
         levels: levels.length,
+        order: orderOf.get(segment)!,
       });
     }
   }

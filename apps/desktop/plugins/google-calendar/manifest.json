@@ -1,20 +1,37 @@
 {
   "id": "google-calendar",
-  "name": "Google Calendar",
-  "version": "2.0.0",
-  "description": "Your Google calendars in a view of their own: see, make, move and change events by day, week or month, and start a meeting note from one. Sign in to Google below, or read calendars from their secret iCal addresses.",
+  "name": "Calendar",
+  "version": "2.1.0",
+  "description": "Your Google calendars and your Outlook or other calendars in one view: see, make, move and change Google events by day, week or month, see subscribed calendars beside them, and start a meeting note from any event.",
   "author": "Loam",
   "apiVersion": 1,
-  "permissions": ["ui", "google:calendar", "notes:write", "network:calendar.google.com"],
+  "permissions": [
+    "ui",
+    "google:calendar",
+    "notes:write",
+    "network:calendar.google.com",
+    "network:outlook.office365.com",
+    "network:outlook.office.com",
+    "network:outlook.live.com"
+  ],
   "settings": [
     {
       "key": "weekStart",
       "type": "select",
       "label": "Weeks start on",
       "options": [
-        { "value": "monday", "label": "Monday" },
-        { "value": "sunday", "label": "Sunday" },
-        { "value": "saturday", "label": "Saturday" }
+        {
+          "value": "monday",
+          "label": "Monday"
+        },
+        {
+          "value": "sunday",
+          "label": "Sunday"
+        },
+        {
+          "value": "saturday",
+          "label": "Saturday"
+        }
       ],
       "default": "monday"
     },
@@ -37,12 +54,30 @@
       "type": "select",
       "label": "Default event length",
       "options": [
-        { "value": "15", "label": "15 minutes" },
-        { "value": "30", "label": "30 minutes" },
-        { "value": "45", "label": "45 minutes" },
-        { "value": "60", "label": "1 hour" },
-        { "value": "90", "label": "1.5 hours" },
-        { "value": "120", "label": "2 hours" }
+        {
+          "value": "15",
+          "label": "15 minutes"
+        },
+        {
+          "value": "30",
+          "label": "30 minutes"
+        },
+        {
+          "value": "45",
+          "label": "45 minutes"
+        },
+        {
+          "value": "60",
+          "label": "1 hour"
+        },
+        {
+          "value": "90",
+          "label": "1.5 hours"
+        },
+        {
+          "value": "120",
+          "label": "2 hours"
+        }
       ],
       "default": "60"
     },
@@ -51,14 +86,38 @@
       "type": "select",
       "label": "Notification for new events",
       "options": [
-        { "value": "calendar", "label": "The calendar's default" },
-        { "value": "none", "label": "None" },
-        { "value": "0", "label": "At the start" },
-        { "value": "5", "label": "5 minutes before" },
-        { "value": "10", "label": "10 minutes before" },
-        { "value": "30", "label": "30 minutes before" },
-        { "value": "60", "label": "1 hour before" },
-        { "value": "1440", "label": "1 day before" }
+        {
+          "value": "calendar",
+          "label": "The calendar's default"
+        },
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "0",
+          "label": "At the start"
+        },
+        {
+          "value": "5",
+          "label": "5 minutes before"
+        },
+        {
+          "value": "10",
+          "label": "10 minutes before"
+        },
+        {
+          "value": "30",
+          "label": "30 minutes before"
+        },
+        {
+          "value": "60",
+          "label": "1 hour before"
+        },
+        {
+          "value": "1440",
+          "label": "1 day before"
+        }
       ],
       "default": "calendar"
     },
@@ -69,10 +128,28 @@
       "default": true
     },
     {
+      "key": "cancelledEvents",
+      "type": "select",
+      "label": "Cancelled meetings",
+      "description": "Outlook keeps a cancelled meeting in the calendar until it is removed.",
+      "options": [
+        {
+          "value": "show",
+          "label": "Show struck through"
+        },
+        {
+          "value": "hide",
+          "label": "Hide"
+        }
+      ],
+      "default": "show"
+    },
+    {
       "key": "urls",
       "type": "string",
       "label": "Secret iCal addresses",
-      "description": "Without signing in: from Google Calendar's Settings, your calendar, \"Secret address in iCal format\". Read-only. Separate several with spaces."
+      "description": "Moved to the calendar's Subscribed calendars.",
+      "hidden": true
     }
   ]
 }
