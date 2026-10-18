@@ -1,27 +1,78 @@
 {
   "id": "google-calendar",
   "name": "Google Calendar",
-  "version": "1.0.0",
-  "description": "Your Google calendars in a pane: today and the days ahead, a week or a month, read from each calendar's secret iCal address.",
+  "version": "2.0.0",
+  "description": "Your Google calendars in a view of their own: see, make, move and change events by day, week or month, and start a meeting note from one. Sign in to Google below, or read calendars from their secret iCal addresses.",
   "author": "Loam",
   "apiVersion": 1,
-  "permissions": ["ui", "network:calendar.google.com"],
+  "permissions": ["ui", "google:calendar", "notes:write", "network:calendar.google.com"],
   "settings": [
-    {
-      "key": "urls",
-      "type": "string",
-      "label": "Secret iCal addresses",
-      "description": "From Google Calendar: Settings, your calendar, \"Secret address in iCal format\". Separate several with spaces."
-    },
     {
       "key": "weekStart",
       "type": "select",
       "label": "Weeks start on",
       "options": [
         { "value": "monday", "label": "Monday" },
-        { "value": "sunday", "label": "Sunday" }
+        { "value": "sunday", "label": "Sunday" },
+        { "value": "saturday", "label": "Saturday" }
       ],
       "default": "monday"
+    },
+    {
+      "key": "workingHoursStart",
+      "type": "number",
+      "label": "Working hours start",
+      "description": "The hour (0 to 23) the working day starts; the hours outside it are shaded.",
+      "default": 9
+    },
+    {
+      "key": "workingHoursEnd",
+      "type": "number",
+      "label": "Working hours end",
+      "description": "The hour (1 to 24) the working day ends.",
+      "default": 17
+    },
+    {
+      "key": "defaultDuration",
+      "type": "select",
+      "label": "Default event length",
+      "options": [
+        { "value": "15", "label": "15 minutes" },
+        { "value": "30", "label": "30 minutes" },
+        { "value": "45", "label": "45 minutes" },
+        { "value": "60", "label": "1 hour" },
+        { "value": "90", "label": "1.5 hours" },
+        { "value": "120", "label": "2 hours" }
+      ],
+      "default": "60"
+    },
+    {
+      "key": "defaultReminder",
+      "type": "select",
+      "label": "Notification for new events",
+      "options": [
+        { "value": "calendar", "label": "The calendar's default" },
+        { "value": "none", "label": "None" },
+        { "value": "0", "label": "At the start" },
+        { "value": "5", "label": "5 minutes before" },
+        { "value": "10", "label": "10 minutes before" },
+        { "value": "30", "label": "30 minutes before" },
+        { "value": "60", "label": "1 hour before" },
+        { "value": "1440", "label": "1 day before" }
+      ],
+      "default": "calendar"
+    },
+    {
+      "key": "showDeclined",
+      "type": "boolean",
+      "label": "Show events you declined",
+      "default": true
+    },
+    {
+      "key": "urls",
+      "type": "string",
+      "label": "Secret iCal addresses",
+      "description": "Without signing in: from Google Calendar's Settings, your calendar, \"Secret address in iCal format\". Read-only. Separate several with spaces."
     }
   ]
 }
