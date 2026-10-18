@@ -21,6 +21,7 @@ describe("layoutDay", () => {
       width: 1,
       level: 0,
       levels: 1,
+      order: 0,
     });
   });
 
@@ -72,6 +73,60 @@ describe("layoutDay", () => {
     expect(placed.get("a")).toMatchObject({ level: 0, levels: 2 });
     expect(placed.get("c")).toMatchObject({ level: 0, levels: 2 });
     expect(placed.get("b")).toMatchObject({ level: 1 });
+  });
+
+  it("cascades an event that starts well after another over it, as Google Calendar does", () => {
+    // Personal and work calendars together: a long block, a meeting half an hour in, and
+    // two calls that start together a little later.
+    const placed = layoutDay(
+      [
+        { id: "workshop", start: at(10), end: at(12) },
+        { id: "budget", start: at(10, 30), end: at(11) },
+        { id: "call", start: at(11), end: at(12) },
+        { id: "sync", start: at(11), end: at(12) },
+      ],
+      0,
+      30,
+    );
+    // The workshop keeps the whole width; its title shows above the later events.
+    expect(placed.get("workshop")).toMatchObject({ left: 0, width: 1 });
+    // The two 11:00 events start together, so they share what's right of the workshop's level.
+    expect(placed.get("call")).toMatchObject({ level: 1, width: 1 / 3 });
+    expect(placed.get("sync")).toMatchObject({ level: 2, left: 2 / 3, width: 1 / 3 });
+    // Later starts are drawn over earlier ones.
+    const order = (id: string) => placed.get(id)!.order;
+    expect(order("workshop")).toBeLessThan(order("budget"));
+    expect(order("budget")).toBeLessThan(order("call"));
+  });
+
+  it("keeps events that start together side by side, and splits without a cascade", () => {
+    const events = [
+      { id: "a", start: at(9), end: at(10) },
+      { id: "b", start: at(9, 10), end: at(10) },
+      { id: "c", start: at(9, 45), end: at(10, 30) },
+    ];
+    const cascaded = layoutDay(events, 0, 30);
+    // b starts within 30 minutes of a, so a stops at b; c starts 45 minutes after a.
+    expect(cascaded.get("a")).toMatchObject({ left: 0, width: 1 / 3 });
+    expect(cascaded.get("b")).toMatchObject({ left: 1 / 3, width: 2 / 3 });
+    expect(cascaded.get("c")).toMatchObject({ left: 2 / 3, width: 1 / 3 });
+    const split = layoutDay(events);
+    expect(split.get("b")).toMatchObject({ width: 1 / 3 });
+  });
+
+  it("never widens an event over one that started before it", () => {
+    // d starts after b and c but sits in an earlier level; c started first, so d stops at it.
+    const placed = layoutDay(
+      [
+        { id: "a", start: at(9), end: at(12) },
+        { id: "b", start: at(9), end: at(10) },
+        { id: "c", start: at(9, 30), end: at(11, 30) },
+        { id: "d", start: at(11), end: at(11, 30) },
+      ],
+      0,
+      30,
+    );
+    expect(placed.get("d")).toMatchObject({ level: 1, width: 1 / 3 });
   });
 
   it("treats short events as tall as they are drawn", () => {
