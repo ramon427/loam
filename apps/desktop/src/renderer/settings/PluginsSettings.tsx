@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { toastError } from "../ui/toast";
 
 import { FormDialog } from "./FormDialog";
+import { GoogleAccountSettings } from "./GoogleAccountSettings";
 import {
   SettingsDetails,
   SettingsNote,
@@ -223,6 +224,9 @@ function PluginRow({ plugin, restricted }: { plugin: BridgePluginInfo; restricte
         />
       }
     >
+      {plugin.enabled && plugin.granted.includes("google:calendar") ? (
+        <GoogleAccountSettings />
+      ) : null}
       {plugin.enabled && manifest.settings.length ? (
         <div className="flex flex-col gap-2 pt-1">
           {manifest.settings.map((setting) => (
