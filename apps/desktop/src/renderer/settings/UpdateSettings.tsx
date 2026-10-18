@@ -1,8 +1,8 @@
-import { RefreshCwIcon } from "lucide-react";
+import { ExternalLinkIcon, RefreshCwIcon } from "lucide-react";
 
 import type { BridgeUpdateStatus } from "@loam/shared/bridge/loamBridge";
 import { formatDateTime } from "../lib/format";
-import { useCheckForUpdates, useInstallUpdate } from "../shell/useAppUpdates";
+import { openReleasePage, useCheckForUpdates, useInstallUpdate } from "../shell/useAppUpdates";
 import { Button } from "../ui/Button";
 
 import { useAppInfo, useUpdateStatus } from "./queries";
@@ -14,6 +14,8 @@ const describeState = (update: BridgeUpdateStatus) => {
       return "This copy of Loam doesn't update itself.";
     case "checking":
       return "Checking for updates…";
+    case "available":
+      return `Version ${update.version ?? ""} is out. Download it from GitHub to install it.`;
     case "downloading":
       return `Downloading ${update.version ?? "update"}… ${update.progress ?? 0}%`;
     case "ready":
@@ -27,7 +29,13 @@ const describeState = (update: BridgeUpdateStatus) => {
   }
 };
 
-/** The running version and its updates, which download in the background. */
+/** macOS installs only signed updates, so the unsigned Mac app leaves the download to the user. */
+const describeUpdates = () =>
+  document.documentElement.dataset.platform === "darwin"
+    ? "Loam checks for updates every hour. When a new version is out, download it from GitHub and replace the copy in Applications."
+    : "Loam checks for updates every hour and downloads them in the background. A downloaded update installs when you restart, or the next time you quit.";
+
+/** The running version and its updates. */
 export function UpdateSettings() {
   const info = useAppInfo();
   const status = useUpdateStatus();
@@ -38,7 +46,7 @@ export function UpdateSettings() {
   const busy = update?.state === "checking" || update?.state === "downloading";
 
   return (
-    <SettingsSection description="Loam checks for updates every hour and downloads them in the background. A downloaded update installs when you restart, or the next time you quit.">
+    <SettingsSection description={describeUpdates()}>
       {status.isError ? (
         <SettingsNotice tone="danger">Could not read the update status.</SettingsNotice>
       ) : null}
@@ -54,6 +62,11 @@ export function UpdateSettings() {
             <Button size="sm" disabled={install.isPending} onClick={() => install.mutate()}>
               <RefreshCwIcon className="size-4" aria-hidden="true" />
               Restart to update
+            </Button>
+          ) : update?.state === "available" ? (
+            <Button size="sm" onClick={() => openReleasePage(update.version)}>
+              <ExternalLinkIcon className="size-4" aria-hidden="true" />
+              Download
             </Button>
           ) : update && update.state !== "unavailable" ? (
             <Button

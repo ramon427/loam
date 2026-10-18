@@ -286,7 +286,8 @@ export const BRIDGE_TOOLS: { [M in LoamBridgeMethod]: BridgeTool<M> } = {
     readOnly: true,
   },
   "updates.check": {
-    description: "Check for an app update; available updates download in the background.",
+    description:
+      "Check for an app update; on Windows it downloads in the background, on macOS the user downloads it.",
   },
   "updates.install": {
     description: "Restart into a downloaded app update. The MCP connection will close.",

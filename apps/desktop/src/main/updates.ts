@@ -32,14 +32,18 @@ export type UpdateService = {
  * Looks for updates on GitHub Releases shortly after launch and then hourly,
  * and downloads them in the background. A downloaded update installs when the
  * user restarts from the window, or on its own the next time the app quits.
+ * A copy that can't install updates (`installs: false`; macOS installs only
+ * signed ones) reports a newer version as "available" for the user to download.
  * Without an `updater` (development runs) the status stays "unavailable".
  */
 export const createUpdateService = ({
   updater,
+  installs = true,
   onStatus,
   timing = DEFAULT_TIMING,
 }: {
   updater: Updater | null;
+  installs?: boolean;
   onStatus: (status: BridgeUpdateStatus) => void;
   timing?: UpdateTiming;
 }): UpdateService => {
@@ -77,8 +81,8 @@ export const createUpdateService = ({
     });
   };
 
-  updater.autoDownload = true;
-  updater.autoInstallOnAppQuit = true;
+  updater.autoDownload = installs;
+  updater.autoInstallOnAppQuit = installs;
   // Notes for every release since this version, not only the newest.
   updater.fullChangelog = true;
   updater.on("checking-for-update", () => update({ state: "checking", error: null }));
@@ -94,9 +98,9 @@ export const createUpdateService = ({
   );
   updater.on("update-available", (info) =>
     update({
-      state: "downloading",
+      state: installs ? "downloading" : "available",
       version: info.version,
-      progress: 0,
+      progress: installs ? 0 : null,
       lastCheckedAt: Date.now(),
       ...normalizeReleaseNotes(info.releaseNotes, info.version),
     }),

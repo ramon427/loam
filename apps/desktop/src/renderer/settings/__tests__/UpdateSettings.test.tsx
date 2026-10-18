@@ -88,6 +88,29 @@ describe("UpdateSettings", () => {
     await waitFor(() => expect(invoke).toHaveBeenCalledWith("updates.install", {}));
   });
 
+  it("links to the download where Loam can't install an update", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    document.documentElement.dataset.platform = "darwin";
+    try {
+      const { invoke } = renderUpdates({ ...IDLE, state: "available", version: "0.2.0" });
+      expect(await screen.findByText(/download it from GitHub and replace/)).toBeTruthy();
+      await waitFor(() =>
+        expect(screen.getByTestId("settings-update-status").textContent).toBe(
+          "Version 0.2.0 is out. Download it from GitHub to install it.",
+        ),
+      );
+      fireEvent.click(screen.getByRole("button", { name: /Download/ }));
+      expect(open).toHaveBeenCalledWith(
+        "https://github.com/ramon427/loam/releases/tag/v0.2.0",
+        "_blank",
+        "noopener",
+      );
+      expect(invoke).not.toHaveBeenCalledWith("updates.install", {});
+    } finally {
+      delete document.documentElement.dataset.platform;
+    }
+  });
+
   it("shows why updates failed", async () => {
     renderUpdates({ ...IDLE, state: "error", error: "Could not check for updates." });
     expect((await screen.findByRole("alert")).textContent).toBe("Could not check for updates.");

@@ -5,7 +5,15 @@ import { errorMessage } from "../lib/errorMessage";
 import { QUERY_KEYS } from "../settings/queries";
 import { toastError } from "../ui/toast";
 
-/** Looks for an update now; a found one downloads in the background. */
+export const RELEASES_URL = "https://github.com/ramon427/loam/releases";
+export const releaseUrl = (version: string) =>
+  `${RELEASES_URL}/tag/v${encodeURIComponent(version)}`;
+
+/** Opens a version's release page in the browser, to download a copy that can't update itself. */
+export const openReleasePage = (version: string | null) =>
+  window.open(version ? releaseUrl(version) : RELEASES_URL, "_blank", "noopener");
+
+/** Looks for an update now; a found one downloads in the background where the app can install it. */
 export function useCheckForUpdates() {
   const queryClient = useQueryClient();
   return useMutation({

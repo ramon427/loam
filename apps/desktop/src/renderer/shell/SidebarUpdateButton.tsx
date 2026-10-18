@@ -16,13 +16,20 @@ import { Button } from "../ui/Button";
 import { cn } from "../ui/cn";
 import { PopoverContent } from "../ui/Popover";
 
-import { useCheckForUpdates, useInstallUpdate } from "./useAppUpdates";
-
-const RELEASES_URL = "https://github.com/ramon427/loam/releases";
-const releaseUrl = (version: string) => `${RELEASES_URL}/tag/v${encodeURIComponent(version)}`;
+import {
+  openReleasePage,
+  RELEASES_URL,
+  releaseUrl,
+  useCheckForUpdates,
+  useInstallUpdate,
+} from "./useAppUpdates";
 
 const describe = (update: BridgeUpdateStatus) => {
   if (update.state === "checking") return "Checking for updates…";
+  if (update.state === "available")
+    return update.version
+      ? `Download version ${update.version} from GitHub`
+      : "Download the new version from GitHub";
   if (update.state === "downloading")
     return `Downloading ${update.version ?? "the update"}… ${update.progress ?? 0}%`;
   if (update.state === "ready") return `Restart to install version ${update.version ?? ""}`.trim();
@@ -80,10 +87,20 @@ function ReadyIcon() {
   );
 }
 
+function AvailableIcon() {
+  return (
+    <span className="relative grid size-4 place-items-center">
+      <DownloadIcon className="size-4" aria-hidden="true" />
+      <span className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full bg-(--app-accent) ring-2 ring-(--app-page)" />
+    </span>
+  );
+}
+
 function StatusIcon({ update }: { update: BridgeUpdateStatus }) {
   if (update.state === "downloading")
     return <DownloadProgressIcon percent={update.progress ?? 0} />;
   if (update.state === "ready") return <ReadyIcon />;
+  if (update.state === "available") return <AvailableIcon />;
   const Icon = update.state === "error" ? CircleAlertIcon : RefreshCwIcon;
   return (
     <Icon
@@ -160,9 +177,11 @@ const CLOSE_DELAY_MS = 150;
 /**
  * The icon-only update control at the end of the sidebar's footer, out of the
  * way until there is something to do: it checks for updates (spinning while it does), shows a download's
- * progress as a ring, and restarts into an update once it has downloaded.
- * While an update downloads or waits, hovering or focusing it shows what
- * changed. Copies that don't update themselves (development runs) show nothing.
+ * progress as a ring, and restarts into an update once it has downloaded. On
+ * macOS, which can't install the update itself, it opens the new version's
+ * release page instead. While an update is available, downloads or waits,
+ * hovering or focusing it shows what changed. Copies that don't look for
+ * updates (development runs) show nothing.
  */
 export function SidebarUpdateButton() {
   const status = useUpdateStatus();
@@ -174,7 +193,9 @@ export function SidebarUpdateButton() {
 
   const update = status.data;
   const hasNotes =
-    (update?.state === "downloading" || update?.state === "ready") &&
+    (update?.state === "available" ||
+      update?.state === "downloading" ||
+      update?.state === "ready") &&
     update.releaseNotes.length > 0;
   useEffect(() => {
     if (!hasNotes) setNotesOpen(false);
@@ -199,7 +220,9 @@ export function SidebarUpdateButton() {
     <PopoverPrimitive.Root open={notesOpen} onOpenChange={setNotesOpen}>
       <PopoverPrimitive.Anchor asChild>
         <Button
-          variant={update.state === "ready" ? "ghost" : "ghost-muted"}
+          variant={
+            update.state === "ready" || update.state === "available" ? "ghost" : "ghost-muted"
+          }
           size="icon-sm"
           className={cn("ml-auto", busy && "cursor-default")}
           aria-label={label}
@@ -214,6 +237,7 @@ export function SidebarUpdateButton() {
           }}
           onBlur={hideNotes}
           onClick={() => {
+            if (update.state === "available") return openReleasePage(update.version);
             if (busy) return;
             if (update.state === "ready") install.mutate();
             else check.mutate();

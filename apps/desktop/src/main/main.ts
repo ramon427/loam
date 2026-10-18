@@ -158,10 +158,15 @@ const start = async () => {
     return;
   }
 
-  // Only the Windows installer can update itself; development runs never do.
-  const updater = app.isPackaged && process.platform === "win32" ? autoUpdater : null;
+  // The Windows installer updates itself. macOS installs only signed updates, so the unsigned
+  // Mac app looks for them and links to the download. Development runs never look.
+  const updater =
+    app.isPackaged && (process.platform === "win32" || process.platform === "darwin")
+      ? autoUpdater
+      : null;
   const updates = createUpdateService({
     updater,
+    installs: process.platform === "win32",
     onStatus: (status) => mainWindow.send("updates.status", status),
   });
   let tools: readonly ToolDefinition[] = [];

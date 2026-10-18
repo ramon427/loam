@@ -161,12 +161,14 @@ export type BridgeSecurityStatus = { state: "off" | "locked" | "on" };
 
 /**
  * Where app updates stand. Updates download in the background; "ready" means
- * one is downloaded and installs on restart. "unavailable" when this build
- * can't update itself, such as a development run.
+ * one is downloaded and installs on restart. "available" means a newer version
+ * is out that this copy can't install itself (the unsigned macOS app), so the
+ * user downloads it from its release page. "unavailable" when this build
+ * doesn't look for updates, such as a development run.
  */
 export type BridgeUpdateStatus = {
-  state: "unavailable" | "idle" | "checking" | "downloading" | "ready" | "error";
-  /** The version downloading or ready to install. */
+  state: "unavailable" | "idle" | "checking" | "available" | "downloading" | "ready" | "error";
+  /** The version available, downloading or ready to install. */
   version: string | null;
   /** Download progress, 0 to 100, while downloading. */
   progress: number | null;
@@ -451,7 +453,7 @@ type LoamBridgeRequests = {
   /** Decrypts every note; turns sync off. */
   "security.disable": Request<{ passphrase: string }, BridgeSecurityStatus>;
   "updates.status": Request<NoParams, BridgeUpdateStatus>;
-  /** Checks for an update now; one that is found downloads in the background. */
+  /** Checks for an update now; one that is found downloads in the background where it can install. */
   "updates.check": Request<NoParams, BridgeUpdateStatus>;
   /** Closes the window and restarts into the downloaded update. */
   "updates.install": Request<NoParams, null>;

@@ -4,8 +4,9 @@
 
 Please report security problems privately, through **Report a vulnerability**
 on this repository's Security tab, not in a public issue. Say what an attacker
-could do and how to reproduce it. Fixes ship in the next release, and
-installed copies update themselves.
+could do and how to reproduce it. Fixes ship in the next release. Installed
+copies on Windows update themselves; the Mac app, which is unsigned, says when
+a new version is out and links to it.
 
 ## How Loam protects your notes
 
