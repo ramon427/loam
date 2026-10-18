@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { app, BrowserWindow, dialog, protocol, safeStorage, session, shell } from "electron";
+import { app, BrowserWindow, dialog, Menu, protocol, safeStorage, session, shell } from "electron";
 import { autoUpdater } from "electron-updater";
 
 import {
@@ -10,6 +10,7 @@ import {
 } from "@loam/shared/bridge/loamBridge";
 
 import { buildContentSecurityPolicy } from "../shared/contentSecurityPolicy";
+import { macAppMenuTemplate } from "./appMenu";
 import { createAiBrowser } from "./ai/browser";
 import { createChatTools } from "./ai/chatTools";
 import { createAiService, type AiService } from "./ai/service";
@@ -114,6 +115,16 @@ const restartAfterRestore = async () => {
 const start = async () => {
   await app.whenReady();
   app.setAppUserModelId(APP_ID);
+  if (process.platform === "darwin")
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate(
+        macAppMenuTemplate({
+          appName: app.name,
+          developerTools: !app.isPackaged,
+          openExternal: (url) => void shell.openExternal(url).catch(() => undefined),
+        }),
+      ),
+    );
   let encryption: EncryptionManager;
   let libraryGate: LibraryGate;
   try {
