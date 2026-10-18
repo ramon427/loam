@@ -250,6 +250,7 @@ type IconName =
   | "info"
   | "link"
   | "list"
+  | "lock"
   | "map-pin"
   | "pencil"
   | "play"
@@ -262,6 +263,7 @@ type IconName =
   | "tag"
   | "timer"
   | "trash"
+  | "video"
   | "warning"
   | "x"
   | "zap";
@@ -280,6 +282,8 @@ export interface CalendarEvent {
   readOnly?: boolean;
   declined?: boolean;
   tentative?: boolean;
+  /** Called off but still in the calendar, as Outlook keeps it: drawn struck through. */
+  cancelled?: boolean;
   location?: string;
 }
 
@@ -326,6 +330,8 @@ export interface ElementProps {
     onPress?: () => void;
     /** Shown pressed, as one of a set of toggles. */
     selected?: boolean;
+    /** Opens this https or mailto address in the system browser instead of calling onPress. */
+    href?: string;
     children?: Children;
   };
   Input: {
