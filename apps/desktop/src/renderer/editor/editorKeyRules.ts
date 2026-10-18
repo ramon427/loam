@@ -1,9 +1,10 @@
 import { SuggestionMenu } from "@blocknote/core/extensions";
 import { closeHistory } from "@tiptap/pm/history";
-import { Selection } from "@tiptap/pm/state";
+import { Selection, TextSelection } from "@tiptap/pm/state";
 import type { Transform } from "@tiptap/pm/transform";
 import type { EditorView } from "@tiptap/pm/view";
 
+import { matchesShortcut, shortcuts } from "../keyboard/shortcuts";
 import { columnKeyRule } from "./columnEditing";
 import { typeDividerShortcut } from "./editorBlockInsertion";
 import {
@@ -75,6 +76,29 @@ const moveCaretToNoteEnd = (view: EditorView, event: KeyboardEvent) => {
     return false;
   }
   view.dispatch(view.state.tr.setSelection(Selection.atEnd(view.state.doc)).scrollIntoView());
+  return true;
+};
+
+/**
+ * Ctrl/Cmd+A first selects the text of the block the caret is in, and a second press the whole
+ * note, as in Notion: one press selecting a long note is easy to do by accident and costly to
+ * act on. An empty block, or one already selected whole, goes straight to the whole note.
+ */
+const selectBlockTextFirst = (view: EditorView, event: KeyboardEvent) => {
+  if (!matchesShortcut(event, shortcuts["edit.select-all"])) return false;
+  const { selection } = view.state;
+  const { $from, $to } = selection;
+  if (
+    !(selection instanceof TextSelection) ||
+    !$from.sameParent($to) ||
+    !$from.parent.isTextblock
+  ) {
+    return false;
+  }
+  const start = $from.start();
+  const end = $from.end();
+  if (start === end || (selection.from === start && selection.to === end)) return false;
+  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, start, end)));
   return true;
 };
 
@@ -153,7 +177,8 @@ export const handleNoteEditorKeyDown = (
   if (
     deleteVideoTimestampOnKey(editor, event) ||
     insertFirstKeyInEmptyTextBlock(view, event) ||
-    moveCaretToNoteEnd(view, event)
+    moveCaretToNoteEnd(view, event) ||
+    selectBlockTextFirst(view, event)
   ) {
     return true;
   }

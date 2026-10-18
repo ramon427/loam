@@ -12,6 +12,8 @@ import { columnDropCursorHooks } from "./columns/columnDropTarget";
 import { columnResizeExtension } from "./columns/columnResize";
 import { createDefaultBlocks } from "./blocknote/editorTabTemplates";
 import { useReleaseSelectedImage } from "./useReleaseSelectedImage";
+import { useMarginSelection } from "./useMarginSelection";
+import { selectBlockText, selectLastWordAtLineEnd } from "./editorClickRules";
 import { handleNoteEditorKeyDown, handleNoteEditorTextInput } from "./editorKeyRules";
 import { handleEditorLinkClick } from "./editorLinks";
 import { handleEditorPaste } from "./editorPaste";
@@ -81,6 +83,8 @@ export function useNoteEditor({
           handleNoteEditorTextInput(editor, view, from, to, text),
         handleDrop: (view, event, slice, moved) => handleColumnDrop(view, event, slice, moved),
         handleKeyDown: (view, event) => handleNoteEditorKeyDown(editor, view, event),
+        handleDoubleClick: (view, pos) => selectLastWordAtLineEnd(view, pos),
+        handleTripleClick: (view, pos) => selectBlockText(view, pos),
       },
     },
   });
@@ -100,6 +104,7 @@ export function useNoteEditor({
   }, [createDecorations, editor]);
 
   useReleaseSelectedImage(editor);
+  useMarginSelection(editor);
 
   return editor;
 }

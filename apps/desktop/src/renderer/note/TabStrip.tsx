@@ -187,7 +187,10 @@ export function TabStrip({
   const overflow = useTabOverflow(scrollRef, tabs);
 
   return (
-    <div data-note-tab-strip className="flex min-w-0 w-full items-center justify-start gap-2">
+    <div
+      data-note-tab-strip
+      className="flex min-w-0 w-full items-center justify-start gap-2 select-none"
+    >
       <div className="relative flex min-h-7 min-w-0 flex-1 items-center overflow-hidden">
         <ContextMenu>
           <ContextMenuTrigger asChild>
