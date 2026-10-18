@@ -10,7 +10,12 @@ import { OpenedFileView } from "./files/OpenedFileView";
 import { useOpenedFiles } from "./files/useOpenedFiles";
 import { NoteHistoryDialog } from "./history/NoteHistoryDialog";
 import { pluginHost } from "./plugins/host";
-import { PluginPanes, PluginPromptDialog, PluginShortcuts } from "./plugins/PluginPanes";
+import {
+  PluginPanes,
+  PluginPromptDialog,
+  PluginShortcuts,
+  PluginView,
+} from "./plugins/PluginPanes";
 import { PluginSlot } from "./plugins/PluginSlot";
 import { NotesSidebarCreateActions } from "./sidebar/NotesSidebarCreateActions";
 import { NotesSidebarFilter } from "./sidebar/NotesSidebarFilter";
@@ -301,6 +306,7 @@ function Workspace() {
                   }}
                 />
               ) : null}
+              <PluginView />
               <PluginPanes />
               <NotesSearch
                 onOpen={showEverything}

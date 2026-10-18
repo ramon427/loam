@@ -13,9 +13,14 @@ import {
   type BridgePlugins,
   type PluginOp,
 } from "@loam/shared/plugins/pluginApi";
+import type {
+  PluginGoogleCalendarRequest,
+  PluginGoogleStatus,
+} from "@loam/shared/google/googleAccount";
 import { networkAllows, type PluginSettingValue } from "@loam/shared/plugins/pluginManifest";
 import { StoreError } from "@loam/storage/storeError";
 
+import type { GoogleAccount } from "../google/googleAccount";
 import type { OpenLibrary } from "../library";
 import { pluginFolderNames, readManifest } from "./manifests";
 import { fetchForPlugin, type PluginFetchRequest } from "./pluginFetch";
@@ -61,6 +66,7 @@ export const createPlugins = ({
   dataDirectory,
   bundledDirectory,
   library,
+  google,
   onChange,
 }: {
   dataDirectory: string;
@@ -68,6 +74,8 @@ export const createPlugins = ({
   bundledDirectory?: string;
   /** The open library; throws while notes are locked. */
   library: () => OpenLibrary;
+  /** The Google account plugins granted google:calendar use. */
+  google?: Pick<GoogleAccount, "status" | "signIn" | "calendar">;
   /** The plugins folder or plugins.json changed. */
   onChange: () => void;
 }) => {
@@ -151,6 +159,13 @@ export const createPlugins = ({
       throw notAllowed(`The plugin was not granted the ${permission} permission.`);
   };
 
+  const googleFor = async (id: string) => {
+    const { granted } = await running(id);
+    requirePermission(granted, "google:calendar");
+    if (!google) throw notAllowed("Google isn't available.");
+    return google;
+  };
+
   let watcher: FSWatcher | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const changed = () => {
@@ -222,6 +237,25 @@ export const createPlugins = ({
       if (!networkAllows(granted, request.url))
         throw notAllowed("The plugin was not granted that address.");
       return fetchForPlugin(request);
+    },
+
+    async googleStatus(id: string): Promise<PluginGoogleStatus> {
+      const account = await googleFor(id);
+      const { state, email } = await account.status();
+      return { state, email };
+    },
+
+    /** Opens the browser to sign in; resolves with the state it ended in. */
+    async googleSignIn(id: string): Promise<PluginGoogleStatus> {
+      const account = await googleFor(id);
+      const { state, email } = await account.signIn();
+      return { state, email };
+    },
+
+    /** A Calendar API request, with the account's token added here and nowhere else. */
+    async googleCalendar(id: string, request: PluginGoogleCalendarRequest) {
+      const account = await googleFor(id);
+      return account.calendar(request);
     },
 
     async storeGet(id: string, key: string) {

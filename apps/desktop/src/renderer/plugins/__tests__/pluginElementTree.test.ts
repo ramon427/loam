@@ -17,6 +17,9 @@ describe("validateTree", () => {
       node("Input", { type: "date", value: "2026-10-14", onChange: { __handler: "h2" } }),
       node("Input", { clearOnSubmit: true, onSubmit: { __handler: "h3" } }),
       node("Link", { href: "https://meet.google.com/abc" }, ["Join"]),
+      node("Button", { href: "https://teams.microsoft.com/l/meetup-join/1", icon: "video" }, [
+        "Join Teams meeting",
+      ]),
       node("Icon", { name: "chevron-left" }),
     ]);
     expect(validateTree(tree)).toBeNull();
@@ -36,8 +39,54 @@ describe("validateTree", () => {
     expect(validateTree(node("Link", { href: "file:///etc/passwd" }, ["x"]))).toBe(
       "Link's href is not a value it takes.",
     );
+    expect(validateTree(node("Button", { href: "javascript:alert(1)" }, ["x"]))).toBe(
+      "Button's href is not a value it takes.",
+    );
     expect(validateTree(node("Link", { href: "https://x.test" }, [node("Text")]))).toBe(
       "Only text goes inside this element.",
+    );
+  });
+
+  it("takes a calendar grid with its events and a popover, and refuses malformed events", () => {
+    const event = {
+      id: "e1",
+      title: "Standup",
+      start: "2026-10-19T09:00:00+02:00",
+      end: "2026-10-19T09:15:00+02:00",
+      allDay: false,
+      color: "#039be5",
+    };
+    const grid = (props: Record<string, unknown>) =>
+      node("CalendarGrid", { view: "week", start: "2026-10-19", events: [event], ...props }, [
+        node("Input", { autoFocus: true, placeholder: "Add title" }),
+      ]);
+    expect(
+      validateTree(
+        grid({
+          events: [{ ...event, cancelled: true, readOnly: true }],
+          onMove: { __handler: "h1" },
+          draft: { start: "2026-10-20", end: "2026-10-21", allDay: true },
+          workingHours: { start: 9, end: 17 },
+        }),
+      ),
+    ).toBeNull();
+    expect(validateTree(grid({ events: [{ ...event, color: "red" }] }))).toBe(
+      "CalendarGrid's events is not a value it takes.",
+    );
+    expect(validateTree(grid({ events: [{ ...event, start: "tomorrow" }] }))).toBe(
+      "CalendarGrid's events is not a value it takes.",
+    );
+    expect(validateTree(grid({ events: [{ ...event, onClick: "x" }] }))).toBe(
+      "CalendarGrid's events is not a value it takes.",
+    );
+    expect(validateTree(grid({ start: "next week" }))).toBe(
+      "CalendarGrid's start is not a value it takes.",
+    );
+    expect(
+      validateTree(node("Swatch", { color: "#d50000", onPress: { __handler: "h" } })),
+    ).toBeNull();
+    expect(validateTree(node("Swatch", { color: "url(x)" }))).toBe(
+      "Swatch's color is not a value it takes.",
     );
   });
 });
