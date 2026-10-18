@@ -16,11 +16,7 @@
  */
 
 export type Permission =
-  | "notes:read"
-  | "notes:write"
-  | "ui"
-  | "google:calendar"
-  | `network:${string}`;
+  "notes:read" | "notes:write" | "ui" | "google:calendar" | `network:${string}`;
 
 export type SettingValue = string | number | boolean;
 
@@ -194,6 +190,8 @@ export interface Slots {
 export interface Events {
   /** The plugin has started. */
   "app.ready": { e: Record<string, never>; result: unknown };
+  /** The window came to the front, so what it shows may be out of date. */
+  "app.focus": { e: Record<string, never>; result: unknown };
   /** A note is about to open. Return `{ deny: reason }` to keep it closed. */
   "note.open": { e: { noteId: string }; result: { deny?: string } };
   /** The window saved a note. */

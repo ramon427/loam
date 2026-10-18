@@ -224,7 +224,10 @@ export const createPluginHost = ({
       const observe = (event: string, e: unknown) => {
         if (host.hooks(event)) void host.dispatch(event, e, () => null);
       };
+      const focused = () => observe("app.focus", {});
+      window.addEventListener("focus", focused);
       const stops = [
+        () => window.removeEventListener("focus", focused),
         onBridgeEvent("plugins.changed", () => void reload()),
         onNoteSaved((noteId) => observe("note.saved", { noteId })),
         onBridgeEvent("notes.changed", (change) =>

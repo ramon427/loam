@@ -59,7 +59,7 @@ export type CalendarGridEvent = {
 export type CalendarGridView = "day" | "3day" | "week" | "month";
 
 /** What the grid tells the plugin; each goes to the handler prop of the same name. */
-export type CalendarGridEmit = (
+type CalendarGridEmit = (
   name:
     | "onCreateRange"
     | "onMove"
