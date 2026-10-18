@@ -108,3 +108,23 @@ test("select all takes the line first, then the note, and never the window aroun
   await window.keyboard.press("ControlOrMeta+A");
   expect(await selectedText(window)).toBe("");
 });
+
+test("double- and triple-clicks right of a line's end keep to that line", async ({ loam }) => {
+  const { window } = loam;
+  await createThreeLineNote(window);
+  const second = await lineBox(window, 1);
+  // Well right of the line's text, on the paper.
+  const pastEnd = { x: second.x + 600, y: second.y + second.height / 2 };
+
+  await window.mouse.dblclick(pastEnd.x, pastEnd.y);
+  await expect.poll(() => selectedText(window)).toBe("first");
+
+  // Away and back, so the next presses count from one.
+  await click(window, second.x + 5, second.y + second.height / 2);
+  await window.waitForTimeout(600);
+  await window.mouse.click(pastEnd.x, pastEnd.y, { clickCount: 3 });
+  await expect.poll(() => selectedText(window)).toBe(LINES[1]);
+  await window.keyboard.type("Replaced");
+  await expect.poll(() => lineTexts(window)).toEqual([LINES[0], "Replaced", LINES[2]]);
+  await expectSaved(window, "Lines", "Replaced");
+});
