@@ -191,6 +191,20 @@ export class LoamApp {
       );
   }
 
+  /**
+   * Visits the addresses the app opens in the browser instead of opening one, following a
+   * redirect: Google's sign-in page answers at once with a redirect back to the app.
+   */
+  async visitBrowserLinks() {
+    await this.running!.app.evaluate(({ shell }) => {
+      shell.openExternal = async (url: string) => {
+        const first = await fetch(url, { redirect: "manual" });
+        const location = first.headers.get("location");
+        if (location) await fetch(location);
+      };
+    });
+  }
+
   /** Moves the main process's clock forward, for rules that wait on time. */
   async advanceClock(ms: number) {
     await this.running!.app.evaluate((_, offset) => {
