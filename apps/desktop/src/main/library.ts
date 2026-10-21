@@ -13,6 +13,7 @@ import { createMediaStore } from "./mediaStore";
 import { createTabFiles } from "./tabFiles";
 import { createNotesImporter } from "./import/sessions";
 import { openStorageAdapter } from "./storage";
+import type { SecretBox } from "./google/googleAccount";
 import { createSyncService, type SyncTiming } from "./sync";
 
 const BACKUP_CHECK_INTERVAL_MS = 60 * 60 * 1000;
@@ -47,6 +48,7 @@ export const openLibrary = async ({
   onNotesChange,
   onRestored,
   onLinkedFileChange,
+  secrets,
   syncTiming,
 }: {
   dataDirectory: string;
@@ -59,6 +61,8 @@ export const openLibrary = async ({
   onRestored: () => void;
   /** A file a tab links to, which the window watches, changed on disk. */
   onLinkedFileChange: (path: string) => void;
+  /** Seals the sync server's key. */
+  secrets: SecretBox;
   syncTiming?: SyncTiming;
 }) => {
   const inner = openStorageAdapter(dataDirectory);
@@ -82,6 +86,7 @@ export const openLibrary = async ({
     mediaDirectory: media.directory,
     onStatus: onSyncStatus,
     encryption: () => encryption.current(),
+    secrets,
     ...(syncTiming ? { timing: syncTiming } : {}),
   });
   const parts: LibraryParts = { inner, mediaDirectory: media.directory, store, backups, sync };

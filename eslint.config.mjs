@@ -56,6 +56,7 @@ export default tseslint.config(
       "**/release/**",
       "coverage/**",
       "tmp/**",
+      "**/.wrangler/**",
       // Built by examples/plugins/build.mjs.
       "examples/plugins/*/main.js",
     ],

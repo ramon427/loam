@@ -219,7 +219,12 @@ before every import or restore. A backup holds every collection except
 
 Sync (`apps/desktop/src/main/sync.ts` over `packages/storage/src/sync/`) goes
 through a folder that a cloud drive (Dropbox, iCloud Drive, OneDrive,
-Syncthing) keeps in step between computers. Loam never runs a server.
+Syncthing) keeps in step between computers, or through a sync server: a
+Cloudflare Worker over an R2 bucket that the user deploys to their own account
+(`apps/sync-server`). Loam never runs a server. Both are a `SyncStorage` that
+lists, reads, writes and removes files, so everything below works the same on
+either; the server answers an unchanged listing with 304, so looking for
+changes costs one small read.
 
 - A note's content, its place in the library and each folder sync as separate
   documents, so moving a note never conflicts with editing it.

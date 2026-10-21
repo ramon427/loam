@@ -15,6 +15,7 @@ import { SyncSettings } from "../SyncSettings";
 
 const OFF: BridgeSyncStatus = {
   folder: null,
+  server: null,
   state: "off",
   lastSyncedAt: null,
   error: null,
@@ -23,6 +24,7 @@ const OFF: BridgeSyncStatus = {
 };
 const ON: BridgeSyncStatus = {
   folder: "/home/me/Dropbox/Notes",
+  server: null,
   state: "synced",
   lastSyncedAt: Date.UTC(2026, 9, 11, 9),
   error: null,
@@ -75,6 +77,19 @@ describe("SyncSettings", () => {
       pushStatus({ ...ON, state: "error", error: "Can't reach the sync folder (EACCES)." }),
     );
     expect((await screen.findByRole("alert")).textContent).toContain("Can't reach the sync folder");
+  });
+
+  it("starts syncing through a sync server with its code", async () => {
+    const code = `https://loam-sync.me.workers.dev/#${"k".repeat(43)}`;
+    const { invoke } = renderSync(OFF, {
+      "sync.useServer": () => ({ ...ON, folder: null, server: "loam-sync.me.workers.dev" }),
+    });
+    fireEvent.change(await screen.findByLabelText("Sync code"), { target: { value: code } });
+    fireEvent.click(screen.getByRole("button", { name: /Connect/ }));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("sync.useServer", { code }));
+    expect(await screen.findByText("loam-sync.me.workers.dev")).toBeTruthy();
+    expect(screen.getByText("Not used")).toBeTruthy();
+    expect((screen.getByLabelText("Sync code") as HTMLInputElement).value).toBe("");
   });
 
   it("syncs now and turns sync off", async () => {

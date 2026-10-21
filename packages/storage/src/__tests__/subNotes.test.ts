@@ -8,6 +8,7 @@ import type { NotesBootstrap } from "@loam/shared/notes/noteModel";
 import { createMemoryStorageAdapter } from "../adapters/memoryAdapter";
 import type { NotesStore } from "../NotesStore";
 import { SyncFolder, syncWithFolder } from "../sync/syncFolder";
+import { folderStorage } from "../sync/syncStorage";
 import { createNote, createTestStore, folderId, noteId, projectId } from "../testing/storeFixtures";
 import { createTempDirectories } from "../testing/tempDirectories";
 
@@ -151,7 +152,7 @@ describe("sub-notes through sync", () => {
 
   const createDevice = async () => {
     const store = await createTestStore();
-    const syncFolder = new SyncFolder(folder, await store.readSyncDevice());
+    const syncFolder = new SyncFolder(folderStorage(folder), await store.readSyncDevice());
     return { store, sync: () => syncWithFolder(store, syncFolder) };
   };
   const syncAll = async (...devices: Array<{ sync: () => Promise<unknown> }>) => {

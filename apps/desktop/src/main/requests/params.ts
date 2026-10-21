@@ -275,6 +275,7 @@ export const BRIDGE_PARAMS: { [M in LoamBridgeMethod]: z.ZodType<LoamBridgeParam
   "backups.openFolder": noParams,
   "sync.status": noParams,
   "sync.chooseFolder": noParams,
+  "sync.useServer": z.strictObject({ code: z.string().min(1).max(2048) }),
   "sync.now": noParams,
   "sync.turnOff": noParams,
   "sync.unlockFolder": z.strictObject({ secret: secretSchema }),

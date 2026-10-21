@@ -1,0 +1,9 @@
+# Deployed by scripts/deploy.mjs, which also creates the bucket and the SYNC_KEY secret.
+name = "loam-sync"
+main = "src/worker.ts"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "loam-sync"

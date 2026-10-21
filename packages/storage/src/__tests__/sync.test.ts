@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createMemoryStorageAdapter } from "../adapters/memoryAdapter";
 import type { NotesStore } from "../NotesStore";
 import { SyncFolder, syncWithFolder } from "../sync/syncFolder";
+import { folderStorage } from "../sync/syncStorage";
 import {
   bodyPatch,
   createClock,
@@ -40,7 +41,7 @@ const createDevice = async (
   clock = createClock(),
 ): Promise<Device> => {
   const store = await createTestStore(adapter, clock);
-  const syncFolder = new SyncFolder(folder, await store.readSyncDevice());
+  const syncFolder = new SyncFolder(folderStorage(folder), await store.readSyncDevice());
   return { store, sync: () => syncWithFolder(store, syncFolder) };
 };
 

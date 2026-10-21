@@ -39,6 +39,14 @@ every file in it as untrusted: a change is checked like any other save, and
 only image files with Loam's random names are copied in. Without encryption,
 anyone who can read that folder can read your notes.
 
+A sync server (`apps/sync-server`) runs in your own Cloudflare account and only
+stores files, in an R2 bucket. Loam reaches it over HTTPS with the key in the
+sync code, which it keeps sealed by the operating system's keychain in
+`sync.json`, outside notes, backups and sync. The server refuses requests
+without the key and paths outside its files. Its files are as untrusted as a
+sync folder's, and without encryption anyone who holds the sync code or can
+read the bucket can read your notes.
+
 An import reads only what you pick in the system's file dialog, or what you
 drop on Settings › Import & export and then confirm in a system dialog the
 window can't answer for you.

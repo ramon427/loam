@@ -273,6 +273,7 @@ export const createHandlers = (app: AppServices): Handlers => {
       if (!folder) return { status: "canceled" };
       return { status: "chosen", sync: await sync.useFolder(folder) };
     },
+    "sync.useServer": async ({ code }) => library().sync.useServer(code),
     "sync.now": async () => library().sync.syncNow(),
     "sync.turnOff": async () => library().sync.turnOff(),
     "sync.unlockFolder": async ({ secret }) => app.gate.unlockSyncFolder(secret),

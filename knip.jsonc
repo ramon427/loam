@@ -17,6 +17,10 @@
       ],
       "project": ["src/**/*.{ts,tsx}", "scripts/*.mjs"],
     },
+    "apps/sync-server": {
+      "entry": ["src/worker.ts", "scripts/*.mjs"],
+      "project": ["src/**/*.ts", "scripts/*.mjs"],
+    },
     "packages/*": {
       "project": ["src/**/*.{ts,tsx}"],
     },

@@ -1,4 +1,4 @@
-import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,7 +8,10 @@ import type { NotesStore, StoreChange } from "@loam/storage/NotesStore";
 import { createNote, createTestStore, noteId } from "@loam/storage/testing/storeFixtures";
 import { createTempDirectories } from "@loam/storage/testing/tempDirectories";
 
+import { createMemoryBucket } from "../../../../sync-server/src/testing/memoryBucket";
+import { handleRequest } from "../../../../sync-server/src/worker";
 import { createSyncService, type SyncService, type SyncTiming } from "../sync";
+import { fakeSecrets } from "./fakeSecrets";
 
 const TIMING: SyncTiming = {
   afterChangeMs: 20,
@@ -28,11 +31,29 @@ beforeEach(async () => {
   root = tempDirectory();
   shared = join(root, "Dropbox");
   await mkdir(shared);
+  server = startServer();
 });
 
 afterEach(async () => {
   for (const service of services.splice(0)) await service.turnOff();
 });
+
+const SERVER_KEY = "loam-sync-key-".repeat(4);
+const SYNC_CODE = `https://loam-sync.example.workers.dev/#${SERVER_KEY}`;
+
+/** A sync server in memory; `down` makes it unreachable. */
+const startServer = () => {
+  const { bucket } = createMemoryBucket();
+  const server = {
+    down: false,
+    fetch: (async (input, init) => {
+      if (server.down) throw new TypeError("fetch failed");
+      return handleRequest(new Request(input, init), { BUCKET: bucket, SYNC_KEY: SERVER_KEY });
+    }) as typeof fetch,
+  };
+  return server;
+};
+let server: ReturnType<typeof startServer>;
 
 const startDevice = async (name: string) => {
   const dataDirectory = join(root, name);
@@ -49,6 +70,8 @@ const startDevice = async (name: string) => {
       dataDirectory,
       mediaDirectory,
       onStatus: (status) => statuses.push(status),
+      secrets: fakeSecrets,
+      fetchImpl: server.fetch,
       timing: TIMING,
     });
     services.push(service);
@@ -140,6 +163,56 @@ describe("sync service", () => {
     const one = await startDevice("one");
     await expect(one.service.useFolder(join(one.dataDirectory, "sync"))).rejects.toThrow(
       "outside Loam' own data folder",
+    );
+  });
+
+  it("syncs notes and images between two computers through a sync server", async () => {
+    const one = await startDevice("one");
+    const two = await startDevice("two");
+    await createNote(one.store, noteId(1), { title: "Written on one" });
+    await writeFile(join(one.mediaDirectory, IMAGE), "png bytes");
+
+    expect(await one.service.useServer(SYNC_CODE)).toMatchObject({
+      folder: null,
+      server: "loam-sync.example.workers.dev",
+      state: "synced",
+      unpublished: 0,
+    });
+    await two.service.useServer(SYNC_CODE);
+
+    expect(await titles(two.store)).toEqual(["Written on one"]);
+    expect(await readdir(two.mediaDirectory)).toEqual([IMAGE]);
+    // The key is kept sealed, and the server is used again after a restart.
+    expect(await readFile(join(one.dataDirectory, "sync.json"), "utf8")).not.toContain(SERVER_KEY);
+    expect((await (await one.restart()).status()).server).toBe("loam-sync.example.workers.dev");
+  });
+
+  it("refuses a code that isn't one, or that the server doesn't accept", async () => {
+    const one = await startDevice("one");
+    await expect(one.service.useServer("https://example.com")).rejects.toThrow(
+      "That isn't a sync code",
+    );
+    await expect(
+      one.service.useServer(`https://loam-sync.example.workers.dev/#${"w".repeat(43)}`),
+    ).rejects.toThrow("didn't accept this computer's sync code");
+    expect((await one.service.status()).state).toBe("off");
+  });
+
+  it("keeps changes while the sync server can't be reached and sends them once it is back", async () => {
+    const one = await startDevice("one");
+    await one.service.useServer(SYNC_CODE);
+    server.down = true;
+    await createNote(one.store, noteId(3), { title: "Waits" });
+    await vi.waitFor(async () => expect((await one.service.status()).state).toBe("error"), {
+      timeout: 2000,
+    });
+    expect((await one.service.status()).error).toContain("Can't reach the sync server");
+
+    server.down = false;
+    await vi.waitFor(
+      async () =>
+        expect(await one.service.status()).toMatchObject({ state: "synced", unpublished: 0 }),
+      { timeout: 2000 },
     );
   });
 

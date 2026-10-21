@@ -19,7 +19,8 @@ study, all on your machine. No account, no server.
 - **Safe by default**: version history, daily backups, and saves that survive
   a crash.
 - **Sync** through a folder Dropbox, iCloud Drive, OneDrive or Syncthing already
-  syncs. No Loam server involved.
+  syncs, or through [your own sync server](apps/sync-server/README.md) on
+  Cloudflare's free tier. No Loam server involved.
 - **Optional encryption** with a passphrase and a recovery key.
 - **[Side chat](docs/side-chat.md)**: an optional AI assistant (bring your own Anthropic, OpenAI or
   local model, or the Claude Code or Codex CLI). Off by default.

@@ -1,5 +1,3 @@
-import { join } from "node:path";
-
 import type { StorageAdapter } from "@loam/storage/adapter";
 import { convertStoredRecords, withEncryption } from "@loam/storage/encryption/encryptedAdapter";
 import type { KeyLocks } from "@loam/storage/encryption/keyLocks";
@@ -8,7 +6,7 @@ import type { NotesStore } from "@loam/storage/NotesStore";
 import { StoreError } from "@loam/storage/storeError";
 
 import type { BackupManager } from "../backups/backups";
-import { convertMediaFolder, type MediaKeys } from "../mediaStore";
+import { convertMediaFolder, mediaConverter, type MediaKeys } from "../mediaStore";
 import type { SyncService } from "../sync";
 
 /** The key notes are sealed with and its locks, as backups and sync need them. */
@@ -84,7 +82,7 @@ export const convertCopies = async (
   if (syncFolder && to) {
     try {
       await syncFolder.resealOwnFiles(previous, to);
-      await convertMediaFolder(join(syncFolder.root, "media"), mediaKeys);
+      await syncFolder.convertMedia(mediaConverter(mediaKeys));
     } catch (error) {
       console.error("Could not reseal the sync folder; publishing everything again", error);
       // The next sync publishes every note again, sealed with the new key.
