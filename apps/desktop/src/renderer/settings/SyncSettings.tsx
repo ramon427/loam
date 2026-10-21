@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { FolderOpenIcon, LockIcon, RefreshCwIcon } from "lucide-react";
+import { CloudIcon, FolderOpenIcon, LockIcon, RefreshCwIcon } from "lucide-react";
 
 import { saveAllNoteEditsOrThrow } from "../workspace/saveAllNoteEdits";
 import { callBridge } from "../bridge";
 import type { BridgeSyncStatus } from "@loam/shared/bridge/loamBridge";
 import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";
 import { Notice } from "../ui/Notice";
 import { toastError } from "../ui/toast";
 
@@ -25,7 +26,7 @@ const describeState = (sync: BridgeSyncStatus) => {
 const showError = (title: string) => (error: unknown) =>
   toastError(title, { description: errorMessage(error) });
 
-/** Sync through a folder a cloud drive keeps in step across computers. */
+/** Sync through a folder a cloud drive keeps in step across computers, or a sync server. */
 export function SyncSettings() {
   const queryClient = useQueryClient();
   const status = useSyncStatus();
@@ -41,6 +42,18 @@ export function SyncSettings() {
     mutationFn: () => callBridge("sync.now", {}),
     onSuccess: setStatus,
     onError: showError("Sync failed"),
+  });
+  const [code, setCode] = useState("");
+  const connect = useMutation({
+    mutationFn: async () => {
+      await saveAllNoteEditsOrThrow();
+      return callBridge("sync.useServer", { code });
+    },
+    onSuccess: (next) => {
+      setCode("");
+      setStatus(next);
+    },
+    onError: showError("Sync not started"),
   });
   const turnOff = useMutation({
     mutationFn: () => callBridge("sync.turnOff", {}),
@@ -59,17 +72,22 @@ export function SyncSettings() {
       void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.securityStatus });
     },
   });
-  const busy = choose.isPending || turnOff.isPending || unlock.isPending;
+  const busy = choose.isPending || connect.isPending || turnOff.isPending || unlock.isPending;
   useSettingsBusy(busy);
 
   const sync = status.data;
+  const isOn = Boolean(sync?.folder || sync?.server);
+  const submitCode = (event: FormEvent) => {
+    event.preventDefault();
+    if (code.trim() && !busy) connect.mutate();
+  };
   const submitSecret = (event: FormEvent) => {
     event.preventDefault();
     if (secret && !busy) unlock.mutate();
   };
 
   return (
-    <SettingsSection description="Keep your notes the same on all your computers by syncing through a folder that Dropbox, iCloud Drive, OneDrive or Syncthing already syncs. Pick a folder in it on each computer. Your notes never go through an Loam server.">
+    <SettingsSection description="Keep your notes the same on all your computers: sync through a folder that Dropbox, iCloud Drive, OneDrive or Syncthing already syncs, or through your own sync server with its sync code. Your notes never go through an Loam server.">
       {status.isError ? (
         <SettingsNotice tone="danger">Could not read the sync settings.</SettingsNotice>
       ) : null}
@@ -104,6 +122,8 @@ export function SyncSettings() {
             <code className={styles.path} data-testid="settings-sync-folder">
               {sync.folder}
             </code>
+          ) : sync?.server ? (
+            "Not used"
           ) : sync ? (
             "Off"
           ) : (
@@ -122,7 +142,38 @@ export function SyncSettings() {
           </Button>
         }
       />
-      {sync?.folder ? (
+      <SettingsRow
+        title="Sync server"
+        description={
+          sync?.server ? (
+            <code className={styles.path} data-testid="settings-sync-server">
+              {sync.server}
+            </code>
+          ) : (
+            "Paste the sync code of your sync server, the same on each computer."
+          )
+        }
+        control={
+          <form className="flex items-center gap-1.5" onSubmit={submitCode}>
+            <Input
+              type="password"
+              className="w-48"
+              aria-label="Sync code"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={sync?.server ? "Paste to replace" : "Sync code"}
+              value={code}
+              disabled={!sync || busy}
+              onChange={(event) => setCode(event.target.value)}
+            />
+            <Button type="submit" variant="outline" size="sm" disabled={!code.trim() || busy}>
+              <CloudIcon className="size-4" aria-hidden="true" />
+              {connect.isPending ? "Connecting…" : "Connect"}
+            </Button>
+          </form>
+        }
+      />
+      {sync && isOn ? (
         <>
           <SettingsRow
             title="Status"
@@ -148,7 +199,7 @@ export function SyncSettings() {
           />
           <SettingsRow
             title="Turn off"
-            description="Notes stay on this computer and in the sync folder."
+            description={`Notes stay on this computer and ${sync.server ? "on the sync server" : "in the sync folder"}.`}
             control={
               <Button variant="ghost" size="sm" disabled={busy} onClick={() => turnOff.mutate()}>
                 Turn off sync

@@ -244,11 +244,17 @@ export const BRIDGE_TOOLS: { [M in LoamBridgeMethod]: BridgeTool<M> } = {
   "backups.restoreFile": false,
   "backups.openFolder": { description: "Open the backup folder in the system file manager." },
   "sync.status": {
-    description: "Read the sync folder, state, unpublished changes and encryption requirements.",
+    description:
+      "Read the sync folder or server, state, unpublished changes and encryption requirements.",
     readOnly: true,
   },
   // Asks for a folder; AI clients name it in sync_choose_folder.
   "sync.chooseFolder": false,
+  "sync.useServer": {
+    description:
+      "Sync through a Loam sync server: pass its sync code (https://…#key). The server is checked before it is used.",
+    flushFirst: true,
+  },
   "sync.now": {
     description: "Publish local edits and receive remote changes now.",
     flushFirst: true,

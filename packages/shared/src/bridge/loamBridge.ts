@@ -146,9 +146,11 @@ export type BridgeBackupList = {
 /** After a restore the app restarts on its own. */
 type BridgeBackupRestore = { createdAt: number };
 
-/** Where sync stands. `folder` is null while sync is off. */
+/** Where sync stands. Sync is off while both `folder` and `server` are null. */
 export type BridgeSyncStatus = {
   folder: string | null;
+  /** The sync server's host name, while syncing through one. */
+  server: string | null;
   state: "off" | "syncing" | "synced" | "error";
   lastSyncedAt: number | null;
   /** Why the last sync failed; it is retried on its own. */
@@ -457,6 +459,8 @@ type LoamBridgeRequests = {
     NoParams,
     { status: "canceled" } | { status: "chosen"; sync: BridgeSyncStatus }
   >;
+  /** Syncs through the sync server a sync code names, once it answers. */
+  "sync.useServer": Request<{ code: string }, BridgeSyncStatus>;
   /** Syncs now instead of at the next scheduled time. */
   "sync.now": Request<NoParams, BridgeSyncStatus>;
   /** Stops syncing. Notes stay on this computer and in the sync folder. */
@@ -578,6 +582,7 @@ const METHODS: Record<LoamBridgeMethod, true> = {
   "backups.openFolder": true,
   "sync.status": true,
   "sync.chooseFolder": true,
+  "sync.useServer": true,
   "sync.now": true,
   "sync.turnOff": true,
   "sync.unlockFolder": true,

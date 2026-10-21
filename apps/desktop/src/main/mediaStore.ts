@@ -11,6 +11,8 @@ import {
 import { readIfExists, writeFileAtomic } from "@loam/storage/files";
 import { StoreError } from "@loam/storage/storeError";
 import { openFile, sealedFileKeyId, sealFile, type DataKey } from "@loam/storage/encryption/seal";
+import type { SyncFolder } from "@loam/storage/sync/syncFolder";
+import { forEachConcurrently } from "@loam/shared/utils/concurrency";
 
 import { MIME_TYPES } from "./rendererProtocol";
 
@@ -185,6 +187,34 @@ export const copyMissingMedia = async (
     copied += 1;
   }
   return copied;
+};
+
+/**
+ * Shares the images this library has and sync lacks, and keeps the ones sync
+ * has and this library lacks, stored the way `convert` says. Names are unique,
+ * so an image is never replaced.
+ */
+export const exchangeMedia = async (
+  directory: string,
+  shared: SyncFolder,
+  convert?: (name: string, bytes: Buffer) => Uint8Array,
+) => {
+  const here = await listMedia(directory);
+  const there = await shared.listMedia();
+  const hereNames = new Set(here);
+  const thereNames = new Set(there);
+  const missingThere = here.filter((name) => !thereNames.has(name));
+  const missingHere = there.filter((name) => !hereNames.has(name));
+  await forEachConcurrently(missingThere, 4, async (name) =>
+    shared.writeMedia(name, await readFile(join(directory, name))),
+  );
+  if (missingHere.length > 0) await mkdir(directory, { recursive: true });
+  await forEachConcurrently(missingHere, 4, async (name) => {
+    const stored = await shared.readMedia(name);
+    if (!stored) return;
+    const bytes = Buffer.from(stored.buffer, stored.byteOffset, stored.byteLength);
+    await writeFileAtomic(join(directory, name), convert ? convert(name, bytes) : bytes);
+  });
 };
 
 /**

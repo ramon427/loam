@@ -1,23 +1,25 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
-import { basename, join } from "node:path";
 
 import { readKeyLocks, type KeyLocks } from "../encryption/keyLocks";
 import { isSealedValue, openValue, sealValue, type DataKey } from "../encryption/seal";
+import { isStoredMediaName } from "@loam/shared/notes/mediaFiles";
 import type { NotesChange } from "@loam/shared/notes/noteModel";
+import { forEachConcurrently } from "@loam/shared/utils/concurrency";
 
-import { readIfExists, writeFileAtomic } from "../files";
 import type { NotesStore } from "../NotesStore";
 import { CLOCK_PATTERN, DEVICE_ID_PATTERN } from "./clock";
 import { readSyncChange, type SyncChange, type SyncChangeRef, type SyncDocKey } from "./syncDocs";
+import type { SyncStorage } from "./syncStorage";
 
 /**
- * Sync through a folder a cloud drive (Dropbox, iCloud Drive, OneDrive,
- * Syncthing…) keeps in step across computers. No Loam server is involved.
+ * Sync through files every computer can reach: a folder a cloud drive
+ * (Dropbox, iCloud Drive, OneDrive, Syncthing…) keeps in step, or a sync
+ * server that only stores files (see `SyncStorage`).
  *
- *   <folder>/Loam Sync/v1/library.json         which library this is
- *   <folder>/Loam Sync/v1/devices/<device>/    one folder per device
- *     <kind>-<id>~<clock>.json                     its latest version of a document
+ *   library.json                 which library this is
+ *   devices/<device>/            one folder per device
+ *     <kind>-<id>~<clock>.json       its latest version of a document
+ *   media/<name>                 every image and file the notes show
  *
  * Each device writes only inside its own folder, so a cloud drive never sees
  * two computers edit one file. A document's file is replaced when it changes,
@@ -30,7 +32,6 @@ import { readSyncChange, type SyncChange, type SyncChangeRef, type SyncDocKey } 
  * File names (document ids and clocks) stay readable.
  */
 
-const ROOT = join("Loam Sync", "v1");
 const LIBRARY_FILE = "library.json";
 /** 2: the library is encrypted. Older versions refuse it rather than read it wrong. */
 const LIBRARY_FORMAT = { plain: 1, encrypted: 2 };
@@ -40,12 +41,19 @@ const FILE_PATTERN = new RegExp(
 );
 /** Larger files are not Loam changes; reading them could exhaust memory. */
 const MAX_CHANGE_BYTES = 64 * 1024 * 1024;
+const MAX_LIBRARY_BYTES = 1024 * 1024;
+/** Images and files a note shows; larger ones stay where they are. */
+const MAX_MEDIA_BYTES = 1024 * 1024 * 1024;
+/** Files read or written at once: a sync server answers each request over the network. */
+const CONCURRENCY = 8;
 /** Changes read and applied per step, so memory stays flat on a first sync. */
 const READ_BATCH = 200;
 /** Changes published per step. */
 const PUBLISH_BATCH = 200;
 
 type ChangeFile = SyncChangeRef & { path: string };
+
+const decoder = new TextDecoder();
 
 const fileName = ({ key, clock }: SyncChangeRef) => `${key.replace(":", "-")}~${clock}.json`;
 
@@ -58,7 +66,7 @@ const parseFileName = (name: string): SyncChangeRef | null => {
   return { key: `${match[1]}:${match[2]}` as SyncDocKey, clock: match[3]! };
 };
 
-const readDirectory = async (path: string) => (await readIfExists(readdir(path))) ?? [];
+const baseName = (path: string) => path.slice(path.lastIndexOf("/") + 1);
 
 export class SyncFolderError extends Error {}
 
@@ -73,31 +81,36 @@ export type SyncEncryption = { key: DataKey; locks: KeyLocks } | null;
 
 type LibraryFile = { format: number; libraryId: string; encryption?: KeyLocks };
 
-/** One library in a sync folder, as one device sees it. */
+/** One library in a sync folder or on a sync server, as one device sees it. */
 export class SyncFolder {
-  readonly root: string;
   /** This device's file for each document, so a new version replaces the old. */
   private ownFiles: Map<SyncDocKey, string> | null = null;
 
   constructor(
-    folder: string,
+    private readonly storage: SyncStorage,
     private readonly device: string,
     private readonly encryption: SyncEncryption = null,
   ) {
     if (!DEVICE_ID_PATTERN.test(device)) throw new Error(`Invalid device id: ${device}`);
-    this.root = join(folder, ROOT);
   }
 
   private get deviceDirectory() {
-    return join(this.root, "devices", this.device);
+    return `devices/${this.device}/`;
+  }
+
+  /** The names of this device's files. */
+  private async listOwnFiles() {
+    return (await this.storage.list(this.deviceDirectory)).map((path) =>
+      path.slice(this.deviceDirectory.length),
+    );
   }
 
   private async readLibrary(): Promise<LibraryFile | null> {
-    const text = await readIfExists(readFile(join(this.root, LIBRARY_FILE), "utf8"));
-    if (text === null) return null;
+    const bytes = await this.storage.read(LIBRARY_FILE, MAX_LIBRARY_BYTES);
+    if (bytes === null) return null;
     let library: Record<string, unknown>;
     try {
-      library = JSON.parse(text);
+      library = JSON.parse(decoder.decode(bytes));
     } catch (error) {
       throw new SyncFolderError("The sync folder's library.json is damaged.", { cause: error });
     }
@@ -118,8 +131,7 @@ export class SyncFolder {
     const library: LibraryFile = locks
       ? { format: LIBRARY_FORMAT.encrypted, libraryId, encryption: locks }
       : { format: LIBRARY_FORMAT.plain, libraryId };
-    await mkdir(this.root, { recursive: true });
-    await writeFileAtomic(join(this.root, LIBRARY_FILE), JSON.stringify(library, null, 2));
+    await this.storage.write(LIBRARY_FILE, JSON.stringify(library, null, 2));
   }
 
   /** The key locks of the library in the folder, when it is encrypted. */
@@ -142,7 +154,6 @@ export class SyncFolder {
           ? "The notes in this sync folder are encrypted with a different passphrase. Enter it to keep syncing."
           : "The notes in this sync folder are encrypted. Enter their passphrase to sync.",
       );
-    await mkdir(this.deviceDirectory, { recursive: true });
     if (library && (library.encryption || !encryption)) return { libraryId: library.libraryId };
     const libraryId = library?.libraryId ?? randomUUID();
     await this.writeLibrary(libraryId, encryption?.locks ?? null);
@@ -173,38 +184,42 @@ export class SyncFolder {
         "The notes in this sync folder are encrypted with a different passphrase.",
       );
     await this.writeLibrary(library?.libraryId ?? randomUUID(), to.locks);
-    for (const name of await readDirectory(this.deviceDirectory)) {
-      if (!parseFileName(name)) continue;
-      const path = join(this.deviceDirectory, name);
+    const names = (await this.listOwnFiles()).filter((name) => parseFileName(name));
+    await forEachConcurrently(names, CONCURRENCY, async (name) => {
+      const path = this.deviceDirectory + name;
       let stored: unknown;
       try {
-        stored = JSON.parse(await readFile(path, "utf8"));
+        const bytes = await this.storage.read(path, MAX_CHANGE_BYTES);
+        if (!bytes) return;
+        stored = JSON.parse(decoder.decode(bytes));
       } catch {
-        continue;
+        return;
       }
-      if (isSealedValue(stored) && stored.loamSealed === to.key.id) continue;
+      if (isSealedValue(stored) && stored.loamSealed === to.key.id) return;
       let change = stored;
       try {
         if (isSealedValue(stored)) change = openValue([from], stored, changeContext(name));
       } catch {
         // Sealed with a key long gone: nobody can read it, and the next change replaces it.
-        continue;
+        return;
       }
-      await writeFileAtomic(path, JSON.stringify(sealValue(to.key, change, changeContext(name))));
-    }
+      await this.storage.write(
+        path,
+        JSON.stringify(sealValue(to.key, change, changeContext(name))),
+      );
+    });
   }
 
   /** Every change file other devices have published. */
   async listChanges(): Promise<ChangeFile[]> {
     const files: ChangeFile[] = [];
-    for (const device of await readDirectory(join(this.root, "devices"))) {
+    for (const path of await this.storage.list("devices/")) {
+      const [, device, name, ...rest] = path.split("/");
+      if (!device || !name || rest.length > 0) continue;
       if (device === this.device || !DEVICE_ID_PATTERN.test(device)) continue;
-      const directory = join(this.root, "devices", device);
-      for (const name of await readDirectory(directory)) {
-        const ref = parseFileName(name);
-        // A file must hold a change by the device whose folder it is in.
-        if (ref && ref.clock.endsWith(device)) files.push({ ...ref, path: join(directory, name) });
-      }
+      const ref = parseFileName(name);
+      // A file must hold a change by the device whose folder it is in.
+      if (ref && ref.clock.endsWith(device)) files.push({ ...ref, path });
     }
     return files;
   }
@@ -212,49 +227,81 @@ export class SyncFolder {
   /** A change file's change, or null while it is missing, incomplete or invalid. */
   async readChange(file: ChangeFile): Promise<SyncChange | null> {
     try {
-      if ((await stat(file.path)).size > MAX_CHANGE_BYTES) return null;
-      const stored: unknown = JSON.parse(await readFile(file.path, "utf8"));
+      const bytes = await this.storage.read(file.path, MAX_CHANGE_BYTES);
+      if (!bytes) return null;
+      const stored: unknown = JSON.parse(decoder.decode(bytes));
       // An encrypted library takes only changes sealed with its key, a plain one only plain ones.
       const key = this.encryption?.key ?? null;
       if (isSealedValue(stored) !== Boolean(key)) return null;
       const change = isSealedValue(stored)
-        ? openValue([key], stored, changeContext(basename(file.path)))
+        ? openValue([key], stored, changeContext(baseName(file.path)))
         : stored;
       return readSyncChange(change, file);
-    } catch {
+    } catch (error) {
+      // A sync server that can't be reached fails the sync; it is retried as a whole.
+      if (error instanceof SyncFolderError) throw error;
       return null;
     }
   }
 
   async publish(changes: readonly SyncChange[]) {
     const ownFiles = await this.readOwnFiles();
-    for (const change of changes) {
+    // Each document appears once, so its new file and the removal of its old one never race.
+    await forEachConcurrently(changes, CONCURRENCY, async (change) => {
       const name = fileName(change);
       const stored = this.encryption
         ? sealValue(this.encryption.key, change, changeContext(name))
         : change;
-      await writeFileAtomic(join(this.deviceDirectory, name), JSON.stringify(stored));
+      await this.storage.write(this.deviceDirectory + name, JSON.stringify(stored));
       const previous = ownFiles.get(change.key);
-      if (previous && previous !== name)
-        await rm(join(this.deviceDirectory, previous), { force: true });
       ownFiles.set(change.key, name);
-    }
+      if (previous && previous !== name) await this.storage.remove(this.deviceDirectory + previous);
+    });
+  }
+
+  /** The names of the images and files shared through sync. */
+  async listMedia(): Promise<string[]> {
+    return (await this.storage.list("media/"))
+      .map((path) => path.slice("media/".length))
+      .filter((name) => isStoredMediaName(name));
+  }
+
+  /** A shared image's bytes, or null when it is missing or too large. */
+  readMedia(name: string) {
+    return this.storage.read(`media/${name}`, MAX_MEDIA_BYTES);
+  }
+
+  /** Shares an image; one too large for the sync server stays on its computer. */
+  async writeMedia(name: string, bytes: Uint8Array) {
+    if (bytes.byteLength > this.storage.maxFileBytes) return;
+    await this.storage.write(`media/${name}`, bytes);
+  }
+
+  /** Re-stores every shared image the way `convert` says; ones it returns unchanged are skipped. */
+  async convertMedia(convert: (name: string, bytes: Buffer) => Uint8Array) {
+    await forEachConcurrently(await this.listMedia(), CONCURRENCY, async (name) => {
+      const stored = await this.readMedia(name);
+      if (!stored) return;
+      const bytes = Buffer.from(stored.buffer, stored.byteOffset, stored.byteLength);
+      const next = convert(name, bytes);
+      if (next !== bytes) await this.writeMedia(name, next);
+    });
   }
 
   private async readOwnFiles() {
     if (!this.ownFiles) {
       this.ownFiles = new Map();
-      for (const name of await readDirectory(this.deviceDirectory)) {
+      for (const name of await this.listOwnFiles()) {
         const ref = parseFileName(name);
         if (!ref) continue;
         // Keep the newest file per document; remove older ones left by an interrupted publish.
         const kept = this.ownFiles.get(ref.key);
         const keptRef = kept ? parseFileName(kept) : null;
         if (keptRef && keptRef.clock > ref.clock) {
-          await rm(join(this.deviceDirectory, name), { force: true });
+          await this.storage.remove(this.deviceDirectory + name);
           continue;
         }
-        if (kept) await rm(join(this.deviceDirectory, kept), { force: true });
+        if (kept) await this.storage.remove(this.deviceDirectory + kept);
         this.ownFiles.set(ref.key, name);
       }
     }
@@ -289,12 +336,14 @@ export async function syncWithFolder(store: NotesStore, folder: SyncFolder) {
   // Oldest first, so a device's changes apply in the order it made them.
   missing.sort((left, right) => (left.clock < right.clock ? -1 : 1));
   for (let start = 0; start < missing.length; start += READ_BATCH) {
-    const changes: SyncChange[] = [];
-    for (const file of missing.slice(start, start + READ_BATCH)) {
-      const change = await folder.readChange(file);
-      if (change) changes.push(change);
-      else result.unreadable += 1;
-    }
+    const batch = missing.slice(start, start + READ_BATCH);
+    const read = new Array<SyncChange | null>(batch.length);
+    await forEachConcurrently([...batch.keys()], CONCURRENCY, async (index) => {
+      read[index] = await folder.readChange(batch[index]!);
+    });
+    // Applied in clock order, whatever order the reads finished in.
+    const changes = read.filter((change): change is SyncChange => change !== null);
+    result.unreadable += read.length - changes.length;
     const applied = await store.applyRemoteChanges(changes);
     result.changedNoteIds.push(...applied.changedNoteIds);
     result.deletedNoteIds.push(...applied.deletedNoteIds);

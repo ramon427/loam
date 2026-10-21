@@ -148,6 +148,7 @@ const start = async () => {
           onSyncStatus: (status) => mainWindow.send("sync.status", status),
           onNotesChange: (change) => mainWindow.send("notes.changed", change),
           onLinkedFileChange: (path) => mainWindow.send("files.changed", { path }),
+          secrets: createSecretBox({ plainText: plainTextKeys }),
           onRestored: () => {
             setTimeout(() => void restartAfterRestore(), RESTART_DELAY_MS);
           },

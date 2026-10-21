@@ -14,6 +14,7 @@ import {
   syncWithFolder,
   type SyncEncryption,
 } from "../sync/syncFolder";
+import { folderStorage } from "../sync/syncStorage";
 import { createNote, createTestStore, noteId } from "../testing/storeFixtures";
 import { createTempDirectories } from "../testing/tempDirectories";
 
@@ -52,7 +53,7 @@ const createDevice = async (keys: SyncEncryption = null): Promise<Device> => {
     store,
     inner,
     device,
-    sync: () => syncWithFolder(store, new SyncFolder(folder, device, keys)),
+    sync: () => syncWithFolder(store, new SyncFolder(folderStorage(folder), device, keys)),
   };
 };
 
@@ -75,8 +76,9 @@ const encryptDevice = async (device: Device, from: DataKey | null, to: typeof en
     await convertStoredRecords(device.inner, { from, to: to.key });
     return withEncryption(device.inner, to.key);
   });
-  await new SyncFolder(folder, device.device, to).resealOwnFiles(from, to);
-  device.sync = () => syncWithFolder(device.store, new SyncFolder(folder, device.device, to));
+  await new SyncFolder(folderStorage(folder), device.device, to).resealOwnFiles(from, to);
+  device.sync = () =>
+    syncWithFolder(device.store, new SyncFolder(folderStorage(folder), device.device, to));
 };
 
 describe("encrypted sync", () => {
@@ -112,7 +114,9 @@ describe("encrypted sync", () => {
     await expect(other.sync()).rejects.toThrow("different passphrase");
 
     // The folder's locks are what a device needs to unlock with its passphrase.
-    expect(await new SyncFolder(folder, plain.device).readLocks()).toEqual(encryption.locks);
+    expect(await new SyncFolder(folderStorage(folder), plain.device).readLocks()).toEqual(
+      encryption.locks,
+    );
     await encryptDevice(plain, null, encryption);
     await plain.sync();
     await one.sync();

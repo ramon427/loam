@@ -7,6 +7,7 @@ import { NotesStore } from "@loam/storage/NotesStore";
 import { newNote } from "@loam/storage/testing/storeFixtures";
 import { createSqliteStorageAdapter } from "@loam/storage/adapters/sqliteAdapter";
 import { SyncFolder, syncWithFolder } from "@loam/storage/sync/syncFolder";
+import { folderStorage } from "@loam/storage/sync/syncStorage";
 
 import { createBackupManager } from "../apps/desktop/src/main/backups/backups";
 import { exportNotesAsMarkdown } from "../apps/desktop/src/main/markdownExport";
@@ -132,7 +133,10 @@ it(
       // second one with an empty library takes it all in.
       const syncFolder = join(directory, "sync");
       const firstSync = await timeOnce(async () =>
-        syncWithFolder(store, new SyncFolder(syncFolder, await store.readSyncDevice())),
+        syncWithFolder(
+          store,
+          new SyncFolder(folderStorage(syncFolder), await store.readSyncDevice()),
+        ),
       );
       rows.push({
         step: "First sync (publish the library)",
@@ -140,14 +144,20 @@ it(
       });
       const second = await openStore(join(directory, "second.sqlite"));
       const joined = await timeOnce(async () =>
-        syncWithFolder(second, new SyncFolder(syncFolder, await second.readSyncDevice())),
+        syncWithFolder(
+          second,
+          new SyncFolder(folderStorage(syncFolder), await second.readSyncDevice()),
+        ),
       );
       rows.push({
         step: "Second computer joins (takes it all in)",
         result: `${formatMs(joined.ms)} (${joined.value.changedNoteIds.length.toLocaleString("en")} notes)`,
       });
       const idle = await timeOnce(async () =>
-        syncWithFolder(second, new SyncFolder(syncFolder, await second.readSyncDevice())),
+        syncWithFolder(
+          second,
+          new SyncFolder(folderStorage(syncFolder), await second.readSyncDevice()),
+        ),
       );
       rows.push({ step: "Sync with nothing new", result: formatMs(idle.ms) });
       await second.close();

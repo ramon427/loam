@@ -19,6 +19,7 @@ import { createTempDirectories } from "@loam/storage/testing/tempDirectories";
 import { loadEncryption, type EncryptionManager } from "../encryption/encryption";
 import { openLibrary } from "../library";
 import { createMediaStore, mediaConverter } from "../mediaStore";
+import { fakeSecrets } from "./fakeSecrets";
 
 const SECRET = "Tangerine";
 const PASSPHRASE = "correct horse battery";
@@ -50,6 +51,7 @@ const openComputer = async (dataDirectory: string) => {
       onNotesChange: () => undefined,
       onRestored: () => undefined,
       onLinkedFileChange: () => undefined,
+      secrets: fakeSecrets,
       syncTiming: TIMING,
     });
     opened.push({ close: () => library.close() });
@@ -189,7 +191,7 @@ describe("encryption", () => {
     expect(computer.encryption.status()).toEqual({ state: "off" });
     expect(existsSync(join(data, "encryption.json"))).toBe(false);
     // Sync is turned off: the folder stays encrypted for the other computers.
-    expect(library.sync.folder()).toBeNull();
+    expect(library.sync.isOn()).toBe(false);
     expect(allBytes(shared).includes(SECRET)).toBe(false);
     expect(readFileSync(join(data, "media", image)).equals(PNG)).toBe(true);
     expect((await library.store.searchNotes(SECRET)).results).toHaveLength(1);

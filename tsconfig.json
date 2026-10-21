@@ -6,6 +6,7 @@
     "apps/desktop/src/renderer/**/*.ts",
     "apps/desktop/src/renderer/**/*.tsx",
     "apps/desktop/src/shared/**/*.ts",
+    "apps/sync-server/src/**/*.ts",
     "bench/**/*.ts",
     "e2e/**/*.ts",
     "*.config.ts",

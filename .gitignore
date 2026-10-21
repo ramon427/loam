@@ -15,6 +15,7 @@ tmp/
 *.db
 *.db-*
 .DS_Store
+.wrangler/
 
 # Local agent and editor state.
 .claude/

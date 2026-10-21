@@ -127,7 +127,7 @@ export const loadEncryption = async (dataDirectory: string) => {
     converting = true;
     try {
       const { sync, backups } = parts;
-      if (turnOffSync && sync.folder()) {
+      if (turnOffSync && sync.isOn()) {
         await sync.flush(10_000);
         await sync.turnOff();
       }
