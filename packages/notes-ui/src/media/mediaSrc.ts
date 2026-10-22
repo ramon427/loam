@@ -20,10 +20,12 @@ const isStoredMediaPath = (value: string) =>
 /**
  * The media-folder path behind an image reference. Notes store paths
  * (`<uuid>.png`), but imported and MCP-written notes may hold the full
- * `loam-media://images/<file>` URL, so both are accepted.
+ * `loam-media://images/<file>` URL, so both are accepted, as is the host's own form.
  */
 export const toMediaPath = (ref: string): string | null => {
   const trimmed = ref.trim();
+  const hosted = configuredNotesHost()?.mediaPath?.(trimmed);
+  if (hosted) return hosted;
   if (isLocalMediaImageUrl(trimmed)) return readLocalMediaImagePath(trimmed);
   return isStoredMediaPath(trimmed) ? trimmed : null;
 };

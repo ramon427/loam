@@ -34,6 +34,11 @@ export type NotesHost = {
   pathForFile?(file: File): string;
   /** The URL an `<img>` loads for a stored image path; Loam's own is `loam-media://images/<path>`. */
   mediaUrl?(path: string): string;
+  /**
+   * The stored image path behind a reference in this host's own form (its own URL scheme,
+   * say), or null for references it doesn't recognize. Paths it returns go to `mediaUrl`.
+   */
+  mediaPath?(reference: string): string | null;
   /** What this host can do; screens for what it can't are hidden. Everything is on by default. */
   capabilities?: Partial<NotesCapabilities>;
 };

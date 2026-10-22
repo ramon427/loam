@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
+import { configureNotesHost, configuredNotesHost } from "../../host/notesHost";
 import { mediaSrc, toMediaPath } from "../mediaSrc";
 
 describe("toMediaPath", () => {
@@ -45,5 +46,23 @@ describe("mediaSrc", () => {
     expect(mediaSrc("data:image/png;base64,AAAA")).toBeNull();
     expect(mediaSrc("blob:loam-app://renderer/123")).toBeNull();
     expect(mediaSrc("")).toBeNull();
+  });
+
+  describe("in a host with its own image addresses", () => {
+    const loamHost = configuredNotesHost();
+    afterEach(() => {
+      if (loamHost) configureNotesHost(loamHost);
+    });
+
+    it("reads them through the host", () => {
+      configureNotesHost({
+        ...loamHost!,
+        mediaPath: (ref) => (ref.startsWith("app-file://") ? ref : null),
+        mediaUrl: (path) => (path.startsWith("app-file://") ? path : `app-file://images/${path}`),
+      });
+      expect(mediaSrc("app-file://images/a.png")).toBe("app-file://images/a.png");
+      expect(mediaSrc("3f1c.png")).toBe("app-file://images/3f1c.png");
+      expect(mediaSrc("file:///etc/passwd")).toBeNull();
+    });
   });
 });
