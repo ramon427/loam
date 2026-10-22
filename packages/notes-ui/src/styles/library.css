@@ -1,6 +1,9 @@
 /* The stylesheet of the built package, for apps that host the notes screens: Tailwind's
    theme and utilities for the classes the screens use (no reset; the host keeps its own),
-   then the notes' tokens and rules. Imported as @loam/notes-ui/style.css. */
+   then the notes' tokens and rules. Imported as @loam/notes-ui/style.css. The layer order
+   is Tailwind's, set here because this sheet loads first: a host's base layer (its reset)
+   must stay under these utilities. */
+@layer theme, base, components, utilities;
 @import "tailwindcss/theme" layer(theme);
 @import "tailwindcss/utilities" layer(utilities) source(none);
 @import "./notes.css";

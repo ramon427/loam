@@ -26,7 +26,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import react from "@vitejs/plugin-react";
-import { build, type Plugin } from "vite";
+import { build } from "vite";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const out = path.join(root, "release/packages");
@@ -75,12 +75,8 @@ const packageOf = (specifier: string) => {
 };
 const isBare = (id: string) => !id.startsWith(".") && !path.isAbsolute(id) && !id.startsWith("\0");
 
+/** A module that only imports the stylesheet, so the build has an entry for it; deleted after. */
 const STYLES_ENTRY = "loam-library-styles";
-const stylesEntry = (stylesheet: string): Plugin => ({
-  name: "loam-library-styles",
-  resolveId: (id) => (id === STYLES_ENTRY ? id : null),
-  load: (id) => (id === STYLES_ENTRY ? `import ${JSON.stringify(stylesheet)};` : null),
-});
 
 const buildPackage = async (name: (typeof PACKAGES)[number]) => {
   const dir = path.join(root, "packages", name);
@@ -88,47 +84,57 @@ const buildPackage = async (name: (typeof PACKAGES)[number]) => {
   const dist = path.join(out, name);
   const entries = walk(src).filter(isSource);
   // A CSS file can't be an entry of a build that puts all CSS in one file, so a stub module
-  // imports the stylesheet; the stub is deleted after the build.
+  // imports the stylesheet; it and what it builds to are deleted after the build.
   const styles = name === "notes-ui";
-  if (styles) entries.push(STYLES_ENTRY);
+  const stub = path.join(src, `${STYLES_ENTRY}.ts`);
+  if (styles) {
+    writeFileSync(stub, `import "./styles/library.css";\n`);
+    entries.push(stub);
+  }
   const imported = new Set<string>();
 
-  await build({
-    configFile: false,
-    root: dir,
-    logLevel: "warn",
-    plugins: styles ? [react(), stylesEntry(path.join(src, "styles/library.css"))] : [],
-    css: { postcss: path.join(root, "apps/desktop") },
-    build: {
-      outDir: path.join(dist, "dist"),
-      emptyOutDir: true,
-      minify: false,
-      sourcemap: true,
-      cssCodeSplit: false,
-      modulePreload: false,
-      rollupOptions: {
-        input: entries,
-        preserveEntrySignatures: "strict",
-        external: (id) => {
-          if (!isBare(id) || id === STYLES_ENTRY) return false;
-          if (!id.startsWith("@loam/")) imported.add(packageOf(id.split("?")[0]));
-          return true;
-        },
-        output: {
-          format: "es",
-          preserveModules: true,
-          preserveModulesRoot: src,
-          entryFileNames: "[name].js",
-          assetFileNames: (asset) =>
-            asset.names.some((file) => file.endsWith(".css"))
-              ? "style.css"
-              : "assets/[name][extname]",
+  try {
+    await build({
+      configFile: false,
+      root: dir,
+      logLevel: "warn",
+      plugins: styles ? [react()] : [],
+      css: { postcss: path.join(root, "apps/desktop") },
+      build: {
+        outDir: path.join(dist, "dist"),
+        emptyOutDir: true,
+        minify: false,
+        sourcemap: true,
+        cssCodeSplit: false,
+        // Library mode leaves dynamic imports as they are: an app build adds its own preloading.
+        lib: { entry: entries, formats: ["es"] },
+        rollupOptions: {
+          external: (id) => {
+            if (!isBare(id)) return false;
+            if (!id.startsWith("@loam/")) imported.add(packageOf(id.split("?")[0]));
+            return true;
+          },
+          output: {
+            format: "es",
+            preserveModules: true,
+            preserveModulesRoot: src,
+            entryFileNames: "[name].js",
+            assetFileNames: (asset) =>
+              asset.names.some((file) => file.endsWith(".css"))
+                ? "style.css"
+                : "assets/[name][extname]",
+          },
         },
       },
-    },
-  });
+    });
+  } finally {
+    if (styles) rmSync(stub, { force: true });
+  }
 
-  if (styles) rmSync(path.join(dist, "dist/_virtual", `${STYLES_ENTRY}.js`), { force: true });
+  if (styles) {
+    rmSync(path.join(dist, "dist", `${STYLES_ENTRY}.js`), { force: true });
+    rmSync(path.join(dist, "dist", `${STYLES_ENTRY}.js.map`), { force: true });
+  }
   cpSync(path.join(typesOut, name, "src"), path.join(dist, "dist"), { recursive: true });
 
   const own = readJson<{ description: string; dependencies?: Record<string, string> }>(
