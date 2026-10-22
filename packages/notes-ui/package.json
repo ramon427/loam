@@ -1,0 +1,12 @@
+{
+  "name": "@loam/notes-ui",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Loam's notes screens: the library, the open note and its tabs, for any app to host.",
+  "dependencies": {
+    "@loam/shared": "0.1.0",
+    "@loam/transfer": "0.1.0"
+  }
+}

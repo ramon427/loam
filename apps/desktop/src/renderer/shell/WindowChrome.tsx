@@ -3,9 +3,9 @@ import { PanelLeftCloseIcon, PanelLeftOpenIcon } from "lucide-react";
 
 import { AiChatOpenButton } from "../ai/AiChatPanel";
 import { callBridge } from "../bridge";
-import { ShortcutHint } from "../keyboard/ShortcutHint";
-import { resolveTheme, subscribeToThemeChanges } from "../lib/theme";
-import { Button } from "../ui/Button";
+import { ShortcutHint } from "@loam/notes-ui/keyboard/ShortcutHint";
+import { resolveTheme, subscribeToThemeChanges } from "@loam/notes-ui/lib/theme";
+import { Button } from "@loam/notes-ui/ui/Button";
 
 /*
  * The window has no separate title bar. Its top row is the sidebar's first

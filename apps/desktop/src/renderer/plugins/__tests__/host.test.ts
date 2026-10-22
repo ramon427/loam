@@ -11,9 +11,9 @@ const toasts = vi.hoisted(() => ({
   toastSuccess: vi.fn(),
   toastWarning: vi.fn(),
 }));
-vi.mock("../../ui/toast", () => toasts);
+vi.mock("@loam/notes-ui/ui/toast", () => toasts);
 
-import { installFakeBridge } from "../../testing/fakeBridge";
+import { installFakeBridge } from "@loam/notes-ui/testing/fakeBridge";
 import { createPluginHost, type PluginHost } from "../host";
 import type { WorkerPort } from "../pluginInstance";
 import type { HostMessage, WorkerMessage } from "../protocol";
@@ -321,7 +321,7 @@ describe("plugin host", () => {
       on("command.run", async ($: Api) => $.notes.create({ title: "Hi", markdown: "# Hello" }));
     });
     await start(info("writer", ["notes:write"]));
-    vi.doMock("../../editor/blockParsers", () => ({
+    vi.doMock("@loam/notes-ui/editor/blockParsers", () => ({
       parseMarkdown: (text: string) => [{ type: "heading", text }],
     }));
     await host.dispatch("command.run", { command: "x" }, () => null);

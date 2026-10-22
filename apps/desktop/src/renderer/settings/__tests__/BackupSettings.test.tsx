@@ -7,16 +7,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BridgeBackupList } from "@loam/shared/bridge/loamBridge";
 
 const waitMock = vi.hoisted(() => ({ saved: true }));
-vi.mock("../../workspace/saveAllNoteEdits", async (importOriginal) => ({
+vi.mock("@loam/notes-ui/workspace/saveAllNoteEdits", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   saveAllNoteEdits: async () => waitMock.saved,
 }));
 
 const toasts = vi.hoisted(() => ({ toastError: vi.fn(), toastSuccess: vi.fn() }));
-vi.mock("../../ui/toast", () => toasts);
+vi.mock("@loam/notes-ui/ui/toast", () => toasts);
 
-import { BridgeError } from "../../bridge";
-import { installFakeBridge } from "../../testing/fakeBridge";
+import { BridgeError } from "@loam/notes-ui/host/notesHost";
+import { installFakeBridge } from "@loam/notes-ui/testing/fakeBridge";
 import { BackupSettings } from "../BackupSettings";
 
 const list: BridgeBackupList = {

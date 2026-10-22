@@ -3,7 +3,7 @@ import { isHexColor, type ThemeManifest } from "@loam/shared/themes/themeSchema"
 
 import { isRecord } from "@loam/shared/utils/isRecord";
 
-import { readPreference, writePreference } from "../lib/preferences";
+import { readPreference, writePreference } from "@loam/notes-ui/lib/preferences";
 
 import { DEFAULT_THEME_ID, THEME_PRESETS } from "./presets";
 

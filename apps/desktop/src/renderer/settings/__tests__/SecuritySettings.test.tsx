@@ -6,8 +6,8 @@ import { describe, expect, it } from "vitest";
 
 import type { BridgeSecurityStatus } from "@loam/shared/bridge/loamBridge";
 
-import { BridgeError } from "../../bridge";
-import { installFakeBridge } from "../../testing/fakeBridge";
+import { BridgeError } from "@loam/notes-ui/host/notesHost";
+import { installFakeBridge } from "@loam/notes-ui/testing/fakeBridge";
 import { SecuritySettings } from "../SecuritySettings";
 
 const RECOVERY_KEY = "ABCD-EFGH-JKMN-PQRS-TVWX-YZ01-2345-6789";

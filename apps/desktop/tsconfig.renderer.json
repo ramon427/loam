@@ -4,6 +4,15 @@
     // The window is sandboxed: no Node.js globals such as process or Buffer.
     "types": ["vite/client"]
   },
-  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"],
-  "exclude": ["src/renderer/**/__tests__/**"]
+  "include": [
+    "src/renderer/**/*.ts",
+    "src/renderer/**/*.tsx",
+    "../../packages/notes-ui/src/**/*.ts",
+    "../../packages/notes-ui/src/**/*.tsx"
+  ],
+  "exclude": [
+    "src/renderer/**/__tests__/**",
+    "../../packages/notes-ui/src/**/__tests__/**",
+    "../../packages/notes-ui/src/testing/**"
+  ]
 }

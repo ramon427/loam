@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useId, useState, type ReactNode } from "react";
 import { ChevronRightIcon } from "lucide-react";
 
-import { cn } from "../ui/cn";
-import { Notice, type NoticeProps } from "../ui/Notice";
+import { cn } from "@loam/notes-ui/ui/cn";
+import { Notice, type NoticeProps } from "@loam/notes-ui/ui/Notice";
 
 import styles from "./settings.module.css";
 

@@ -4,6 +4,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 const PACKAGES = ["shared", "storage", "transfer"];
+const ALL_PACKAGES = [...PACKAGES, "notes-ui"];
 
 /** One `no-restricted-imports` per file group: a later config would replace an earlier one. */
 const restrictImports = (...patterns) => ({
@@ -11,7 +12,7 @@ const restrictImports = (...patterns) => ({
 });
 
 const otherPackagesByAlias = {
-  group: ["**/packages/**", ...PACKAGES.map((name) => `**/${name}/src/**`)],
+  group: ["**/packages/**", ...ALL_PACKAGES.map((name) => `**/${name}/src/**`)],
   message: "Import another package as @loam/<package>/<path>.",
 };
 
@@ -30,6 +31,17 @@ export default tseslint.config(
       otherPackagesByAlias,
     ),
   })),
+  {
+    files: ["packages/notes-ui/src/**/*.{ts,tsx}"],
+    rules: restrictImports(
+      {
+        group: ["**/apps/**", "electron", "node:*", "@loam/storage/*"],
+        message: "The notes screens reach storage only through the host they are given.",
+      },
+      { group: ["@loam/notes-ui/*"], message: "Import this package's own files by relative path." },
+      otherPackagesByAlias,
+    ),
+  },
   {
     files: ["apps/desktop/src/renderer/**/*.{ts,tsx}"],
     rules: restrictImports(

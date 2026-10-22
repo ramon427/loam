@@ -12,7 +12,7 @@ import {
   subscribeToThemeChanges,
   type AppTheme,
   type ThemeChoice,
-} from "../lib/theme";
+} from "@loam/notes-ui/lib/theme";
 import {
   availableThemes,
   readAppearance,
@@ -22,10 +22,16 @@ import {
   type Appearance,
 } from "../themes/appearance";
 import { DEFAULT_THEME_ID } from "../themes/presets";
-import { Button } from "../ui/Button";
-import { cn } from "../ui/cn";
-import { Input } from "../ui/Input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/Select";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { cn } from "@loam/notes-ui/ui/cn";
+import { Input } from "@loam/notes-ui/ui/Input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@loam/notes-ui/ui/Select";
 
 import { CustomizationFiles } from "./CustomizationFiles";
 import { SettingsRow, SettingsSection } from "./SettingsLayout";

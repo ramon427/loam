@@ -11,15 +11,15 @@ import {
 
 import { AI_ACCESS_MODES, type AiChatContext, type AiChatStatus } from "@loam/shared/ai/aiChat";
 
-import { Button } from "../ui/Button";
-import { cn } from "../ui/cn";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { cn } from "@loam/notes-ui/ui/cn";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../ui/DropdownMenu";
-import { Textarea } from "../ui/Textarea";
+} from "@loam/notes-ui/ui/DropdownMenu";
+import { Textarea } from "@loam/notes-ui/ui/Textarea";
 
 import { ACCESS_MODES } from "./accessModes";
 import styles from "./aiChat.module.css";

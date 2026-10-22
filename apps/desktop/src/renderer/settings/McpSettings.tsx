@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { callBridge } from "../bridge";
-import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { Input } from "@loam/notes-ui/ui/Input";
 
 import {
   SettingsDetails,

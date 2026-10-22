@@ -6,8 +6,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { BridgeSecurityStatus } from "@loam/shared/bridge/loamBridge";
 
-import { BridgeError } from "../../bridge";
-import { installFakeBridge } from "../../testing/fakeBridge";
+import { BridgeError } from "@loam/notes-ui/host/notesHost";
+import { installFakeBridge } from "@loam/notes-ui/testing/fakeBridge";
 
 vi.mock("../../shell/TitleBar", () => ({ TitleBar: () => null }));
 

@@ -1,4 +1,4 @@
-import type { NoteBlockEditor, NotePartialBlock } from "../editor/noteEditorSchema";
+import type { NoteBlockEditor, NotePartialBlock } from "@loam/notes-ui/editor/noteEditorSchema";
 
 import { pluginHost } from "./host";
 import type { PluginSlashItem } from "./pluginContributions";
@@ -14,7 +14,7 @@ export const runPluginSlashItem = async (
 ) => {
   const markdown = await pluginHost.runSlashItem(item, noteId);
   if (!markdown?.trim()) return;
-  const { parseMarkdown } = await import("../editor/blockParsers");
+  const { parseMarkdown } = await import("@loam/notes-ui/editor/blockParsers");
   const blocks = parseMarkdown(markdown) as NotePartialBlock[];
   if (blocks.length === 0) return;
   editor.transact(() => {

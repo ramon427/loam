@@ -6,10 +6,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { BridgeUpdateStatus } from "@loam/shared/bridge/loamBridge";
 
-import { installFakeBridge } from "../../testing/fakeBridge";
+import { installFakeBridge } from "@loam/notes-ui/testing/fakeBridge";
 
 const toasts = vi.hoisted(() => ({ toastError: vi.fn() }));
-vi.mock("../../ui/toast", () => toasts);
+vi.mock("@loam/notes-ui/ui/toast", () => toasts);
 
 import { UpdateSettings } from "../UpdateSettings";
 

@@ -10,11 +10,11 @@ import {
 } from "lucide-react";
 
 import type { BridgeUpdateStatus } from "@loam/shared/bridge/loamBridge";
-import { clamp } from "../lib/clamp";
+import { clamp } from "@loam/notes-ui/lib/clamp";
 import { useUpdateStatus } from "../settings/queries";
-import { Button } from "../ui/Button";
-import { cn } from "../ui/cn";
-import { PopoverContent } from "../ui/Popover";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { cn } from "@loam/notes-ui/ui/cn";
+import { PopoverContent } from "@loam/notes-ui/ui/Popover";
 
 import {
   openReleasePage,

@@ -12,9 +12,15 @@ import {
 
 import { ACCESS_MODES } from "../ai/accessModes";
 import { callBridge } from "../bridge";
-import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/Select";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { Input } from "@loam/notes-ui/ui/Input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@loam/notes-ui/ui/Select";
 
 import { QUERY_KEYS, useAiChatStatus } from "./queries";
 import {

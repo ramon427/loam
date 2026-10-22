@@ -1,10 +1,16 @@
 import { FileOutputIcon, LibraryIcon } from "lucide-react";
 
 import { useSecurityStatus } from "../settings/queries";
-import { Button } from "../ui/Button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/Dialog";
-import { Notice } from "../ui/Notice";
-import { useNotesWorkspace } from "../workspace/NotesWorkspace";
+import { Button } from "@loam/notes-ui/ui/Button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@loam/notes-ui/ui/Dialog";
+import { Notice } from "@loam/notes-ui/ui/Notice";
+import { useNotesWorkspace } from "@loam/notes-ui/workspace/NotesWorkspace";
 
 import { useMarkdownExport } from "./useMarkdownExport";
 

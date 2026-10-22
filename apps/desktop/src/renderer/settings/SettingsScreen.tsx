@@ -14,12 +14,16 @@ import {
   PuzzleIcon,
 } from "lucide-react";
 
-import { ShortcutHint } from "../keyboard/ShortcutHint";
-import { useShortcuts, type Shortcut } from "../keyboard/useShortcuts";
-import { Button } from "../ui/Button";
-import { cn } from "../ui/cn";
-import { SearchField } from "../ui/SearchField";
-import { SidebarRow, sidebarSearchClassName, sidebarSearchInputClassName } from "../ui/SidebarRow";
+import { ShortcutHint } from "@loam/notes-ui/keyboard/ShortcutHint";
+import { useShortcuts, type Shortcut } from "@loam/notes-ui/keyboard/useShortcuts";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { cn } from "@loam/notes-ui/ui/cn";
+import { SearchField } from "@loam/notes-ui/ui/SearchField";
+import {
+  SidebarRow,
+  sidebarSearchClassName,
+  sidebarSearchInputClassName,
+} from "@loam/notes-ui/ui/SidebarRow";
 
 import { AppearanceSettings } from "./AppearanceSettings";
 import { BackupSettings } from "./BackupSettings";

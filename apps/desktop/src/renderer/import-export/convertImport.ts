@@ -21,7 +21,7 @@ export const convertImport = async ({
   // The converters and BlockNote's parsers load with the first import.
   const [{ IMPORT_CONVERTERS }, { parseHtml, parseMarkdown }] = await Promise.all([
     import("./importConverters"),
-    import("../editor/blockParsers"),
+    import("@loam/notes-ui/editor/blockParsers"),
   ]);
   return IMPORT_CONVERTERS[source]({
     files,

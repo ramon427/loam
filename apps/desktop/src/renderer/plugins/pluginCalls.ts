@@ -2,8 +2,8 @@ import type { PluginOp } from "@loam/shared/plugins/pluginApi";
 import type { PluginManifest } from "@loam/shared/plugins/pluginManifest";
 
 import { callBridge } from "../bridge";
-import { emitAppEvent } from "../lib/appEventBus";
-import { toastError, toastInfo, toastSuccess, toastWarning } from "../ui/toast";
+import { emitAppEvent } from "@loam/notes-ui/lib/appEventBus";
+import { toastError, toastInfo, toastSuccess, toastWarning } from "@loam/notes-ui/ui/toast";
 
 import { isHandlerRef } from "./protocol";
 
@@ -47,7 +47,7 @@ const requirePermission = (plugin: PluginCaller, permission: string) => {
 
 const parseBlocks = async (markdown: unknown) => {
   if (markdown === undefined) return [];
-  const { parseMarkdown } = await import("../editor/blockParsers");
+  const { parseMarkdown } = await import("@loam/notes-ui/editor/blockParsers");
   return parseMarkdown(asString(markdown, "markdown", 1_000_000));
 };
 

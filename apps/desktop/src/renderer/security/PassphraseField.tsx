@@ -1,8 +1,8 @@
 import { useId } from "react";
 
-import { Input } from "../ui/Input";
-import { cn } from "../ui/cn";
-import { Label } from "../ui/Label";
+import { Input } from "@loam/notes-ui/ui/Input";
+import { cn } from "@loam/notes-ui/ui/cn";
+import { Label } from "@loam/notes-ui/ui/Label";
 
 import styles from "./security.module.css";
 

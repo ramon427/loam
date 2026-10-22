@@ -9,8 +9,8 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
-import { asNumber, readPreference, writePreference } from "../lib/preferences";
-import { clamp } from "../lib/clamp";
+import { asNumber, readPreference, writePreference } from "@loam/notes-ui/lib/preferences";
+import { clamp } from "@loam/notes-ui/lib/clamp";
 
 const SIDEBAR_LAYOUT_KEY = "sidebar-layout:v1";
 const DEFAULT_WIDTH = 280;

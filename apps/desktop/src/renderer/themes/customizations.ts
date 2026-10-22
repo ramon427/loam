@@ -2,7 +2,7 @@ import type { BridgeCustomizations } from "@loam/shared/bridge/loamBridge";
 import { compileSnippetsCss } from "@loam/shared/themes/snippetCss";
 
 import { callBridge, onBridgeEvent } from "../bridge";
-import { readPreference, writePreference } from "../lib/preferences";
+import { readPreference, writePreference } from "@loam/notes-ui/lib/preferences";
 
 import { setCustomThemes, setSnippetsCss } from "./appearance";
 

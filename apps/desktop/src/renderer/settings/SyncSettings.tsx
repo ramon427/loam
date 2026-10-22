@@ -2,17 +2,17 @@ import { useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CloudIcon, FolderOpenIcon, LockIcon, RefreshCwIcon } from "lucide-react";
 
-import { saveAllNoteEditsOrThrow } from "../workspace/saveAllNoteEdits";
+import { saveAllNoteEditsOrThrow } from "@loam/notes-ui/workspace/saveAllNoteEdits";
 import { callBridge } from "../bridge";
 import type { BridgeSyncStatus } from "@loam/shared/bridge/loamBridge";
-import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";
-import { Notice } from "../ui/Notice";
-import { toastError } from "../ui/toast";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { Input } from "@loam/notes-ui/ui/Input";
+import { Notice } from "@loam/notes-ui/ui/Notice";
+import { toastError } from "@loam/notes-ui/ui/toast";
 
 import { PassphraseField } from "../security/PassphraseField";
-import { errorMessage } from "../lib/errorMessage";
-import { formatDateTime } from "../lib/format";
+import { errorMessage } from "@loam/notes-ui/lib/errorMessage";
+import { formatDateTime } from "@loam/notes-ui/lib/format";
 import { QUERY_KEYS, useSyncStatus } from "./queries";
 import { SettingsNotice, SettingsRow, SettingsSection, useSettingsBusy } from "./SettingsLayout";
 import styles from "./settings.module.css";

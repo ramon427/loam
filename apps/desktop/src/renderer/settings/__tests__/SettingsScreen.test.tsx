@@ -5,8 +5,8 @@ import { useMemo, useState } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { KeyboardShortcutsScope, useShortcuts } from "../../keyboard/useShortcuts";
-import { installFakeBridge } from "../../testing/fakeBridge";
+import { KeyboardShortcutsScope, useShortcuts } from "@loam/notes-ui/keyboard/useShortcuts";
+import { installFakeBridge } from "@loam/notes-ui/testing/fakeBridge";
 
 import { SettingsButton, SettingsScreen } from "../SettingsScreen";
 

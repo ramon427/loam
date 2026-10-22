@@ -1,11 +1,17 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
-import { Button, buttonVariants } from "../ui/Button";
-import { Checkbox } from "../ui/Checkbox";
-import { cn } from "../ui/cn";
-import { Input } from "../ui/Input";
-import { Textarea } from "../ui/Textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/Select";
+import { Button, buttonVariants } from "@loam/notes-ui/ui/Button";
+import { Checkbox } from "@loam/notes-ui/ui/Checkbox";
+import { cn } from "@loam/notes-ui/ui/cn";
+import { Input } from "@loam/notes-ui/ui/Input";
+import { Textarea } from "@loam/notes-ui/ui/Textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@loam/notes-ui/ui/Select";
 
 import {
   CalendarGrid,

@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AiChatStatus } from "@loam/shared/ai/aiChat";
 
-import { installFakeBridge } from "../../testing/fakeBridge";
+import { installFakeBridge } from "@loam/notes-ui/testing/fakeBridge";
 import { AiChatSettings } from "../AiChatSettings";
 
 const STATUS: AiChatStatus = {

@@ -4,11 +4,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../workspace/saveAllNoteEdits", async (importOriginal) => ({
+vi.mock("@loam/notes-ui/workspace/saveAllNoteEdits", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   saveAllNoteEdits: async () => true,
 }));
-vi.mock("../../workspace/NotesWorkspace", () => ({
+vi.mock("@loam/notes-ui/workspace/NotesWorkspace", () => ({
   useNotesWorkspace: () => ({
     reloadLibrary: () => undefined,
     notes: [{ id: "n1", title: "Plan" }],
@@ -20,9 +20,9 @@ const toasts = vi.hoisted(() => ({
   toastSuccess: vi.fn(),
   toastWarning: vi.fn(),
 }));
-vi.mock("../../ui/toast", () => toasts);
+vi.mock("@loam/notes-ui/ui/toast", () => toasts);
 
-import { installFakeBridge } from "../../testing/fakeBridge";
+import { installFakeBridge } from "@loam/notes-ui/testing/fakeBridge";
 import { ImportExportSettings } from "../ImportExportSettings";
 
 const renderSection = () => {

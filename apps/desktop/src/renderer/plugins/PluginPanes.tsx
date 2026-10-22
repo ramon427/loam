@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { XIcon } from "lucide-react";
 
-import { useShortcuts, type Shortcut } from "../keyboard/useShortcuts";
-import { parsePluginShortcut } from "../keyboard/shortcuts";
-import { NoteHeader } from "../note/NoteHeader";
+import { useShortcuts, type Shortcut } from "@loam/notes-ui/keyboard/useShortcuts";
+import { parsePluginShortcut } from "@loam/notes-ui/keyboard/shortcuts";
+import { NoteHeader } from "@loam/notes-ui/note/NoteHeader";
 import { FormDialog } from "../settings/FormDialog";
 import { MainHeader } from "../shell/WindowChrome";
-import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";
-import { useNotesWorkspace } from "../workspace/NotesWorkspace";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { Input } from "@loam/notes-ui/ui/Input";
+import { useNotesWorkspace } from "@loam/notes-ui/workspace/NotesWorkspace";
 
 import { pluginHost } from "./host";
 import type { PluginPane, PluginPrompt } from "./pluginContributions";

@@ -12,8 +12,10 @@ Loam is an Electron app, so it runs as two processes.
 - **The main process** (`apps/desktop/src/main`) owns the data. It opens the
   store, the media folder and the backups, runs sync, encryption, imports and
   exports, serves the AI access (MCP) server, and checks for updates.
-- **The window** (`apps/desktop/src/renderer`) is a React app. It renders the
-  library and the open note and asks the main process for everything else.
+- **The window** (`apps/desktop/src/renderer`) is a React app. It lays out the
+  notes screens from `packages/notes-ui` (the library and the open note) with
+  its own settings, side chat and plugins, and asks the main process for
+  everything else.
 
 The window runs sandboxed, with context isolation and no Node.js. The preload
 script (`apps/desktop/src/preload/preload.ts`) gives it one object,
@@ -42,7 +44,8 @@ in the browser only for `http`, `https` and `mailto`.
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- |
 | `apps/desktop/src/main`     | Electron main process: window, protocols, store setup, media, backups, sync, encryption, import/export, MCP, side chat, plugins, themes, updates | main            |
 | `apps/desktop/src/preload`  | The `window.loam` bridge                                                                                                                         | preload         |
-| `apps/desktop/src/renderer` | The window's React app                                                                                                                           | window          |
+| `apps/desktop/src/renderer` | The window's React app: layout, settings, side chat, plugins, themes, imports                                                                    | window          |
+| `packages/notes-ui`         | The notes screens: library, open note, tabs, editor, graphs, tables, search, history; other apps can host them                                   | window          |
 | `packages/shared`           | The note model, the bridge contract, in-app link formats, heading connections, graph and video helpers                                           | both            |
 | `packages/storage`          | `NotesStore`, the stored-note schema, storage adapters (SQLite, memory), version history, search, sync and encryption                            | main            |
 | `packages/transfer`         | Import parsing (Markdown, Obsidian, Evernote, Notion, HTML), Markdown export, JSON Canvas and Mermaid                                            | main and window |
@@ -55,19 +58,34 @@ Imports follow two rules, and ESLint checks both:
   Another package is imported by path, as `@loam/<package>/<file>`; there
   are no barrel `index.ts` files.
 - `shared`, `storage` and `transfer` never import the app, Electron or React.
-  The window never imports the main process, the preload or `storage`; it
-  reaches them through `window.loam`. The main process never imports window code.
+  `notes-ui` never imports the app, Electron, Node.js or `storage`; it reaches
+  its data through the host it is given. The window never imports the main
+  process, the preload or `storage`; it reaches them through `window.loam`. The
+  main process never imports window code.
 
 ## The window's code
 
-`apps/desktop/src/renderer` is grouped by what each part does, not by kind of
-file:
+The window's code is in two places, each grouped by what each part does, not by
+kind of file. `apps/desktop/src/renderer` is Loam's own window:
+
+| Folder                   | What it holds                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| `App.tsx`, `main.tsx`    | The window: sidebar, the open note, settings, and their shortcuts               |
+| `bridge.ts`              | `callBridge` and `onBridgeEvent` over all of `window.loam`                      |
+| `automation.ts`          | Requests from AI clients that need the window, such as opening a note           |
+| `ai/`                    | The side chat panel: messages, composer, model picker, note mentions            |
+| `plugins/`               | Plugin workers, the host that answers their calls, and the elements they draw   |
+| `themes/`                | Theme presets and the user's CSS customizations                                 |
+| `import-export/`         | Imports and Markdown export                                                     |
+| `settings/`, `security/` | The settings screen, and unlocking an encrypted library                         |
+| `shell/`                 | The window's top row and native buttons, the sidebar's size and toggle, updates |
+
+`packages/notes-ui/src` holds the notes screens:
 
 | Folder                       | What it holds                                                                            |
 | ---------------------------- | ---------------------------------------------------------------------------------------- |
-| `App.tsx`                    | The window: sidebar, the open note, settings, and their shortcuts                        |
-| `bridge.ts`                  | `callBridge` and `onBridgeEvent` over `window.loam`, and `BridgeError`                   |
-| `automation.ts`              | Requests from AI clients that need the window, such as opening a note                    |
+| `host/`                      | `NotesHost`: where the screens read and save, and what the host can do                   |
+| `extensions/`                | `NotesExtensions`: slots, slash items, commands and checks the app adds                  |
 | `workspace/`                 | The library and open-note cache, and saving                                              |
 | `sidebar/`                   | The notes tree: selection, drag and drop, its commands and right-click menu              |
 | `note/`                      | The open note: header, tabs and their kinds, layout, and the view that composes its tabs |
@@ -75,16 +93,10 @@ file:
 | `editor/columns/`            | Column layouts: dropping a block beside another, resizing, the slash menu items          |
 | `board/`, `embed/`, `files/` | Board tabs, embed tabs, and PDF, Word and Markdown file tabs                             |
 | `graph/`, `table/`, `video/` | Graph tabs, table tabs, and the study video beside a note                                |
-| `ai/`                        | The side chat panel: messages, composer, model picker, note mentions                     |
 | `commands/`                  | The command palette                                                                      |
-| `plugins/`                   | Plugin workers, the host that answers their calls, and the elements they draw            |
-| `themes/`                    | Theme presets and the user's CSS customizations                                          |
 | `history/`                   | Version history and the preview of a saved version                                       |
 | `search/`                    | Search across notes and find in the open note                                            |
-| `import-export/`             | Imports and Markdown export                                                              |
-| `settings/`, `security/`     | The settings screen, and unlocking an encrypted library                                  |
-| `media/`                     | Images: uploads, `loam-media://` URLs, previews                                          |
-| `shell/`                     | The window's top row and native buttons, the sidebar's size and toggle, updates          |
+| `media/`                     | Images: uploads, media URLs, previews                                                    |
 | `keyboard/`, `action-menu/`  | Shortcuts and the pieces of right-click menus                                            |
 | `ui/`, `styles/`             | Shared controls (buttons, dialogs, menus, inputs) and the design tokens                  |
 | `lib/`                       | Small helpers several folders use                                                        |
@@ -92,6 +104,31 @@ file:
 
 The window has no router: which note is open is state in the workspace, and a
 link to a note opens it through the workspace.
+
+## Hosting the notes screens
+
+`packages/notes-ui` is how other apps get Loam's notes: they install it and lay
+its parts out in their own window. They share code with Loam, never data.
+
+- **Where notes live.** `configureNotesHost` gives the screens a `NotesHost`:
+  `invoke` and `on` for the `notes.*`, `media.*` and `files.*` methods and
+  events of `loamBridge.ts`, answered like `window.loam`, plus the image URL
+  for a stored path. Loam's window passes `window.loam`; another app answers
+  from its own storage. `capabilities` turns off what a host can't do (version
+  history, file tabs), and the screens hide it.
+- **What the app adds.** `NotesExtensionsProvider` takes slots (the note
+  header, the sidebar footer), slash menu items, command palette entries, a
+  check before a note opens, and the row along the top of a note. Loam's window
+  fills it from its plugins (`plugins/pluginExtensions.tsx`) and its title bar.
+- **Look.** The screens use the `--app-*`, `--status-*` and `--glass-*` tokens
+  that `styles/app.css` defines; a host loads its own values after the
+  package's stylesheet.
+- **Packages.** `node scripts/packPackages.ts` builds `@loam/shared`,
+  `@loam/transfer` and `@loam/notes-ui` into `release/packages/*.tgz`, at the
+  desktop app's version. Each source file is its own module, so imports read
+  `@loam/notes-ui/<path>` as they do here; `@loam/notes-ui/style.css` holds the
+  styles. Libraries with app-wide state (React, BlockNote, tiptap, React Query,
+  React Flow, Framer Motion) are peer dependencies.
 
 ## A note
 
@@ -141,11 +178,11 @@ Two things inside a note have their own module in `shared`:
 ## Saving
 
 The window holds the library and each open note in one TanStack Query cache,
-through `NotesWorkspaceProvider` (`renderer/workspace/NotesWorkspace.tsx`).
+through `NotesWorkspaceProvider` (`notes-ui/src/workspace/NotesWorkspace.tsx`).
 That cache is the only copy of a note in the window: editors read the note
 from it and change it with `updateNote(noteId, patch)`.
 
-`updateNote` records which fields changed. `renderer/workspace/noteSaves.ts`
+`updateNote` records which fields changed. `notes-ui/src/workspace/noteSaves.ts`
 saves them 800 ms after the last change, when the note is left, or when the
 user presses Done, with one save per note at a time; edits made meanwhile
 follow it. Edits not saved yet are also written to the window's localStorage
@@ -156,11 +193,11 @@ is saved and the version it replaced is kept in the note's history as a
 conflict, and a toast offers to compare them; an
 AI client's own stale write is refused instead, so it reads the note again.
 
-Each page tab has its own BlockNote editor (`renderer/editor/PageTabEditor.tsx`),
+Each page tab has its own BlockNote editor (`notes-ui/src/editor/PageTabEditor.tsx`),
 so switching tabs never swaps one editor's document. The other tabs are React
-components over the same note. `renderer/note/tabKinds.tsx` names each kind
+components over the same note. `notes-ui/src/note/tabKinds.tsx` names each kind
 and groups the add-tab menu; changing a tab's kind carries its content over
-through `renderer/note/tabConversions.ts`.
+through `notes-ui/src/note/tabConversions.ts`.
 
 ## File tabs
 
@@ -346,7 +383,7 @@ window sends a message and shows what comes back as `ai.event`.
 Column layouts in page tabs are Loam's own blocks, `columnList` holding
 `column`s with a relative `width` (`packages/shared/src/notes/columnBlocks.ts`),
 so the editor, imports and exports share one schema. The editor's dragging and
-resizing live in `renderer/editor/columns/`.
+resizing live in `notes-ui/src/editor/columns/`.
 
 ## Dependency licenses
 

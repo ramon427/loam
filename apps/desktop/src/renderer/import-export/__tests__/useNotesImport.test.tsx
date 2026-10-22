@@ -15,18 +15,18 @@ const mocks = vi.hoisted(() => ({
   toastWarning: vi.fn(),
 }));
 
-vi.mock("../../workspace/saveAllNoteEdits", () => ({
+vi.mock("@loam/notes-ui/workspace/saveAllNoteEdits", () => ({
   saveAllNoteEdits: mocks.saveAllNoteEdits,
 }));
 vi.mock("@loam/transfer/import/markdownImport", () => ({
   convertMarkdownImport: mocks.convertMarkdownImport,
 }));
-vi.mock("../../ui/toast", () => ({
+vi.mock("@loam/notes-ui/ui/toast", () => ({
   toastError: mocks.toastError,
   toastWarning: mocks.toastWarning,
 }));
 
-import { installFakeBridge } from "../../testing/fakeBridge";
+import { installFakeBridge } from "@loam/notes-ui/testing/fakeBridge";
 import { useNotesImport } from "../useNotesImport";
 
 installFakeBridge({

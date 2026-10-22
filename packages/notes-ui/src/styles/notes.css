@@ -1,0 +1,58 @@
+/* What the notes screens need around their components: design tokens, Tailwind variants and
+   utilities, and page-wide rules. The host app imports Tailwind first, then this. */
+@import "./app.css";
+@import "./fullGlass.css";
+
+@custom-variant dark (&:is(.dark, .dark *));
+@custom-variant reduced-transparency (@media (prefers-reduced-transparency: reduce));
+
+@theme inline {
+  --color-primary: var(--app-accent);
+  --color-muted: var(--app-page-2);
+  --color-destructive: var(--status-danger);
+}
+
+/* A frosted surface over the page; --glass-tint picks its colour. Glass only reads with
+   something under it, so it is for what floats over content, not for panels. */
+@utility surface-glass {
+  background: color-mix(
+    in srgb,
+    var(--glass-tint, var(--app-page)) var(--glass-opacity),
+    transparent
+  );
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+
+  @media (prefers-reduced-transparency: reduce) {
+    background: var(--glass-tint, var(--app-page));
+  }
+}
+
+/* Thicker glass for what holds rows of text, like menus and tooltips, so a busy page under
+   them stays out of the way of reading. */
+@utility surface-glass-thick {
+  --glass-opacity: var(--glass-opacity-thick);
+}
+
+/* Toasts float over whatever is open; their fill comes from the Toaster's --normal-bg. */
+.toaster [data-sonner-toast] {
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .toaster {
+    --normal-bg: var(--app-surface) !important;
+  }
+}
+
+/* Matches of find in the open note. */
+::highlight(note-find) {
+  color: var(--app-search-match-foreground);
+  background: var(--app-search-match-bg);
+}
+::highlight(note-find-active) {
+  color: var(--app-text);
+  background: var(--app-accent-muted);
+  text-decoration: underline;
+}

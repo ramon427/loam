@@ -3,7 +3,7 @@ import { ServerIcon } from "lucide-react";
 
 import type { AiProviderId } from "@loam/shared/ai/aiChat";
 
-import { cn } from "../ui/cn";
+import { cn } from "@loam/notes-ui/ui/cn";
 
 type IconProps = SVGProps<SVGSVGElement>;
 

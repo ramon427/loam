@@ -7,14 +7,16 @@ import type {
   BridgeBackupKind,
   LoamBridgeResult,
 } from "@loam/shared/bridge/loamBridge";
-import { BridgeError, callBridge } from "../bridge";
-import { errorMessage } from "../lib/errorMessage";
-import { formatDateTime, formatSize } from "../lib/format";
+import { BridgeError } from "@loam/notes-ui/host/notesHost";
+
+import { callBridge } from "../bridge";
+import { errorMessage } from "@loam/notes-ui/lib/errorMessage";
+import { formatDateTime, formatSize } from "@loam/notes-ui/lib/format";
 import { PassphraseField } from "../security/PassphraseField";
-import { Button } from "../ui/Button";
-import { DestructiveConfirmDialog } from "../ui/DestructiveConfirmDialog";
-import { toastError, toastSuccess } from "../ui/toast";
-import { saveAllNoteEdits, UNSAVED_EDITS_MESSAGE } from "../workspace/saveAllNoteEdits";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { DestructiveConfirmDialog } from "@loam/notes-ui/ui/DestructiveConfirmDialog";
+import { toastError, toastSuccess } from "@loam/notes-ui/ui/toast";
+import { saveAllNoteEdits, UNSAVED_EDITS_MESSAGE } from "@loam/notes-ui/workspace/saveAllNoteEdits";
 
 import { FormDialog } from "./FormDialog";
 import { QUERY_KEYS, useBackups } from "./queries";

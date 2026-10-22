@@ -15,6 +15,7 @@
     "types": ["node", "vite/client"],
     "paths": {
       "@loam/shared/*": ["./packages/shared/src/*"],
+      "@loam/notes-ui/*": ["./packages/notes-ui/src/*"],
       "@loam/storage/*": ["./packages/storage/src/*"],
       "@loam/transfer/*": ["./packages/transfer/src/*"]
     }

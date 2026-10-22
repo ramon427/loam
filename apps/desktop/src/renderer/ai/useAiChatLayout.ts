@@ -8,8 +8,8 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
-import { asNumber, readPreference, writePreference } from "../lib/preferences";
-import { clamp } from "../lib/clamp";
+import { asNumber, readPreference, writePreference } from "@loam/notes-ui/lib/preferences";
+import { clamp } from "@loam/notes-ui/lib/clamp";
 
 /** The side chat's column, by its element id. */
 export const PANEL_ID = "ai-chat-panel";

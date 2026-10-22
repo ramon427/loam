@@ -6,7 +6,7 @@ export default defineConfig({
   resolve: { alias: workspaceAliases },
   test: {
     environment: "node",
-    setupFiles: ["apps/desktop/src/renderer/testing/vitestSetup.ts"],
+    setupFiles: ["packages/notes-ui/src/testing/vitestSetup.ts"],
     testTimeout: 30_000,
     include: [
       "packages/*/src/**/*.test.{ts,tsx}",

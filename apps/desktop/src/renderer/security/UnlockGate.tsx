@@ -4,13 +4,13 @@ import { LockIcon } from "lucide-react";
 
 import type { BridgeSecurityStatus } from "@loam/shared/bridge/loamBridge";
 import { callBridge } from "../bridge";
-import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";
-import { Label } from "../ui/Label";
-import { Notice } from "../ui/Notice";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { Input } from "@loam/notes-ui/ui/Input";
+import { Label } from "@loam/notes-ui/ui/Label";
+import { Notice } from "@loam/notes-ui/ui/Notice";
 
 import { TitleBar } from "../shell/TitleBar";
-import { errorMessage } from "../lib/errorMessage";
+import { errorMessage } from "@loam/notes-ui/lib/errorMessage";
 import { QUERY_KEYS, useSecurityStatus } from "../settings/queries";
 import { newPassphraseProblem, PassphraseField } from "./PassphraseField";
 import styles from "./security.module.css";

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BridgeCustomizations } from "@loam/shared/bridge/loamBridge";
 
-import { installFakeBridge } from "../../testing/fakeBridge";
+import { installFakeBridge } from "@loam/notes-ui/testing/fakeBridge";
 import { reloadCustomizations } from "../../themes/customizations";
 import { AppearanceSettings } from "../AppearanceSettings";
 

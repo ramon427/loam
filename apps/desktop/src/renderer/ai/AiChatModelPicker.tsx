@@ -11,9 +11,9 @@ import {
 } from "@loam/shared/ai/aiChat";
 
 import { callBridge } from "../bridge";
-import { errorMessage } from "../lib/errorMessage";
+import { errorMessage } from "@loam/notes-ui/lib/errorMessage";
 import { QUERY_KEYS } from "../settings/queries";
-import { cn } from "../ui/cn";
+import { cn } from "@loam/notes-ui/ui/cn";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,8 +24,8 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "../ui/DropdownMenu";
-import { toastError } from "../ui/toast";
+} from "@loam/notes-ui/ui/DropdownMenu";
+import { toastError } from "@loam/notes-ui/ui/toast";
 
 import { ModelIcon, shortModelName } from "./ModelIcon";
 

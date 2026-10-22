@@ -22,11 +22,11 @@ import {
 import type { AiApprovalDecision, AiChatItem } from "@loam/shared/ai/aiChat";
 import { readNoteHrefNoteId } from "@loam/shared/notes/noteLinks";
 
-import { Button } from "../ui/Button";
-import { cn } from "../ui/cn";
-import { CopyButton } from "../ui/CopyButton";
-import { DotMatrixLoader } from "../ui/DotMatrixLoader";
-import { Notice } from "../ui/Notice";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { cn } from "@loam/notes-ui/ui/cn";
+import { CopyButton } from "@loam/notes-ui/ui/CopyButton";
+import { DotMatrixLoader } from "@loam/notes-ui/ui/DotMatrixLoader";
+import { Notice } from "@loam/notes-ui/ui/Notice";
 
 import { SentAttachmentChips } from "./AiChatAttachments";
 import styles from "./aiChat.module.css";

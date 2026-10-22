@@ -5,10 +5,10 @@ import { ExternalLinkIcon } from "lucide-react";
 import type { BridgeGoogleStatus } from "@loam/shared/google/googleAccount";
 
 import { callBridge, onBridgeEvent } from "../bridge";
-import { errorMessage } from "../lib/errorMessage";
-import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";
-import { toastError } from "../ui/toast";
+import { errorMessage } from "@loam/notes-ui/lib/errorMessage";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { Input } from "@loam/notes-ui/ui/Input";
+import { toastError } from "@loam/notes-ui/ui/toast";
 
 const GOOGLE_KEY = ["google"];
 

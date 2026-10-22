@@ -15,11 +15,17 @@ import {
 import { callBridge, onBridgeEvent } from "../bridge";
 import { pluginHost } from "../plugins/host";
 import { usePluginHost } from "../plugins/PluginSlot";
-import { Button } from "../ui/Button";
-import { Checkbox } from "../ui/Checkbox";
-import { Input } from "../ui/Input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/Select";
-import { toastError } from "../ui/toast";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { Checkbox } from "@loam/notes-ui/ui/Checkbox";
+import { Input } from "@loam/notes-ui/ui/Input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@loam/notes-ui/ui/Select";
+import { toastError } from "@loam/notes-ui/ui/toast";
 
 import { FormDialog } from "./FormDialog";
 import { GoogleAccountSettings } from "./GoogleAccountSettings";

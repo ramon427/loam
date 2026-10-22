@@ -2,13 +2,36 @@ import { LazyMotion, domAnimation } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+import { CommandPalette, type AppCommand } from "@loam/notes-ui/commands/CommandPalette";
+import { OpenedFileView } from "@loam/notes-ui/files/OpenedFileView";
+import { useOpenedFiles } from "@loam/notes-ui/files/useOpenedFiles";
+import { NoteHistoryDialog } from "@loam/notes-ui/history/NoteHistoryDialog";
+import { NotesSidebarCreateActions } from "@loam/notes-ui/sidebar/NotesSidebarCreateActions";
+import { NotesSidebarFilter } from "@loam/notes-ui/sidebar/NotesSidebarFilter";
+import { NotesSidebar } from "@loam/notes-ui/sidebar/NotesSidebar";
+import { scopedProjectOf, type NotesProjectScope } from "@loam/notes-ui/sidebar/notesTreeModel";
+import { NotesTrashButton } from "@loam/notes-ui/sidebar/NotesTrashButton";
+import {
+  NotesTreeCommandsProvider,
+  useNotesTreeCommands,
+} from "@loam/notes-ui/sidebar/useNotesTreeCommands";
+import {
+  KeyboardShortcutsScope,
+  useShortcuts,
+  type Shortcut,
+} from "@loam/notes-ui/keyboard/useShortcuts";
+import { NotesExtensionsProvider } from "@loam/notes-ui/extensions/NotesExtensions";
+import { NotesWorkspaceProvider, useNotesWorkspace } from "@loam/notes-ui/workspace/NotesWorkspace";
+import { createFileNoteDocument } from "@loam/notes-ui/workspace/noteDocuments";
+import { Toaster } from "@loam/notes-ui/ui/Toaster";
+import { Tooltips } from "@loam/notes-ui/ui/Tooltips";
+import { NotesScreen } from "@loam/notes-ui/note/NotesScreen";
+import { NotesSearch } from "@loam/notes-ui/search/NotesSearch";
+import { NoteFindBar, type NoteFindBarHandle } from "@loam/notes-ui/search/NoteFindBar";
+
 import { AiChatSide, AiChatToggleProvider } from "./ai/AiChatPanel";
 import { useAiChatLayout } from "./ai/useAiChatLayout";
-import { CommandPalette, type AppCommand } from "./commands/CommandPalette";
 import { ExportDialog } from "./import-export/ExportDialog";
-import { OpenedFileView } from "./files/OpenedFileView";
-import { useOpenedFiles } from "./files/useOpenedFiles";
-import { NoteHistoryDialog } from "./history/NoteHistoryDialog";
 import { pluginHost } from "./plugins/host";
 import {
   PluginPanes,
@@ -17,21 +40,7 @@ import {
   PluginView,
 } from "./plugins/PluginPanes";
 import { PluginSlot } from "./plugins/PluginSlot";
-import { NotesSidebarCreateActions } from "./sidebar/NotesSidebarCreateActions";
-import { NotesSidebarFilter } from "./sidebar/NotesSidebarFilter";
-import { NotesSidebar } from "./sidebar/NotesSidebar";
-import { scopedProjectOf, type NotesProjectScope } from "./sidebar/notesTreeModel";
-import { NotesTrashButton } from "./sidebar/NotesTrashButton";
-import { NotesTreeCommandsProvider, useNotesTreeCommands } from "./sidebar/useNotesTreeCommands";
-import { KeyboardShortcutsScope, useShortcuts, type Shortcut } from "./keyboard/useShortcuts";
-import { NotesWorkspaceProvider, useNotesWorkspace } from "./workspace/NotesWorkspace";
-import { createFileNoteDocument } from "./workspace/noteDocuments";
-import { Toaster } from "./ui/Toaster";
-import { Tooltips } from "./ui/Tooltips";
-
-import { NotesScreen } from "./note/NotesScreen";
-import { NotesSearch } from "./search/NotesSearch";
-import { NoteFindBar, type NoteFindBarHandle } from "./search/NoteFindBar";
+import { pluginNotesExtensions } from "./plugins/pluginExtensions";
 import { UnlockGate } from "./security/UnlockGate";
 import { useAiChatStatus } from "./settings/queries";
 import { SettingsButton, SettingsScreen, type SettingsSectionId } from "./settings/SettingsScreen";
@@ -358,11 +367,13 @@ export function App() {
         <Tooltips />
         {/* Encrypted notes: nothing reads them, not even saved drafts, until they are unlocked. */}
         <UnlockGate>
-          <NotesWorkspaceProvider>
-            <NotesTreeCommandsProvider>
-              <Workspace />
-            </NotesTreeCommandsProvider>
-          </NotesWorkspaceProvider>
+          <NotesExtensionsProvider value={pluginNotesExtensions}>
+            <NotesWorkspaceProvider>
+              <NotesTreeCommandsProvider>
+                <Workspace />
+              </NotesTreeCommandsProvider>
+            </NotesWorkspaceProvider>
+          </NotesExtensionsProvider>
         </UnlockGate>
       </LazyMotion>
     </QueryClientProvider>

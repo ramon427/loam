@@ -15,10 +15,11 @@
   },
   "type": "module",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.32.1",
+    "@loam/notes-ui": "0.1.0",
     "@loam/shared": "0.1.0",
     "@loam/storage": "0.1.0",
-    "@loam/transfer": "0.1.0"
+    "@loam/transfer": "0.1.0",
+    "@modelcontextprotocol/sdk": "1.32.1"
   },
   "author": "Loam contributors",
   "homepage": "https://github.com/ramon427/loam",

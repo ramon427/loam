@@ -1,6 +1,6 @@
 import { FileTextIcon } from "lucide-react";
 
-import { cn } from "../ui/cn";
+import { cn } from "@loam/notes-ui/ui/cn";
 
 import styles from "./aiChat.module.css";
 import type { MentionableNote } from "./useNoteMentions";

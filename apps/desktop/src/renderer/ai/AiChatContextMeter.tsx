@@ -1,6 +1,6 @@
 import type { AiContextUsage } from "@loam/shared/ai/aiChat";
 
-import { cn } from "../ui/cn";
+import { cn } from "@loam/notes-ui/ui/cn";
 
 const RADIUS = 6;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;

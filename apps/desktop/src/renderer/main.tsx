@@ -5,15 +5,17 @@ import "./styles.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { followSystemTheme } from "./lib/theme";
+import { followSystemTheme } from "@loam/notes-ui/lib/theme";
+import { configureNotesHost } from "@loam/notes-ui/host/notesHost";
+
 import { applyAppearance } from "./themes/appearance";
 import { installCustomizations } from "./themes/customizations";
-
 import { App } from "./App";
 import { installAutomation } from "./automation";
 
 // Lets the styles leave room for each platform's window buttons.
 document.documentElement.dataset.platform = window.loam.platform;
+configureNotesHost(window.loam);
 followSystemTheme();
 applyAppearance();
 installCustomizations();

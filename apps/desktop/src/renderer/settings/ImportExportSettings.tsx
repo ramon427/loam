@@ -3,10 +3,10 @@ import { useState, type DragEvent } from "react";
 
 import { ExportDialog } from "../import-export/ExportDialog";
 import { useNotesImport, type NotesImportProgress } from "../import-export/useNotesImport";
-import { Button } from "../ui/Button";
-import { cn } from "../ui/cn";
-import { toastError } from "../ui/toast";
-import { useNotesWorkspace } from "../workspace/NotesWorkspace";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { cn } from "@loam/notes-ui/ui/cn";
+import { toastError } from "@loam/notes-ui/ui/toast";
+import { useNotesWorkspace } from "@loam/notes-ui/workspace/NotesWorkspace";
 
 import { ImportSummaryDialog } from "./ImportSummaryDialog";
 import {

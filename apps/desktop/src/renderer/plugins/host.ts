@@ -2,7 +2,7 @@ import type { BridgePluginInfo } from "@loam/shared/plugins/pluginApi";
 import { settingValue, type PluginSettingValue } from "@loam/shared/plugins/pluginManifest";
 
 import { callBridge, onBridgeEvent } from "../bridge";
-import { onNoteSaved } from "../workspace/noteSaves";
+import { onNoteSaved } from "@loam/notes-ui/workspace/noteSaves";
 
 import { matches, runChain, type HookRegistration } from "./hookChain";
 import { asRecord, createPluginCalls, type PluginCaller } from "./pluginCalls";

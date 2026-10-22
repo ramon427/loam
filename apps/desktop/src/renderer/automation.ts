@@ -1,18 +1,18 @@
 import type { BridgeAutomationCommand, BridgeResult } from "@loam/shared/bridge/loamBridge";
 import { callBridge, onBridgeEvent } from "./bridge";
-import { chooseThemeChoice, readThemeChoice, resolveTheme } from "./lib/theme";
+import { chooseThemeChoice, readThemeChoice, resolveTheme } from "@loam/notes-ui/lib/theme";
 import { findTheme, readAppearance, updateAppearance } from "./themes/appearance";
-import { emitAppEvent } from "./lib/appEventBus";
+import { emitAppEvent } from "@loam/notes-ui/lib/appEventBus";
 import { convertImport } from "./import-export/convertImport";
-import { saveAllNoteEditsOrThrow } from "./workspace/saveAllNoteEdits";
+import { saveAllNoteEditsOrThrow } from "@loam/notes-ui/workspace/saveAllNoteEdits";
 import { buildYouTubePlayerCommandMessage } from "@loam/shared/notes/noteVideo";
-import { errorMessage } from "./lib/errorMessage";
+import { errorMessage } from "@loam/notes-ui/lib/errorMessage";
 
 /** Runs named app operations, using the same editor parsers and converters as the UI. */
 const runAutomationCommand = async (command: BridgeAutomationCommand): Promise<unknown> => {
   switch (command.action) {
     case "graphTemplates": {
-      const { noteGraphTemplates } = await import("./graph/noteGraphTemplates");
+      const { noteGraphTemplates } = await import("@loam/notes-ui/graph/noteGraphTemplates");
       if (!command.templateId)
         return noteGraphTemplates.map(({ id, label, description }) => ({ id, label, description }));
       const template = noteGraphTemplates.find((entry) => entry.id === command.templateId);
@@ -23,7 +23,10 @@ const runAutomationCommand = async (command: BridgeAutomationCommand): Promise<u
       const [
         { computeNoteGraphGridLayout, computeNoteGraphTidyLayout },
         { applyLayout, emptyNoteGraphSelection },
-      ] = await Promise.all([import("./graph/noteGraphLayout"), import("./graph/noteGraphOps")]);
+      ] = await Promise.all([
+        import("@loam/notes-ui/graph/noteGraphLayout"),
+        import("@loam/notes-ui/graph/noteGraphOps"),
+      ]);
       const { graph, mode } = command;
       const positions =
         mode === "grid"
@@ -86,21 +89,21 @@ const runAutomationCommand = async (command: BridgeAutomationCommand): Promise<u
       return { theme: readThemeChoice(), themeId: readAppearance().themeId };
     }
     case "parseMarkdown": {
-      const { parseMarkdown } = await import("./editor/blockParsers");
+      const { parseMarkdown } = await import("@loam/notes-ui/editor/blockParsers");
       return parseMarkdown(command.text);
     }
     case "parseHtml": {
-      const { parseHtml } = await import("./editor/blockParsers");
+      const { parseHtml } = await import("@loam/notes-ui/editor/blockParsers");
       return parseHtml(command.text);
     }
     case "convertImport":
       return convertImport(command);
     case "exportGraph": {
       if (command.format === "svg") {
-        const { buildNoteGraphSvg } = await import("./graph/noteGraphSvg");
+        const { buildNoteGraphSvg } = await import("@loam/notes-ui/graph/noteGraphSvg");
         return { text: buildNoteGraphSvg(command.graph), mimeType: "image/svg+xml" };
       }
-      const { renderNoteGraphImage } = await import("./graph/noteGraphImage");
+      const { renderNoteGraphImage } = await import("@loam/notes-ui/graph/noteGraphImage");
       const canvas = await renderNoteGraphImage(command.graph);
       return { base64: canvas.toDataURL("image/png").split(",")[1], mimeType: "image/png" };
     }

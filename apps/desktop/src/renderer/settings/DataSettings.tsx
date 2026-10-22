@@ -2,9 +2,9 @@ import { useMutation } from "@tanstack/react-query";
 import { FolderOpenIcon } from "lucide-react";
 
 import { callBridge } from "../bridge";
-import { errorMessage } from "../lib/errorMessage";
-import { Button } from "../ui/Button";
-import { toastError } from "../ui/toast";
+import { errorMessage } from "@loam/notes-ui/lib/errorMessage";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { toastError } from "@loam/notes-ui/ui/toast";
 
 import { useAppInfo } from "./queries";
 import {

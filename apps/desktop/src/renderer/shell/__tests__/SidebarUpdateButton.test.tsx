@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { BridgeUpdateStatus } from "@loam/shared/bridge/loamBridge";
 
-import { installFakeBridge } from "../../testing/fakeBridge";
+import { installFakeBridge } from "@loam/notes-ui/testing/fakeBridge";
 import { SidebarUpdateButton } from "../SidebarUpdateButton";
 
 const IDLE: BridgeUpdateStatus = {

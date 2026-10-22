@@ -1,10 +1,10 @@
 import { useCallback, useRef, useState } from "react";
 
 import { callBridge } from "../bridge";
-import { saveAllNoteEdits } from "../workspace/saveAllNoteEdits";
+import { saveAllNoteEdits } from "@loam/notes-ui/workspace/saveAllNoteEdits";
 import type { BridgeExportScope } from "@loam/shared/bridge/loamBridge";
-import { toastError, toastSuccess, toastWarning } from "../ui/toast";
-import { errorMessage } from "../lib/errorMessage";
+import { toastError, toastSuccess, toastWarning } from "@loam/notes-ui/ui/toast";
+import { errorMessage } from "@loam/notes-ui/lib/errorMessage";
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 

@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { callBridge } from "../bridge";
-import { errorMessage } from "../lib/errorMessage";
+import { errorMessage } from "@loam/notes-ui/lib/errorMessage";
 import { QUERY_KEYS } from "../settings/queries";
-import { toastError } from "../ui/toast";
+import { toastError } from "@loam/notes-ui/ui/toast";
 
 export const RELEASES_URL = "https://github.com/ramon427/loam/releases";
 export const releaseUrl = (version: string) =>

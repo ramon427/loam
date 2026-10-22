@@ -3,15 +3,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CopyIcon, SaveIcon, LockIcon, LockOpenIcon } from "lucide-react";
 
 import { callBridge } from "../bridge";
-import { saveAllNoteEditsOrThrow } from "../workspace/saveAllNoteEdits";
+import { saveAllNoteEditsOrThrow } from "@loam/notes-ui/workspace/saveAllNoteEdits";
 import type { BridgeSecurityStatus } from "@loam/shared/bridge/loamBridge";
-import { Button } from "../ui/Button";
-import { Checkbox } from "../ui/Checkbox";
-import { Label } from "../ui/Label";
-import { Notice } from "../ui/Notice";
-import { toastError, toastSuccess } from "../ui/toast";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { Checkbox } from "@loam/notes-ui/ui/Checkbox";
+import { Label } from "@loam/notes-ui/ui/Label";
+import { Notice } from "@loam/notes-ui/ui/Notice";
+import { toastError, toastSuccess } from "@loam/notes-ui/ui/toast";
 
-import { errorMessage } from "../lib/errorMessage";
+import { errorMessage } from "@loam/notes-ui/lib/errorMessage";
 import { newPassphraseProblem, PassphraseField } from "../security/PassphraseField";
 import { FormDialog } from "./FormDialog";
 import { QUERY_KEYS, useSecurityStatus } from "./queries";

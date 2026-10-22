@@ -1,9 +1,9 @@
 import { ExternalLinkIcon, RefreshCwIcon } from "lucide-react";
 
 import type { BridgeUpdateStatus } from "@loam/shared/bridge/loamBridge";
-import { formatDateTime } from "../lib/format";
+import { formatDateTime } from "@loam/notes-ui/lib/format";
 import { openReleasePage, useCheckForUpdates, useInstallUpdate } from "../shell/useAppUpdates";
-import { Button } from "../ui/Button";
+import { Button } from "@loam/notes-ui/ui/Button";
 
 import { useAppInfo, useUpdateStatus } from "./queries";
 import { SettingsNotice, SettingsRow, SettingsSection } from "./SettingsLayout";

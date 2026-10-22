@@ -1,0 +1,98 @@
+import type {
+  LoamBridgeEvent,
+  LoamBridgeEvents,
+  LoamBridgeMethod,
+  LoamBridgeParams,
+  LoamBridgeResult,
+  BridgeResult,
+} from "@loam/shared/bridge/loamBridge";
+
+/** The bridge methods the notes screens call: the library, media and files. */
+export type NotesHostMethod = Extract<
+  LoamBridgeMethod,
+  `notes.${string}` | `media.${string}` | `files.${string}`
+>;
+
+/** The events the notes screens listen to. */
+export type NotesHostEvent = Extract<LoamBridgeEvent, `notes.${string}` | `files.${string}`>;
+
+/**
+ * Where the notes screens read and save. Loam's window passes `window.loam`; an app that
+ * embeds the notes passes its own, backed by its storage. Each method answers like
+ * `window.loam.invoke`: `{ ok: true, data }` or `{ ok: false, error }`.
+ */
+export type NotesHost = {
+  invoke<M extends NotesHostMethod>(
+    method: M,
+    params: LoamBridgeParams<M>,
+  ): Promise<BridgeResult<LoamBridgeResult<M>>>;
+  on<E extends NotesHostEvent>(
+    event: E,
+    listener: (payload: LoamBridgeEvents[E]) => void,
+  ): () => void;
+  /** Where a file dropped on the window is on this computer; empty when it isn't a file there. */
+  pathForFile?(file: File): string;
+  /** The URL an `<img>` loads for a stored image path; Loam's own is `loam-media://images/<path>`. */
+  mediaUrl?(path: string): string;
+  /** What this host can do; screens for what it can't are hidden. Everything is on by default. */
+  capabilities?: Partial<NotesCapabilities>;
+};
+
+export type NotesCapabilities = {
+  /** Saved versions of each note (`notes.history`, `notes.version`, `notes.restoreVersion`). */
+  history: boolean;
+  /** PDF, Word and Markdown file tabs, and opening files from this computer (`files.*`). */
+  files: boolean;
+};
+
+// Kept on the global object, so every copy of this module (after a test resets modules, or
+// when a bundle holds two) reads the same host.
+const HOST_KEY = Symbol.for("loam.notesHost");
+const hostSlot = globalThis as { [HOST_KEY]?: NotesHost };
+
+/** Sets where the notes screens read and save; call once, before they render. */
+export const configureNotesHost = (next: NotesHost) => {
+  hostSlot[HOST_KEY] = next;
+};
+
+/** The host, or null before one is set. */
+export const configuredNotesHost = (): NotesHost | null => hostSlot[HOST_KEY] ?? null;
+
+export const notesCapabilities = (): NotesCapabilities => ({
+  history: true,
+  files: true,
+  ...configuredNotesHost()?.capabilities,
+});
+
+export const notesHost = (): NotesHost => {
+  const host = configuredNotesHost();
+  if (!host) throw new Error("The notes host isn't set: call configureNotesHost first.");
+  return host;
+};
+
+/** A failed bridge request. `code` is the store's reason, such as `NOT_FOUND`. */
+export class BridgeError extends Error {
+  readonly code: string;
+
+  constructor(message: string, code: string) {
+    super(message);
+    this.name = "BridgeError";
+    this.code = code;
+  }
+}
+
+/** Sends one request to the host and returns its data; throws `BridgeError` on failure. */
+export const callBridge = async <M extends NotesHostMethod>(
+  method: M,
+  params: LoamBridgeParams<M>,
+): Promise<LoamBridgeResult<M>> => {
+  const result = await notesHost().invoke(method, params);
+  if (!result.ok) throw new BridgeError(result.error.message, result.error.code);
+  return result.data;
+};
+
+/** Calls `listener` with each `event` the host sends; returns an unsubscribe. */
+export const onBridgeEvent = <E extends NotesHostEvent>(
+  event: E,
+  listener: (payload: LoamBridgeEvents[E]) => void,
+): (() => void) => notesHost().on(event, listener);

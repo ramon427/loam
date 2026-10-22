@@ -9,10 +9,10 @@ import {
 } from "@loam/shared/ai/aiChat";
 
 import { callBridge } from "../bridge";
-import { Button } from "../ui/Button";
-import { cn } from "../ui/cn";
-import { DotMatrixLoader } from "../ui/DotMatrixLoader";
-import { toastError } from "../ui/toast";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { cn } from "@loam/notes-ui/ui/cn";
+import { DotMatrixLoader } from "@loam/notes-ui/ui/DotMatrixLoader";
+import { toastError } from "@loam/notes-ui/ui/toast";
 
 import styles from "./aiChat.module.css";
 
@@ -57,11 +57,11 @@ const readFile = async (file: File, kind: Kind | "docx"): Promise<AiAttachmentUp
   const bytes = new Uint8Array(await file.arrayBuffer());
   let text: string | null = null;
   if (kind === "pdf")
-    text = await import("../files/pdfjs")
+    text = await import("@loam/notes-ui/files/pdfjs")
       .then(({ readPdfText }) => readPdfText(bytes, MAX_TEXT_CHARS))
       .catch(() => null);
   if (kind === "docx")
-    text = await import("../files/docxText").then(({ readDocxText }) =>
+    text = await import("@loam/notes-ui/files/docxText").then(({ readDocxText }) =>
       readDocxText(bytes, MAX_TEXT_CHARS),
     );
   return { name: file.name, bytes, text };

@@ -42,9 +42,11 @@ In short:
 - `apps/desktop/src/main` is the Electron main process: the store, media,
   backups, sync, encryption, import and export, AI access, and the requests
   the window makes.
-- `apps/desktop/src/renderer` is the window, a React app grouped by what each
-  part of the screen does (the sidebar, the open note, the editor, graphs,
-  tables, settings).
+- `apps/desktop/src/renderer` is the window, a React app: its layout,
+  settings, side chat and plugins.
+- `packages/notes-ui` is the notes screens, grouped by what each part of the
+  screen does (the sidebar, the open note, the editor, graphs, tables); other
+  apps can host them.
 - `packages/storage` is `NotesStore`, the storage adapters, history, sync and
   encryption.
 - `packages/transfer` converts notes to and from Markdown and other formats.

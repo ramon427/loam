@@ -1,7 +1,7 @@
 import { ClockIcon, CornerDownLeftIcon, PencilIcon, XIcon } from "lucide-react";
 
-import { Button } from "../ui/Button";
-import { cn } from "../ui/cn";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { cn } from "@loam/notes-ui/ui/cn";
 
 import styles from "./aiChat.module.css";
 import type { QueuedPrompt } from "./usePromptQueue";

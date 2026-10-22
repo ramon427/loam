@@ -22,8 +22,11 @@ affect the running app. Run `npm run format` rather than hand-formatting.
 - `apps/desktop/src/main`: Electron main process (store, sync, encryption,
   backups, import and export, AI, MCP server, bridge request handlers).
 - `apps/desktop/src/preload`: exposes `window.loam` and nothing else.
-- `apps/desktop/src/renderer`: the React window, one folder per part of the
-  screen. It reaches the main process only through `window.loam`.
+- `apps/desktop/src/renderer`: the React window (layout, settings, side chat,
+  plugins). It reaches the main process only through `window.loam`.
+- `packages/notes-ui`: the notes screens, one folder per part of the screen.
+  They reach their data only through the `NotesHost` they are given, so other
+  apps can host them (see "Hosting the notes screens" in the architecture).
 - `packages/shared`: the note model and the bridge contract
   (`src/bridge/loamBridge.ts`).
 - `packages/storage`: `NotesStore`, storage adapters, history, sync, encryption.

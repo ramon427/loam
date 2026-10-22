@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { MicIcon, SquareIcon } from "lucide-react";
 
 import { callBridge } from "../bridge";
-import { errorMessage } from "../lib/errorMessage";
-import { Button } from "../ui/Button";
-import { cn } from "../ui/cn";
-import { DotMatrixLoader } from "../ui/DotMatrixLoader";
-import { toastError } from "../ui/toast";
+import { errorMessage } from "@loam/notes-ui/lib/errorMessage";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { cn } from "@loam/notes-ui/ui/cn";
+import { DotMatrixLoader } from "@loam/notes-ui/ui/DotMatrixLoader";
+import { toastError } from "@loam/notes-ui/ui/toast";
 
 import styles from "./aiChat.module.css";
 

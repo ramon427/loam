@@ -12,7 +12,7 @@ import type {
 } from "@loam/shared/ai/aiChat";
 
 import { callBridge, onBridgeEvent } from "../bridge";
-import { errorMessage } from "../lib/errorMessage";
+import { errorMessage } from "@loam/notes-ui/lib/errorMessage";
 
 /** A chat as the window shows it. */
 export type ChatThread = {

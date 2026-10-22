@@ -10,9 +10,9 @@ import {
   setSnippetEnabled,
   subscribeToCustomizations,
 } from "../themes/customizations";
-import { Button } from "../ui/Button";
-import { Checkbox } from "../ui/Checkbox";
-import { toastError } from "../ui/toast";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { Checkbox } from "@loam/notes-ui/ui/Checkbox";
+import { toastError } from "@loam/notes-ui/ui/toast";
 
 import { SettingsNote, SettingsNotice, SettingsRow, SettingsSection } from "./SettingsLayout";
 

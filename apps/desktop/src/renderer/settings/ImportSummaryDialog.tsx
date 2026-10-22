@@ -1,5 +1,5 @@
 import type { NotesImportSummary } from "../import-export/useNotesImport";
-import { Button } from "../ui/Button";
+import { Button } from "@loam/notes-ui/ui/Button";
 import {
   Dialog,
   DialogContent,
@@ -7,7 +7,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../ui/Dialog";
+} from "@loam/notes-ui/ui/Dialog";
 
 import styles from "./settings.module.css";
 

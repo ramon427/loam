@@ -6,9 +6,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AiChatItem, AiChatStatus, AiThread } from "@loam/shared/ai/aiChat";
 
-import { useShortcuts } from "../../keyboard/useShortcuts";
+import { useShortcuts } from "@loam/notes-ui/keyboard/useShortcuts";
 import { useAiChatStatus } from "../../settings/queries";
-import { installFakeBridge } from "../../testing/fakeBridge";
+import { installFakeBridge } from "@loam/notes-ui/testing/fakeBridge";
 import { AiChatOpenButton, AiChatSide, AiChatToggleProvider } from "../AiChatPanel";
 import { useAiChatLayout } from "../useAiChatLayout";
 

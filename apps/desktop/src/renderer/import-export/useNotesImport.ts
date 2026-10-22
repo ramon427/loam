@@ -1,12 +1,12 @@
 import { useCallback, useRef, useState } from "react";
 
 import { callBridge } from "../bridge";
-import { saveAllNoteEdits } from "../workspace/saveAllNoteEdits";
+import { saveAllNoteEdits } from "@loam/notes-ui/workspace/saveAllNoteEdits";
 import type { BridgeImportSkip } from "@loam/shared/bridge/loamBridge";
-import { toastError, toastWarning } from "../ui/toast";
+import { toastError, toastWarning } from "@loam/notes-ui/ui/toast";
 
 import { convertImport } from "./convertImport";
-import { errorMessage } from "../lib/errorMessage";
+import { errorMessage } from "@loam/notes-ui/lib/errorMessage";
 
 /** Notes per bridge call, so a large import never sends everything at once. */
 const WRITE_BATCH_SIZE = 100;

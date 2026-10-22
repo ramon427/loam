@@ -7,7 +7,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../ui/Dialog";
+} from "@loam/notes-ui/ui/Dialog";
 
 import styles from "./settings.module.css";
 

@@ -6,22 +6,12 @@ import type {
   LoamBridgeParams,
   LoamBridgeResult,
 } from "@loam/shared/bridge/loamBridge";
+import { BridgeError } from "@loam/notes-ui/host/notesHost";
 
 declare global {
   interface Window {
     /** Set by the preload script; tests assign a fake. */
     loam: LoamBridge;
-  }
-}
-
-/** A failed bridge request. `code` is the store's reason, such as `NOT_FOUND`. */
-export class BridgeError extends Error {
-  readonly code: string;
-
-  constructor(message: string, code: string) {
-    super(message);
-    this.name = "BridgeError";
-    this.code = code;
   }
 }
 

@@ -2,7 +2,7 @@ import { useEffect, useId, useState, useSyncExternalStore } from "react";
 
 import { stableJsonStringify } from "@loam/shared/utils/stableJson";
 
-import { cn } from "../ui/cn";
+import { cn } from "@loam/notes-ui/ui/cn";
 
 import { PluginElement } from "./PluginElement";
 import { handlerIds, validateTree } from "./pluginElementTree";

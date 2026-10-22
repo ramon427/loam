@@ -14,10 +14,10 @@ import {
 
 import type { AiChatStatus } from "@loam/shared/ai/aiChat";
 
-import { ShortcutHint } from "../keyboard/ShortcutHint";
-import { Button } from "../ui/Button";
-import { cn } from "../ui/cn";
-import { DestructiveConfirmDialog } from "../ui/DestructiveConfirmDialog";
+import { ShortcutHint } from "@loam/notes-ui/keyboard/ShortcutHint";
+import { Button } from "@loam/notes-ui/ui/Button";
+import { cn } from "@loam/notes-ui/ui/cn";
+import { DestructiveConfirmDialog } from "@loam/notes-ui/ui/DestructiveConfirmDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,10 +25,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../ui/DropdownMenu";
-import { EmptyState } from "../ui/EmptyState";
-import { Input } from "../ui/Input";
-import { Notice } from "../ui/Notice";
+} from "@loam/notes-ui/ui/DropdownMenu";
+import { EmptyState } from "@loam/notes-ui/ui/EmptyState";
+import { Input } from "@loam/notes-ui/ui/Input";
+import { Notice } from "@loam/notes-ui/ui/Notice";
 
 import { usePendingAttachments } from "./AiChatAttachments";
 import { AiChatComposer, type ActiveNote } from "./AiChatComposer";
