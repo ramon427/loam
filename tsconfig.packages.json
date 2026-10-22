@@ -2,7 +2,7 @@
   // Type declarations for the packages scripts/packPackages.ts packs.
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "types": ["vite/client"],
+    "types": ["node", "vite/client"],
     "noEmit": false,
     "declaration": true,
     "emitDeclarationOnly": true,
@@ -13,8 +13,9 @@
   "include": [
     "packages/shared/src/**/*.ts",
     "packages/transfer/src/**/*.ts",
+    "packages/storage/src/**/*.ts",
     "packages/notes-ui/src/**/*.ts",
     "packages/notes-ui/src/**/*.tsx"
   ],
-  "exclude": ["packages/*/src/**/__tests__/**", "packages/notes-ui/src/testing/**"]
+  "exclude": ["packages/*/src/**/__tests__/**", "packages/*/src/testing/**"]
 }

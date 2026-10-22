@@ -1,8 +1,9 @@
 /**
- * Builds the packages other apps install (@loam/shared, @loam/transfer, @loam/notes-ui) and
- * packs each into release/packages/<name>-<version>.tgz. Every source file becomes its own
- * ES module in dist/, so `@loam/<package>/<path>` imports work the same outside this repo;
- * notes-ui's styles, CSS modules included, become dist/style.css.
+ * Builds the packages other apps install (@loam/shared, @loam/transfer, @loam/storage,
+ * @loam/notes-ui) and packs each into release/packages/<name>-<version>.tgz. Every source
+ * file becomes its own ES module in dist/, so `@loam/<package>/<path>` imports work the same
+ * outside this repo; notes-ui's styles, CSS modules included, become dist/style.css. A host
+ * app's storage uses @loam/storage's note rules (patches, layouts, search) on its own rows.
  *
  * The packages share the desktop app's version. Libraries that hold app-wide state (React,
  * BlockNote, tiptap, React Query, React Flow, Framer Motion) are peer dependencies over their
@@ -31,7 +32,7 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const out = path.join(root, "release/packages");
 const typesOut = path.join(root, "tmp/package-types");
 
-const PACKAGES = ["shared", "transfer", "notes-ui"] as const;
+const PACKAGES = ["shared", "transfer", "storage", "notes-ui"] as const;
 const PEERS = [
   /^react$/,
   /^react-dom$/,
