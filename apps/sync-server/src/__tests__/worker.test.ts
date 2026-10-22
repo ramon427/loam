@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 import { SyncFolder, syncWithFolder } from "@loam/storage/sync/syncFolder";
 import { parseSyncCode, serverStorage } from "@loam/storage/sync/syncServer";
@@ -70,6 +74,39 @@ describe("sync server", () => {
       headers: { "if-none-match": etag },
     });
     expect(await changed.json()).toEqual({ paths: ["media/a.png", "media/b.png"] });
+  });
+
+  it("stores a file even while R2 refuses the stamp, and lists it within minutes", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const { bucket } = createMemoryBucket();
+    const put = bucket.put.bind(bucket);
+    let busy = false;
+    bucket.put = async (key, value) => {
+      // R2 refuses frequent writes to one object.
+      if (busy && key === ".stamp")
+        throw new Error("put: Reduce your concurrent request rate for the same object. (10058)");
+      return put(key, value);
+    };
+    const waits: number[] = [];
+    const serve = (path: string, init: RequestInit = {}) =>
+      handleRequest(
+        new Request(`${ORIGIN}${path}`, {
+          ...init,
+          headers: { authorization: `Bearer ${KEY}`, ...init.headers },
+        }),
+        { BUCKET: bucket, SYNC_KEY: KEY },
+        undefined,
+        async (ms) => void waits.push(ms),
+      );
+    const etag = (await serve("/v1/list?prefix=")).headers.get("etag")!;
+
+    busy = true;
+    expect((await serve("/v1/files/a", { method: "PUT", body: "x" })).status).toBe(204);
+    expect(waits).toEqual([1100, 2200]);
+    const listing = { headers: { "if-none-match": etag } };
+    expect((await serve("/v1/list?prefix=", listing)).status).toBe(304);
+    vi.setSystemTime(Date.now() + 5 * 60_000);
+    expect(await (await serve("/v1/list?prefix=", listing)).json()).toEqual({ paths: ["a"] });
   });
 
   it("refuses paths outside the sync files and hides its stamp", async () => {
