@@ -129,6 +129,11 @@ its parts out in their own window. They share code with Loam, never data.
   `@loam/notes-ui/<path>` as they do here; `@loam/notes-ui/style.css` holds the
   styles. Libraries with app-wide state (React, BlockNote, tiptap, React Query,
   React Flow, Framer Motion) are peer dependencies.
+- **Same behavior.** `describeNotesHostConformance` in
+  `shared/src/bridge/notesHostConformance.ts` is what the screens count on from
+  any host: saves that keep unnamed fields, layouts, trash, backlinks, search.
+  Loam runs it against its main process; a host runs it against its storage,
+  so an update that changes what the screens expect fails there first.
 
 ## A note
 
