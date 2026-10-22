@@ -11,7 +11,10 @@
  *
  * Each write also replaces a stamp, so a listing whose stamp hasn't changed
  * answers 304 for the price of one small read: computers look for changes
- * every half minute, and a full listing is billed per thousand files.
+ * every half minute, and a full listing is billed per thousand files. R2
+ * takes about one write a second to one object, so a stamp write that loses
+ * to others is retried and then given up; the ETag also changes every few
+ * minutes, so a change whose stamp was lost is listed then at the latest.
  */
 
 /** The parts of an R2 bucket the server uses. */
@@ -30,6 +33,9 @@ export type SyncServerEnv = { BUCKET: SyncBucket; SYNC_KEY: string };
 
 /** Replaced on every write; not a path a client can name, since paths can't start with ".". */
 const STAMP = ".stamp";
+/** The longest an unchanged ETag lasts, so a lost stamp write delays a change no longer. */
+const ETAG_WINDOW_MS = 5 * 60_000;
+const STAMP_ATTEMPTS = 3;
 /** Paths Loam writes: ids, clocks and media names, separated by "/". */
 const SEGMENT = /^[A-Za-z0-9_~-][A-Za-z0-9._~-]{0,199}$/;
 const MAX_PATH_LENGTH = 512;
@@ -74,10 +80,40 @@ const listAll = async (bucket: SyncBucket, prefix: string) => {
   return paths;
 };
 
-const stamp = async (bucket: SyncBucket) =>
-  `"${(await (await bucket.get(STAMP))?.text()) ?? "none"}"`;
+const etagOf = async (bucket: SyncBucket) =>
+  `"${(await (await bucket.get(STAMP))?.text()) ?? "none"}:${Math.floor(Date.now() / ETAG_WINDOW_MS)}"`;
 
-export const handleRequest = async (request: Request, env: SyncServerEnv): Promise<Response> => {
+/** Replaces the stamp after a write, retrying while other writes to it are in flight. */
+const touch = async (bucket: SyncBucket, wait: (ms: number) => Promise<void>) => {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await bucket.put(STAMP, crypto.randomUUID());
+      return;
+    } catch (error) {
+      if (attempt >= STAMP_ATTEMPTS) {
+        console.warn("The stamp wasn't replaced; listings catch up within minutes", error);
+        return;
+      }
+      await wait(1100 * attempt);
+    }
+  }
+};
+
+/** What the Workers runtime passes along: work that may finish after the response. */
+type WorkerContext = { waitUntil(promise: Promise<unknown>): void };
+
+export const handleRequest = async (
+  request: Request,
+  env: SyncServerEnv,
+  context?: WorkerContext,
+  wait = (ms: number) => new Promise<void>((done) => setTimeout(done, ms)),
+): Promise<Response> => {
+  // The client needn't wait for the stamp; without a runtime (in tests) it does.
+  const afterWrite = async () => {
+    const touched = touch(env.BUCKET, wait);
+    if (context) context.waitUntil(touched);
+    else await touched;
+  };
   if (!env.SYNC_KEY) return text(500, "The server has no SYNC_KEY secret.");
   const authorization = request.headers.get("authorization") ?? "";
   const given = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
@@ -90,7 +126,7 @@ export const handleRequest = async (request: Request, env: SyncServerEnv): Promi
     const prefix = url.searchParams.get("prefix") ?? "";
     if (!isPath(prefix, { prefix: true })) return text(400, "Invalid prefix.");
     // Read before listing: a write in between changes the stamp, so the next listing is fresh.
-    const etag = await stamp(bucket);
+    const etag = await etagOf(bucket);
     const headers = { etag, "cache-control": "no-store" };
     if (request.headers.get("if-none-match") === etag)
       return new Response(null, { status: 304, headers });
@@ -122,12 +158,12 @@ export const handleRequest = async (request: Request, env: SyncServerEnv): Promi
       const length = Number(request.headers.get("content-length"));
       if (!Number.isFinite(length) || length > MAX_FILE_BYTES) return text(413, "Too large.");
       await bucket.put(path, request.body);
-      await bucket.put(STAMP, crypto.randomUUID());
+      await afterWrite();
       return new Response(null, { status: 204 });
     }
     case "DELETE":
       await bucket.delete(path);
-      await bucket.put(STAMP, crypto.randomUUID());
+      await afterWrite();
       return new Response(null, { status: 204 });
     default:
       return text(405, "Method not allowed.");
