@@ -7,6 +7,8 @@ import type {
   BridgeResult,
 } from "@loam/shared/bridge/loamBridge";
 
+import type { CanvasBackground } from "../note/useCanvasBackground";
+
 /** The bridge methods the notes screens call: the library, media and files. */
 export type NotesHostMethod = Extract<
   LoamBridgeMethod,
@@ -41,6 +43,8 @@ export type NotesHost = {
   mediaPath?(reference: string): string | null;
   /** What this host can do; screens for what it can't are hidden. Everything is on by default. */
   capabilities?: Partial<NotesCapabilities>;
+  /** The pattern behind a note's paper until someone picks one; graph paper by default. */
+  canvasBackground?: CanvasBackground;
 };
 
 export type NotesCapabilities = {
