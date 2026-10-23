@@ -9,7 +9,12 @@ import {
 } from "react";
 
 import { matchesShortcut, shortcuts } from "../keyboard/shortcuts";
-import { asNumber, readPreference, writePreference } from "../lib/preferences";
+import {
+  asNumber,
+  readPreference,
+  subscribeToPreferences,
+  writePreference,
+} from "../lib/preferences";
 import { clamp } from "../lib/clamp";
 
 const PAPER_SIZE_KEY = "note-paper-size:v1";
@@ -36,19 +41,24 @@ const clampToPixel = (value: number, min: number, max: number) =>
   Math.round(clamp(value, min, max));
 
 const readSize = (): PaperSize =>
-  readPreference(PAPER_SIZE_KEY, (saved) => {
-    if (!saved || typeof saved !== "object") return null;
-    const { width, height } = saved as Record<string, unknown>;
-    const savedWidth = asNumber(width);
-    const savedHeight = asNumber(height);
-    return {
-      width: savedWidth === null ? A4_SIZE.width : clampToPixel(savedWidth, MIN_WIDTH, MAX_WIDTH),
-      height:
-        savedHeight === null ? A4_SIZE.height : clampToPixel(savedHeight, MIN_HEIGHT, MAX_HEIGHT),
-    };
-  }) ?? A4_SIZE;
+  readPreference(
+    PAPER_SIZE_KEY,
+    (saved) => {
+      if (!saved || typeof saved !== "object") return null;
+      const { width, height } = saved as Record<string, unknown>;
+      const savedWidth = asNumber(width);
+      const savedHeight = asNumber(height);
+      return {
+        width: savedWidth === null ? A4_SIZE.width : clampToPixel(savedWidth, MIN_WIDTH, MAX_WIDTH),
+        height:
+          savedHeight === null ? A4_SIZE.height : clampToPixel(savedHeight, MIN_HEIGHT, MAX_HEIGHT),
+      };
+    },
+    "everywhere",
+  ) ?? A4_SIZE;
 
-const persistSize = (size: PaperSize) => writePreference(PAPER_SIZE_KEY, size);
+// The sheet size is a choice: a host with its own store keeps it on every computer.
+const persistSize = (size: PaperSize) => writePreference(PAPER_SIZE_KEY, size, "everywhere");
 
 const sameSize = (left: PaperSize, right: PaperSize) =>
   left.width === right.width && left.height === right.height;
@@ -93,6 +103,19 @@ export function useNotesPaperSize(enabled: boolean) {
       return () => observer.disconnect();
     },
     [enabled],
+  );
+
+  // A size chosen elsewhere (another window or computer) shows here, unless a drag is under way.
+  useEffect(
+    () =>
+      subscribeToPreferences(() => {
+        const next = readSize();
+        if (dragRef.current || sameSize(next, savedRef.current)) return;
+        savedRef.current = next;
+        sizeRef.current = next;
+        setSize(next);
+      }),
+    [],
   );
 
   const save = useCallback((next: PaperSize) => {

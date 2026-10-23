@@ -45,6 +45,28 @@ export type NotesHost = {
   capabilities?: Partial<NotesCapabilities>;
   /** The pattern behind a note's paper until someone picks one; graph paper by default. */
   canvasBackground?: CanvasBackground;
+  /** Where the screens keep their preferences; the window's localStorage by default. */
+  preferences?: NotesPreferences;
+};
+
+/**
+ * Who a preference is for: `everywhere` for choices a person makes once (the paper's
+ * pattern and size, recent commands), `this-computer` for how this window was left (open
+ * folders, the last note, pane sizes).
+ */
+export type NotesPreferenceScope = "everywhere" | "this-computer";
+
+/**
+ * A host's own store for the screens' preferences, so they live with the host's settings
+ * (and its sync) instead of the window's localStorage. Reads are synchronous; values are
+ * JSON-safe and `undefined` means none.
+ */
+export type NotesPreferences = {
+  read(key: string, scope: NotesPreferenceScope): unknown;
+  /** Saves `value`; `undefined` forgets the key. */
+  write(key: string, value: unknown, scope: NotesPreferenceScope): void;
+  /** Calls `listener` when values change from elsewhere (another window or computer). */
+  subscribe?(listener: () => void): () => void;
 };
 
 export type NotesCapabilities = {

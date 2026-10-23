@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 import { configuredNotesHost } from "../host/notesHost";
-import { readPreference, writePreference } from "../lib/preferences";
+import { readPreference, subscribeToPreferences, writePreference } from "../lib/preferences";
 
 const CANVAS_BACKGROUND_KEY = "canvas-background:v1";
 
@@ -15,19 +15,31 @@ const isCanvasBackground = (value: unknown): value is CanvasBackground =>
 let current: CanvasBackground | undefined;
 const readCurrent = () =>
   (current ??=
-    readPreference(CANVAS_BACKGROUND_KEY, (saved) => (isCanvasBackground(saved) ? saved : null)) ??
+    readPreference(
+      CANVAS_BACKGROUND_KEY,
+      (saved) => (isCanvasBackground(saved) ? saved : null),
+      "everywhere",
+    ) ??
     configuredNotesHost()?.canvasBackground ??
     "grid");
 const listeners = new Set<() => void>();
 
+// A pattern picked elsewhere (another window or computer) is read again.
 const subscribe = (listener: () => void) => {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  const stopWatching = subscribeToPreferences(() => {
+    current = undefined;
+    listener();
+  });
+  return () => {
+    listeners.delete(listener);
+    stopWatching();
+  };
 };
 
 const setCanvasBackground = (next: CanvasBackground) => {
   current = next;
-  writePreference(CANVAS_BACKGROUND_KEY, next);
+  writePreference(CANVAS_BACKGROUND_KEY, next, "everywhere");
   for (const listener of listeners) listener();
 };
 

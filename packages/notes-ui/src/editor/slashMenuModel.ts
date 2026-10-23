@@ -111,10 +111,13 @@ const sectionByContextBlock: Record<string, SlashMenuSection> = {
 
 export function loadRecentSlashMenuIds() {
   return (
-    readPreference(RECENT_COMMANDS_KEY, (value) =>
-      Array.isArray(value)
-        ? value.filter((item): item is string => typeof item === "string")
-        : null,
+    readPreference(
+      RECENT_COMMANDS_KEY,
+      (value) =>
+        Array.isArray(value)
+          ? value.filter((item): item is string => typeof item === "string")
+          : null,
+      "everywhere",
     ) ?? []
   );
 }
@@ -124,7 +127,7 @@ export function trackRecentSlashMenuItem(id: string) {
     0,
     MAX_RECENT_COMMANDS,
   );
-  writePreference(RECENT_COMMANDS_KEY, next);
+  writePreference(RECENT_COMMANDS_KEY, next, "everywhere");
 }
 
 /**
