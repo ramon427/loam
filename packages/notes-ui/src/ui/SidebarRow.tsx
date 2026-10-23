@@ -4,8 +4,9 @@ import type { ComponentPropsWithoutRef } from "react";
 import { fastUiTransitionClass } from "../styles/motion";
 import { cn } from "./cn";
 
-// Every row is 34px tall, with a rounded pill behind it on hover and when active.
-const sidebarRowClassName = `flex h-[34px] w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[14px] leading-5 text-[color:var(--sidebar-foreground,var(--app-muted))] transition-all ${fastUiTransitionClass} hover:bg-(--sidebar-item-hover-bg) hover:text-(--app-text) focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-(--app-border)/25 focus-visible:ring-offset-1 focus-visible:ring-offset-(--app-page) disabled:cursor-default disabled:opacity-50 [&>svg]:block [&>svg]:-translate-y-px`;
+// Every row is 34px tall, with a rounded pill behind it on hover and when active. An app sets
+// the text size with --sidebar-text-size (14px by default), to match its own sidebar.
+const sidebarRowClassName = `flex h-[34px] w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[length:var(--sidebar-text-size,14px)] leading-5 text-[color:var(--sidebar-foreground,var(--app-muted))] transition-all ${fastUiTransitionClass} hover:bg-(--sidebar-item-hover-bg) hover:text-(--app-text) focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-(--app-border)/25 focus-visible:ring-offset-1 focus-visible:ring-offset-(--app-page) disabled:cursor-default disabled:opacity-50 [&>svg]:block [&>svg]:-translate-y-px`;
 
 /** A row in a sidebar list: the notes tree and the settings sections. */
 export function SidebarRow({
