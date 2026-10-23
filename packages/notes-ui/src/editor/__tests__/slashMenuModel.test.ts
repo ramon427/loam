@@ -12,6 +12,8 @@ import { noteEditorSchema } from "../noteEditorSchema";
 import {
   buildSlashMenuItems,
   isSlashQueryAbandoned,
+  isSlashCommandInRange,
+  type EditorBlockRange,
   isValidSlashTrigger,
   loadRecentSlashMenuIds,
   offeredBlockTypeItems,
@@ -172,6 +174,22 @@ describe("the blocks notes offer", () => {
     for (const hidden of ["code_block", "heading_4", "video", "audio", "file"]) {
       expect(keys).not.toContain(hidden);
     }
+  });
+
+  it("offers only the blocks an editor's range allows", () => {
+    const keysIn = (range: EditorBlockRange) =>
+      getDefaultEditorSlashMenuItems(editor)
+        .filter((item) => isSlashCommandInRange(item, range))
+        .map((item) => item.key);
+    const text = keysIn("text");
+    expect(text).toEqual(expect.arrayContaining(["heading", "bullet_list", "check_list"]));
+    for (const hidden of ["image", "table", "columns_2", "columns_3"]) {
+      expect(text).not.toContain(hidden);
+    }
+    const noMedia = keysIn("no-media");
+    expect(noMedia).toEqual(expect.arrayContaining(["heading", "table", "columns_2"]));
+    expect(noMedia).not.toContain("image");
+    expect(keysIn("all")).toContain("image");
   });
 
   it("offers the same headings in the formatting toolbar", () => {

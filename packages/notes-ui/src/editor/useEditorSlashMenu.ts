@@ -7,9 +7,11 @@ import {
   buildSlashMenuItems,
   isSlashMenuCloseGuardActive,
   isSlashQueryAbandoned,
+  isSlashCommandInRange,
   isValidSlashTrigger,
   loadRecentSlashMenuIds,
   trackRecentSlashMenuItem,
+  type EditorBlockRange,
   type SlashCommand,
   type SlashMenuItem,
 } from "./slashMenuModel";
@@ -22,20 +24,24 @@ export function useEditorSlashMenu({
   editor,
   extraItems,
   onInsertImage,
+  blocks = "all",
 }: {
   editor: NoteBlockEditor;
+  /** Which blocks the menu offers. */
+  blocks?: EditorBlockRange;
   /** Host-specific commands offered beside the default blocks; keep the array stable. */
   extraItems: readonly SlashCommand[];
   onInsertImage: () => void;
 }) {
   const items = useMemo(
-    () => [
-      ...getDefaultEditorSlashMenuItems(editor).map((item) =>
-        item.key === "image" ? { ...item, onItemClick: onInsertImage } : item,
-      ),
-      ...extraItems,
-    ],
-    [editor, extraItems, onInsertImage],
+    () =>
+      [
+        ...getDefaultEditorSlashMenuItems(editor).map((item) =>
+          item.key === "image" ? { ...item, onItemClick: onInsertImage } : item,
+        ),
+        ...extraItems,
+      ].filter((item) => isSlashCommandInRange(item, blocks)),
+    [blocks, editor, extraItems, onInsertImage],
   );
 
   const getSlashItems = useCallback(

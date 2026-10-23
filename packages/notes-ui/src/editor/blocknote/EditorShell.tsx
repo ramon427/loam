@@ -13,6 +13,8 @@ type EditorShellProps = {
   contentKey: string;
   rootClassName?: string;
   containerClassName?: string;
+  /** Shown above the content, inside the editor's frame (a host's title or tab row). */
+  header?: ReactNode;
   children: ReactNode;
 };
 
@@ -22,6 +24,7 @@ export const EditorShell = ({
   contentKey,
   rootClassName,
   containerClassName,
+  header,
   children,
 }: EditorShellProps) => {
   const prefersReducedMotion = useReducedMotion() ?? false;
@@ -70,6 +73,7 @@ export const EditorShell = ({
         rootClassName,
       )}
     >
+      {header}
       <div
         data-slot="editor-container"
         className={cn(styles.editorContainer, "px-0 pb-0", containerClassName)}

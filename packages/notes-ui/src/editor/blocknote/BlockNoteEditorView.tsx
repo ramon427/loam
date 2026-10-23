@@ -74,6 +74,8 @@ type BlockNoteEditorViewProps = {
    * links get the native menu.
    */
   linkMenuItems?: (link: { href: string; text: string }) => ReactNode;
+  /** The drag handle and add button beside each block; off for small fields. */
+  showSideMenu?: boolean;
 };
 
 /** What the open menu acts on. */
@@ -104,6 +106,7 @@ export function BlockNoteEditorView({
   beforeEditor,
   featureBlockMenuItems,
   linkMenuItems,
+  showSideMenu = true,
 }: BlockNoteEditorViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [readOnlyImageSrc, setReadOnlyImageSrc] = useState<string | null>(null);
@@ -198,7 +201,7 @@ export function BlockNoteEditorView({
             {beforeEditor}
             {editable ? (
               <>
-                <EditorSideMenuController />
+                {showSideMenu ? <EditorSideMenuController /> : null}
                 <BlockNoteFormattingToolbarController />
                 <EmojiPickerController />
                 <LinkToolbarController linkToolbar={NoteLinkToolbar} />

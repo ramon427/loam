@@ -45,6 +45,20 @@ export type SlashCommand = DefaultReactSuggestionItem & { key: SlashCommandKey }
 
 const PLUGIN_SLASH_COMMAND = { section: "Plugins", preview: "generic" } as const;
 
+/** The blocks an editor holds: everything, all but media, or written blocks only (no tables or columns). */
+export type EditorBlockRange = "all" | "no-media" | "text";
+
+/** Whether a command inserts a block the editor's range allows. */
+export const isSlashCommandInRange = (
+  command: Pick<SlashCommand, "key">,
+  range: EditorBlockRange,
+) => {
+  const { section } = describeCommand(command.key);
+  if (range === "all") return true;
+  if (section === "Media") return false;
+  return range === "no-media" || section !== "Layout";
+};
+
 const describeCommand = (key: SlashCommandKey) =>
   key.startsWith("plugin:")
     ? PLUGIN_SLASH_COMMAND

@@ -1,6 +1,5 @@
 import {
   useCallback,
-  useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useMemo,
@@ -15,17 +14,11 @@ import { useEditorChange } from "@blocknote/react";
 import type { EditorState } from "@tiptap/pm/state";
 import { LinkIcon } from "lucide-react";
 
-import { BlockNoteEditorView } from "./blocknote/BlockNoteEditorView";
 import { ActionMenuItem } from "../action-menu/ActionMenu";
-import { InsertImagePopover } from "./blocknote/InsertImagePopover";
-import { SlashMenuController } from "./blocknote/SlashMenuController";
+import { BlockEditor } from "./BlockEditor";
 import { useNoteEditor } from "./useNoteEditor";
-import { useEditorSlashMenu } from "./useEditorSlashMenu";
 import type { SlashCommand } from "./slashMenuModel";
-import { useEditorTheme } from "./useEditorTheme";
-import { useInsertImagePopover } from "./useInsertImagePopover";
 import { useImageUpload } from "../media/useImageUpload";
-import { rejectNonImageFiles } from "./editorImageOnlyMedia";
 import type { NoteBlock } from "./noteEditorSchema";
 import { beginPendingUpload } from "../media/pendingUploads";
 import { NoteRouteGlyph } from "../ui/NoteRouteIcon";
@@ -106,7 +99,6 @@ export function PageTabEditor({
   /** Called after a YouTube link is pasted, so the note can offer to attach it. */
   onPasteVideoLink?: (video: ParsedYouTubeUrl) => void;
 }) {
-  const theme = useEditorTheme();
   const { uploadImage } = useImageUpload();
   const headingOptions = useMemo(() => listNoteHeadingConnectionOptions(note), [note]);
   const createDecorations = useCallback(
@@ -213,16 +205,6 @@ export function PageTabEditor({
     () => [noteLinkCommand, ...extensionItems],
     [noteLinkCommand, extensionItems],
   );
-  const imagePopover = useInsertImagePopover(editor);
-  const { closeImagePopover } = imagePopover;
-  const slashMenu = useEditorSlashMenu({
-    editor,
-    extraItems: extraCommands,
-    onInsertImage: imagePopover.insertImageBlock,
-  });
-  useEffect(() => {
-    if (readOnly) closeImagePopover();
-  }, [closeImagePopover, readOnly]);
 
   const getMentionItems = useCallback(
     async (query: string) => buildNoteMentionMenuItems(note, query, readLinkableNotes()),
@@ -314,23 +296,17 @@ export function PageTabEditor({
           className="contents"
           onClickCapture={followLink}
           onAuxClickCapture={followLink}
-          onDropCapture={(event) => {
-            if (!readOnly && rejectNonImageFiles(event.nativeEvent)) event.stopPropagation();
-          }}
           onPasteCapture={(event) => {
             if (readOnly) return;
-            if (rejectNonImageFiles(event.nativeEvent)) {
-              event.stopPropagation();
-              return;
-            }
             const video = parseYouTubeUrl(event.clipboardData.getData("text/plain"));
             if (video) onPasteVideoLink?.(video);
           }}
         >
-          <BlockNoteEditorView
+          <BlockEditor
             editor={editor}
-            theme={theme}
-            editable={!readOnly && !guard.pending}
+            readOnly={readOnly || Boolean(guard.pending)}
+            uploadFile={uploadFile}
+            slashCommands={extraCommands}
             featureBlockMenuItems={headingMenuItems}
             linkMenuItems={({ href, text }) => (
               <NoteLinkMenuItems
@@ -342,35 +318,16 @@ export function PageTabEditor({
               />
             )}
             beforeEditor={
-              <>
-                <SlashMenuController
-                  enabled={!readOnly}
-                  getItems={slashMenu.getSlashItems}
-                  onItemClick={slashMenu.handleSlashItemClick}
-                />
-                <NoteMentionMenuController
-                  enabled={!readOnly}
-                  getItems={getMentionItems}
-                  onItemClick={insertMention}
-                />
-              </>
+              <NoteMentionMenuController
+                enabled={!readOnly}
+                getItems={getMentionItems}
+                onItemClick={insertMention}
+              />
             }
           />
         </div>
       </NoteGraphSnapshotContext>
 
-      {readOnly ? null : (
-        <InsertImagePopover
-          open={imagePopover.imagePopoverState.open}
-          anchorRect={imagePopover.imagePopoverState.anchorRect}
-          onOpenChange={(open) => {
-            if (!open) closeImagePopover();
-          }}
-          onInvalidImageInput={imagePopover.discardPendingImageBlock}
-          onInsertImage={imagePopover.insertImage}
-          onUploadFile={uploadFile}
-        />
-      )}
       {managedHeading ? (
         <HeadingTargetManager
           onClose={() => setManagedHeadingId(null)}

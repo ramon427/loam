@@ -32,6 +32,8 @@ type UseNoteEditorOptions = {
   initialContent: NotePartialBlock[];
   /** Saves a file and resolves to the reference its block stores (a media path). */
   uploadFile: (file: File) => Promise<string>;
+  /** Handles a click on a link while editing first; true when it did. */
+  onLinkClick?: (event: MouseEvent, editor: NoteBlockEditor) => boolean;
 };
 
 /** Creates the note editor: its schema, paste and key rules, uploads and media URLs. */
@@ -39,14 +41,17 @@ export function useNoteEditor({
   createDecorations,
   initialContent,
   uploadFile,
+  onLinkClick,
 }: UseNoteEditorOptions) {
   // BlockNote reads its options once, so callbacks that change are read through refs.
   const createDecorationsRef = useRef(createDecorations);
   const uploadFileRef = useRef(uploadFile);
+  const onLinkClickRef = useRef(onLinkClick);
   useEffect(() => {
     createDecorationsRef.current = createDecorations;
     uploadFileRef.current = uploadFile;
-  }, [createDecorations, uploadFile]);
+    onLinkClickRef.current = onLinkClick;
+  }, [createDecorations, uploadFile, onLinkClick]);
 
   // BlockNote rejects an empty initialContent, and a page tab has no blocks
   // until its first edit is saved, so it starts from one empty paragraph.
@@ -71,7 +76,11 @@ export function useNoteEditor({
     },
     // Blocks store media paths; BlockNote asks for a loadable URL when it renders one.
     resolveFileUrl: async (url) => mediaSrc(url) ?? "",
-    links: { onClick: handleEditorLinkClick, isValidLink: isEditorLink },
+    links: {
+      onClick: (event, clicked) =>
+        onLinkClickRef.current?.(event, editor) || handleEditorLinkClick(event, clicked),
+      isValidLink: isEditorLink,
+    },
     pasteHandler: handleEditorPaste,
     _tiptapOptions: {
       editorProps: {
