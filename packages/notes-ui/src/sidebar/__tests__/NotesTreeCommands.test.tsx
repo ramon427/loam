@@ -78,6 +78,25 @@ describe("creating notes and folders", () => {
     expect(row("Archive").compareDocumentPosition(field)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
+  it("keeps New note on the header's outer edge, whichever side the buttons are on", async () => {
+    await renderSidebar({
+      extra: (
+        <>
+          <NotesSidebarCreateActions />
+          <NotesSidebarCreateActions align="start" />
+        </>
+      ),
+    });
+    const [end, start] = screen.getAllByRole("group", { name: "Create in Notes" }).map((group) =>
+      within(group)
+        .getAllByRole("button")
+        .map((button) => button.title),
+    );
+
+    expect(end).toEqual(["New project", "New folder", "New note"]);
+    expect(start).toEqual(["New note", "New folder", "New project"]);
+  });
+
   it("creates one note while a create is still running", async () => {
     const create = deferred();
     const { invoke, store } = await renderSidebar({
