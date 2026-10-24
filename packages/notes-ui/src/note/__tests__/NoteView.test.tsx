@@ -12,6 +12,7 @@ import {
   textNote,
   pageTabEditor,
 } from "./noteViewHarness";
+import type { NoteDocument } from "../../workspace/types";
 
 stubLayout();
 
@@ -275,6 +276,44 @@ describe("headings that graph nodes link to", () => {
     save();
     expect(editorText(container)).toContain("Plan");
     expect(linkedHeadings(store.note("note-guard-cancel"))).toEqual(["h1"]);
+  });
+});
+
+describe("a change made elsewhere to the open note", () => {
+  it("shows in place, keeping the editor's focus and cursor", async () => {
+    const store = createStore([
+      textNote("note-synced", {
+        notes: [paragraph("a", "Block one."), paragraph("b", "Block two.")],
+      }),
+    ]);
+    const { container } = await renderNoteScreen(store, "note-synced");
+    const editor = await pageTabEditor(container);
+    act(() => {
+      editor.focus();
+      editor.setTextCursorPosition("b", "end");
+    });
+
+    // Another device's editor saves whole blocks; only the first one changed there.
+    const [first, second] = structuredClone(editor.document);
+    const edited = {
+      ...first!,
+      content: [{ type: "text", text: "Block one. Remote edit.", styles: {} }],
+    };
+    act(() =>
+      store.changeElsewhere("note-synced", () => ({
+        blocksByTab: { notes: [edited, second!] } as NoteDocument["blocksByTab"],
+      })),
+    );
+    const secondBlock = container.querySelector('[data-id="b"]');
+
+    await waitFor(() => expect(editorText(container)).toContain("Block one. Remote edit."));
+    expect(await pageTabEditor(container)).toBe(editor);
+    expect(document.activeElement?.closest(".ProseMirror")).not.toBeNull();
+    expect(editor.getTextCursorPosition().block.id).toBe("b");
+    expect(container.querySelector('[data-id="b"]')).toBe(secondBlock);
+    act(() => editor.insertInlineContent("!"));
+    expect(editorText(container)).toContain("Block two.!");
+    expect(store.saves()).toBe(0);
   });
 });
 

@@ -81,10 +81,6 @@ export function NotesScreen({ onCreateNote }: { onCreateNote?: () => void } = {}
     );
   }
   return (
-    <NoteView
-      // Sync replacing the note's content starts its editors over.
-      key={`${note.data.id}:${workspace.activeNoteRevision}`}
-      note={note.data}
-    />
+    <NoteView key={note.data.id} note={note.data} syncRevision={workspace.activeNoteRevision} />
   );
 }

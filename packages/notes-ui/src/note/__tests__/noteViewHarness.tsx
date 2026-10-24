@@ -69,6 +69,8 @@ export const textNote = (
 export const createStore = (notes: NoteDocument[]) => {
   const stored = new Map(notes.map((note) => [note.id, structuredClone(note)]));
   let clock = Date.parse("2026-02-01T00:00:00.000Z");
+  let saves = 0;
+  const listeners = new Map<string, Set<(payload: unknown) => void>>();
   const answer = (method: string, params: Record<string, unknown>) => {
     switch (method) {
       case "notes.library":
@@ -87,6 +89,7 @@ export const createStore = (notes: NoteDocument[]) => {
         return { ...structuredClone(note), contentState: "full" };
       }
       case "notes.save": {
+        saves += 1;
         const note = stored.get(params.noteId as string)!;
         const { video, ...patch } = params.patch as NotePatch;
         const next: NoteDocument = { ...note, ...(patch as Partial<NoteDocument>) };
@@ -111,11 +114,29 @@ export const createStore = (notes: NoteDocument[]) => {
         return { ok: false, error: { code, message: String(error), status: 500 } };
       }
     }) as LoamBridge["invoke"],
-    on: () => () => undefined,
+    on: ((event: string, listener: (payload: unknown) => void) => {
+      const forEvent = listeners.get(event) ?? new Set();
+      listeners.set(event, forEvent);
+      forEvent.add(listener);
+      return () => forEvent.delete(listener);
+    }) as LoamBridge["on"],
     platform: "linux",
     pathForFile: () => "",
   };
-  return { bridge, note: (id: string) => stored.get(id)! };
+  /** Changes a note the way sync from another device would, and announces it. */
+  const changeElsewhere = (id: string, change: (note: NoteDocument) => Partial<NoteDocument>) => {
+    const note = stored.get(id)!;
+    clock += 1000;
+    stored.set(id, { ...note, ...change(note), updatedAt: new Date(clock).toISOString() });
+    const payload = {
+      changedNoteIds: [id],
+      deletedNoteIds: [],
+      layoutChanged: false,
+      conflicts: [],
+    };
+    for (const listener of listeners.get("notes.changed") ?? []) listener(payload);
+  };
+  return { bridge, note: (id: string) => stored.get(id)!, changeElsewhere, saves: () => saves };
 };
 
 /** Renders the notes screen over `store` and opens `noteId`. */

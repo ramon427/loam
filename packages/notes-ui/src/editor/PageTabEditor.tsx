@@ -53,6 +53,7 @@ import { HeadingTargetManager } from "./HeadingTargetManager";
 import { NoteLinkMenuItems } from "./NoteLinkMenuItems";
 import { NoteMentionMenuController } from "./NoteMentionMenu";
 import { useHeadingDeletionGuard } from "./useHeadingDeletionGuard";
+import { replaceSyncedBlocks } from "./replaceSyncedBlocks";
 import { useBlockReveal, type BlockRevealRequest } from "./useBlockReveal";
 import { useNoteLinkDecorations } from "./useNoteLinkDecorations";
 import { useTabUndoHistory } from "./useTabUndoHistory";
@@ -67,8 +68,9 @@ const isPlainClick = (event: MouseEvent) =>
 
 /**
  * One page tab's editor. The note owns the tab's blocks; this editor starts
- * from them and reports every change. The note view gives each tab its own
- * editor, so switching tabs never swaps the document under one.
+ * from them, reports every change, and takes in what sync brings. The note
+ * view gives each tab its own editor, so switching tabs never swaps the
+ * document under one.
  */
 export function PageTabEditor({
   note,
@@ -82,6 +84,7 @@ export function PageTabEditor({
   commands,
   currentVideoTimestamp = null,
   onPasteVideoLink,
+  syncRevision = 0,
 }: {
   note: NoteDocument;
   tab: NoteTab;
@@ -98,6 +101,8 @@ export function PageTabEditor({
   currentVideoTimestamp?: number | null;
   /** Called after a YouTube link is pasted, so the note can offer to attach it. */
   onPasteVideoLink?: (video: ParsedYouTubeUrl) => void;
+  /** Goes up when sync replaces the note; the editor then shows its blocks. */
+  syncRevision?: number;
 }) {
   const { uploadImage } = useImageUpload();
   const headingOptions = useMemo(() => listNoteHeadingConnectionOptions(note), [note]);
@@ -126,8 +131,24 @@ export function PageTabEditor({
   const guard = useHeadingDeletionGuard(editor, note, readOnly);
   useTabUndoHistory(editor, `${note.id}:${tab.id}`, guard.tombstones);
 
+  // Sync's blocks are already the note's; showing them is not an edit to save.
+  const showingSynced = useRef(false);
+  const shownSyncRevision = useRef(syncRevision);
+  const syncedBlocks = note.blocksByTab[tab.id];
+  useLayoutEffect(() => {
+    if (shownSyncRevision.current === syncRevision) return;
+    shownSyncRevision.current = syncRevision;
+    if (!syncedBlocks) return;
+    showingSynced.current = true;
+    try {
+      replaceSyncedBlocks(editor, syncedBlocks);
+    } finally {
+      showingSynced.current = false;
+    }
+  }, [editor, syncRevision, syncedBlocks]);
+
   useEditorChange(() => {
-    if (readOnly) return;
+    if (readOnly || showingSynced.current) return;
     const blocks = editor.document;
     onChange((latest) => {
       const blocksByTab = { ...latest.blocksByTab, [tab.id]: blocks };

@@ -82,9 +82,12 @@ type GraphSelection = { nodeId: string | null; edgeId: string | null };
  */
 export function NoteView({
   note,
+  syncRevision = 0,
 }: {
   /** The open note, read in full. */
   note: NoteDocument;
+  /** Goes up when sync replaces the note's content. */
+  syncRevision?: number;
 }) {
   const { updateNote, openNote, openRequest, notes, folders, projects } = useNotesWorkspace();
   const theme = useEditorTheme();
@@ -263,6 +266,8 @@ export function NoteView({
     return pageCommands.current;
   };
 
+  // A page tab takes in what sync brings; the other tabs start over with it.
+  const syncedTabKey = `${activeTab.id}:${syncRevision}`;
   let body: ReactNode;
   if (activeKind === "page") {
     body = (
@@ -279,12 +284,13 @@ export function NoteView({
         commands={pageCommands}
         currentVideoTimestamp={video.playingTimestamp}
         onPasteVideoLink={hasVideo ? undefined : video.offerPastedVideo}
+        syncRevision={syncRevision}
       />
     );
   } else if (activeKind === "board") {
     body = (
       <StoredTable
-        key={activeTab.id}
+        key={syncedTabKey}
         note={note}
         tabId={activeTab.id}
         create={createNoteBoard}
@@ -303,7 +309,7 @@ export function NoteView({
   } else if (isFileTabKind(activeKind)) {
     body = (
       <FileTab
-        key={activeTab.id}
+        key={syncedTabKey}
         kind={activeKind}
         file={note.filesByTab?.[activeTab.id]}
         onChangeFile={(file) =>
@@ -314,7 +320,7 @@ export function NoteView({
   } else if (activeKind === "embed") {
     body = (
       <EmbedTab
-        key={activeTab.id}
+        key={syncedTabKey}
         address={note.embedsByTab?.[activeTab.id]?.url ?? ""}
         onChange={(url) =>
           update((latest) => ({ embedsByTab: { ...latest.embedsByTab, [activeTab.id]: { url } } }))
@@ -331,7 +337,7 @@ export function NoteView({
       ? graphSelection.edgeId
       : null;
     body = (
-      <div key={activeTab.id} className={cn("w-full", isFull ? "h-full min-h-0" : "min-h-[34rem]")}>
+      <div key={syncedTabKey} className={cn("w-full", isFull ? "h-full min-h-0" : "min-h-[34rem]")}>
         {isGraph ? (
           <NoteGraphPanel
             tabId={activeTab.id}
