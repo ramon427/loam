@@ -315,6 +315,38 @@ describe("a change made elsewhere to the open note", () => {
     expect(editorText(container)).toContain("Block two.!");
     expect(store.saves()).toBe(0);
   });
+  it("shows in place after this window saved its own edit", async () => {
+    const store = createStore([
+      textNote("note-saved-then-synced", {
+        notes: [paragraph("a", "Block one."), paragraph("b", "Block two.")],
+      }),
+    ]);
+    const { container } = await renderNoteScreen(store, "note-saved-then-synced");
+    const editor = await pageTabEditor(container);
+    act(() => {
+      editor.focus();
+      editor.setTextCursorPosition("b", "end");
+      editor.insertInlineContent(" Typed here.");
+    });
+    save();
+    await waitFor(() =>
+      expect(storedText(store.note("note-saved-then-synced"), "notes")).toContain("Typed here."),
+    );
+
+    const [first, second] = structuredClone(editor.document);
+    const edited = {
+      ...first!,
+      content: [{ type: "text", text: "Block one. Remote edit.", styles: {} }],
+    };
+    act(() =>
+      store.changeElsewhere("note-saved-then-synced", () => ({
+        blocksByTab: { notes: [edited, second!] } as NoteDocument["blocksByTab"],
+      })),
+    );
+
+    await waitFor(() => expect(editorText(container)).toContain("Block one. Remote edit."));
+    expect(editorText(container)).toContain("Block two. Typed here.");
+  });
 });
 
 describe("opening a note", () => {
