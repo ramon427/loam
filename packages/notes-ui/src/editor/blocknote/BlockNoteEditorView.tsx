@@ -17,7 +17,7 @@ import {
   useExtensionState,
   type SideMenuProps,
 } from "@blocknote/react";
-import { UnlinkIcon } from "lucide-react";
+import { BookPlusIcon, UnlinkIcon } from "lucide-react";
 
 import {
   ActionMenuContent,
@@ -25,6 +25,7 @@ import {
   leaveToNativeMenu,
   snapshotContextSelection,
 } from "../../action-menu/ActionMenu";
+import { configuredNotesHost } from "../../host/notesHost";
 import { ContextMenu, ContextMenuSeparator, ContextMenuTrigger } from "../../ui/ContextMenu";
 import "./blockNoteStyles";
 import { mediaSrc } from "../../media/mediaSrc";
@@ -32,6 +33,7 @@ import { AttachmentPreviewDialog } from "../../media/AttachmentPreviewDialog";
 import type { NoteBlockEditor } from "../noteEditorSchema";
 import { BlockMenuItems, safeEditorAction, type FeatureBlockMenuItems } from "./BlockMenuItems";
 import { EmojiPickerController } from "./EmojiPickerController";
+import { misspelledWordAt, replaceMisspelledWord, type MisspelledWord } from "./misspelledWord";
 import { BlockNoteFormattingToolbarController } from "./BlockNoteFormattingToolbar";
 import { CustomDragHandleButton } from "./CustomDragHandleButton";
 import { EditorPortalContext } from "./EditorPortal";
@@ -80,7 +82,13 @@ type BlockNoteEditorViewProps = {
 
 /** What the open menu acts on. */
 type OpenMenu =
-  | { kind: "blocks"; blockIds: readonly string[]; hasSelectedText: boolean }
+  | {
+      kind: "blocks";
+      blockIds: readonly string[];
+      hasSelectedText: boolean;
+      /** The misspelled word under the click, when the host checks spelling. */
+      misspelled: MisspelledWord | null;
+    }
   /** `from` is where the link starts, for removing it; null in a read-only note. */
   | { kind: "link"; href: string; text: string; from: number | null };
 
@@ -98,6 +106,39 @@ const removeLink = (editor: NoteBlockEditor, from: number) =>
   safeEditorAction(editor, () => {
     if (editor.getLinkMarkAtPos(from + 1)?.from === from) editor.deleteLink(from);
   });
+
+/** A misspelled word's suggestions and Add to dictionary, ahead of the block's actions. */
+const SpellingMenuItems = ({
+  editor,
+  misspelled,
+}: {
+  editor: NoteBlockEditor;
+  misspelled: MisspelledWord;
+}) => (
+  <>
+    {misspelled.suggestions.length > 0 ? (
+      misspelled.suggestions.map((suggestion) => (
+        <ActionMenuItem
+          key={suggestion}
+          onSelect={() => replaceMisspelledWord(editor, misspelled, suggestion)}
+        >
+          {suggestion}
+        </ActionMenuItem>
+      ))
+    ) : (
+      <ActionMenuItem disabled onSelect={() => undefined}>
+        No spelling suggestions
+      </ActionMenuItem>
+    )}
+    <ActionMenuItem
+      icon={<BookPlusIcon aria-hidden="true" />}
+      onSelect={() => configuredNotesHost()?.spelling?.addToDictionary(misspelled.word)}
+    >
+      Add to dictionary
+    </ActionMenuItem>
+    <ContextMenuSeparator />
+  </>
+);
 
 export function BlockNoteEditorView({
   editor,
@@ -147,6 +188,11 @@ export function BlockNoteEditorView({
       leaveToNativeMenu(event);
       return;
     }
+    const spelling = configuredNotesHost()?.spelling;
+    // Read before the cursor moves, while the click point still shows the same text.
+    const misspelled = spelling
+      ? misspelledWordAt(editor, spelling, event.clientX, event.clientY)
+      : null;
     const current = editor.getSelection()?.blocks.map((block) => block.id) ?? [];
     const snapshot = snapshotContextSelection(new Set(current), blockId);
     if (!current.includes(blockId)) editor.setTextCursorPosition(blockId);
@@ -154,6 +200,7 @@ export function BlockNoteEditorView({
       kind: "blocks",
       blockIds: snapshot.ids,
       hasSelectedText: Boolean(window.getSelection()?.toString()),
+      misspelled,
     });
   };
 
@@ -215,6 +262,9 @@ export function BlockNoteEditorView({
         </div>
       </ContextMenuTrigger>
       <ActionMenuContent aria-label={menu?.kind === "link" ? "Link actions" : "Block actions"}>
+        {menu?.kind === "blocks" && menu.misspelled ? (
+          <SpellingMenuItems editor={editor} misspelled={menu.misspelled} />
+        ) : null}
         {menu?.kind === "blocks" ? (
           <BlockMenuItems
             editor={editor}

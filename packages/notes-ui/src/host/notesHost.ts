@@ -47,6 +47,17 @@ export type NotesHost = {
   canvasBackground?: CanvasBackground;
   /** Where the screens keep their preferences; the window's localStorage by default. */
   preferences?: NotesPreferences;
+  /**
+   * The host's spell checker. With it, right-clicking a misspelled word in a note puts its
+   * suggestions and Add to dictionary first in the block menu.
+   */
+  spelling?: NotesSpelling;
+};
+
+export type NotesSpelling = {
+  /** Suggestions for a misspelled word, best first; null when it's spelled right. */
+  suggestions(word: string): readonly string[] | null;
+  addToDictionary(word: string): void;
 };
 
 /**

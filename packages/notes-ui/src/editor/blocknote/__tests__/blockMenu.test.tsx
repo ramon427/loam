@@ -3,8 +3,9 @@
 import { useEffect } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { DecorationSet } from "@tiptap/pm/view";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { configureNotesHost, notesHost } from "../../../host/notesHost";
 import { installFakeBridge } from "../../../testing/fakeBridge";
 import type { NoteBlockEditor, NotePartialBlock } from "../../noteEditorSchema";
 import { useNoteEditor } from "../../useNoteEditor";
@@ -212,5 +213,95 @@ describe("the editor's block menu", () => {
     await waitFor(() => expect(editor.document).toHaveLength(4));
     expect(editor.document[1]).toMatchObject({ type: "paragraph" });
     expect(editor.document[1]?.id).not.toBe("a");
+  });
+});
+
+describe("spelling in the block menu", () => {
+  const spelling = {
+    suggestions: vi.fn((word: string) => {
+      if (word === "teh") return ["the", "ten"];
+      return word === "zzq" ? [] : null;
+    }),
+    addToDictionary: vi.fn(),
+  };
+  beforeEach(() => {
+    spelling.suggestions.mockClear();
+    spelling.addToDictionary.mockClear();
+    installFakeBridge({});
+    configureNotesHost({ ...notesHost(), spelling });
+  });
+
+  /** Right-clicks the second letter of `word`; jsdom has no layout, so the click point is given. */
+  const rightClickWord = (container: HTMLElement, id: string, word: string) => {
+    const view = editor.prosemirrorView;
+    let pos = -1;
+    view.state.doc.descendants((node, at) => {
+      if (pos < 0 && node.isText && node.text?.includes(word))
+        pos = at + node.text.indexOf(word) + 1;
+    });
+    vi.spyOn(view, "posAtCoords").mockReturnValue({ pos, inside: -1 });
+    openBlockMenu(container, id);
+  };
+  const shownItems = async () =>
+    Array.from(
+      (await screen.findByRole("menu", { name: "Block actions" })).querySelectorAll(
+        '[role="menuitem"]',
+      ),
+      (item) => item.textContent?.trim(),
+    );
+  const text = () => editor.getBlock("a")?.content;
+  const typo: NotePartialBlock[] = [{ id: "a", type: "paragraph", content: "Entry was teh move" }];
+
+  it("leads with the suggestions for a misspelled word, and one replaces it", async () => {
+    const container = await renderNote(typo);
+    rightClickWord(container, "a", "teh");
+
+    expect((await shownItems()).slice(0, 4)).toEqual([
+      "the",
+      "ten",
+      "Add to dictionary",
+      "Turn into",
+    ]);
+    expect(spelling.suggestions).toHaveBeenCalledWith("teh");
+    await choose("the");
+    await waitFor(() =>
+      expect(text()).toEqual([expect.objectContaining({ text: "Entry was the move" })]),
+    );
+  });
+
+  it("adds the word to the dictionary", async () => {
+    const container = await renderNote(typo);
+    rightClickWord(container, "a", "teh");
+
+    await choose("Add to dictionary");
+    await waitFor(() => expect(spelling.addToDictionary).toHaveBeenCalledWith("teh"));
+  });
+
+  it("says when a misspelled word has no suggestions", async () => {
+    const container = await renderNote([{ id: "a", type: "paragraph", content: "One zzq two" }]);
+    rightClickWord(container, "a", "zzq");
+
+    expect(await isDisabled("No spelling suggestions")).toBe(true);
+  });
+
+  it("adds nothing for a word spelled right", async () => {
+    const container = await renderNote(typo);
+    rightClickWord(container, "a", "Entry");
+
+    expect((await shownItems())[0]).toBe("Turn into");
+    expect(spelling.suggestions).toHaveBeenCalledWith("Entry");
+  });
+
+  it("leaves a word alone that changed while the menu was open", async () => {
+    const container = await renderNote(typo);
+    rightClickWord(container, "a", "teh");
+    await screen.findByRole("menuitem", { name: "the" });
+    act(() => editor.updateBlock("a", { content: "Entry was tex move" }));
+
+    await choose("the");
+    // The item acts once the menu has closed.
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    await act(async () => undefined);
+    expect(text()).toEqual([expect.objectContaining({ text: "Entry was tex move" })]);
   });
 });
