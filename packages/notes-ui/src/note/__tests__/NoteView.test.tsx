@@ -358,3 +358,55 @@ describe("opening a note", () => {
     await waitFor(() => expect(editorText(container)).toBe("Two"));
   });
 });
+
+describe("switching notes", () => {
+  /** Holds `notes.get` for `noteId` until the returned function runs. */
+  const holdRead = (store: ReturnType<typeof createStore>, noteId: string) => {
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const invoke = store.bridge.invoke;
+    store.bridge.invoke = (async (method: string, params: Record<string, unknown>) => {
+      if (method === "notes.get" && params.noteId === noteId) await gate;
+      return invoke(method as never, params as never);
+    }) as typeof invoke;
+    return release;
+  };
+  const skeleton = (container: HTMLElement) =>
+    container.querySelector("[data-notes-document-skeleton]");
+
+  it("keeps the open note on screen, not a skeleton, while the next one is read", async () => {
+    const store = createStore([
+      textNote("note-from", { notes: [paragraph("a", "From text")] }),
+      textNote("note-to", { notes: [paragraph("b", "To text")] }),
+    ]);
+    const { container, workspace } = await renderNoteScreen(store, "note-from");
+    const fromEditor = await pageTabEditor(container);
+    const release = holdRead(store, "note-to");
+
+    act(() => workspace().openNote("note-to"));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    expect(skeleton(container)).toBeNull();
+    expect(editorText(container)).toBe("From text");
+    expect(await pageTabEditor(container)).toBe(fromEditor);
+    expect(container.querySelector("[data-note-held]")?.hasAttribute("inert")).toBe(true);
+
+    release();
+    await waitFor(() => expect(editorText(container)).toBe("To text"));
+    expect(container.querySelector("[data-note-held]")).toBeNull();
+  });
+
+  it("shows the skeleton when the next note takes a while to read", async () => {
+    const store = createStore([
+      textNote("note-from", { notes: [paragraph("a", "From text")] }),
+      textNote("note-slow", { notes: [paragraph("b", "Slow text")] }),
+    ]);
+    const { container, workspace } = await renderNoteScreen(store, "note-from");
+    const release = holdRead(store, "note-slow");
+
+    act(() => workspace().openNote("note-slow"));
+    await waitFor(() => expect(skeleton(container)).not.toBeNull(), { timeout: 2000 });
+
+    release();
+    await waitFor(() => expect(editorText(container)).toBe("Slow text"));
+  });
+});

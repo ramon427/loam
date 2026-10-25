@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import type { NoteFolder, NoteProject, NoteProjectIcon } from "@loam/shared/notes/noteModel";
 import { callBridge } from "../host/notesHost";
@@ -112,8 +112,14 @@ export const useNotesWorkspace = () => {
   return workspace;
 };
 
-/** The open note in full: the store's copy plus the edits made since. */
-export const useNoteDocument = (noteId: string | null) =>
+/**
+ * The open note in full: the store's copy plus the edits made since. With `keepShown`, the note
+ * read last stays as placeholder data until the next one is read.
+ */
+export const useNoteDocument = (
+  noteId: string | null,
+  { keepShown = false }: { keepShown?: boolean } = {},
+) =>
   useQuery({
     queryKey: noteKey(noteId ?? ""),
     queryFn: async () => {
@@ -130,6 +136,7 @@ export const useNoteDocument = (noteId: string | null) =>
     staleTime: Infinity,
     gcTime: 5 * 60 * 1000,
     retry: false,
+    placeholderData: keepShown ? keepPreviousData : undefined,
   });
 
 /** Owns the notes library, the open note and every change to them. */

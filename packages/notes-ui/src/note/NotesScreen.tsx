@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { BridgeError } from "../host/notesHost";
 import { toastError } from "../ui/toast";
@@ -14,11 +14,25 @@ import { NoteView } from "./NoteView";
 import { NotesOpenEmptyState } from "./NotesOpenEmptyState";
 import { errorMessage } from "../lib/errorMessage";
 
+// A local read usually lands within a frame or two; the skeleton is for one that doesn't.
+const SLOW_READ_MS = 300;
+
 /** The main column: the open note, the note being loaded, or why there is none. */
 export function NotesScreen({ onCreateNote }: { onCreateNote?: () => void } = {}) {
   const workspace = useNotesWorkspace();
   const { activeNoteId } = workspace;
-  const note = useNoteDocument(activeNoteId);
+  const note = useNoteDocument(activeNoteId, { keepShown: true });
+  const ready = !note.isPlaceholderData && note.data?.contentState === "full";
+  const reading = Boolean(activeNoteId) && !note.isError && !ready;
+
+  // The note switched from stays on screen while the next is read, until the read is slow.
+  const [slowNoteId, setSlowNoteId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!reading) return;
+    const timer = setTimeout(() => setSlowNoteId(activeNoteId), SLOW_READ_MS);
+    return () => clearTimeout(timer);
+  }, [activeNoteId, reading]);
+  const slow = reading && slowNoteId === activeNoteId;
 
   // Notes save by themselves after a pause; this saves the open one now.
   const save = useCallback(async () => {
@@ -73,14 +87,20 @@ export function NotesScreen({ onCreateNote }: { onCreateNote?: () => void } = {}
       </NoteLayout>
     );
   }
-  if (note.data?.contentState !== "full") {
+  const held = reading && !slow && note.data?.contentState === "full" ? note.data : undefined;
+  const shown = ready ? note.data : held;
+  if (!shown) {
+    if (reading && !slow) return <NoteLayout>{null}</NoteLayout>;
     return (
       <NoteLayout header={<NoteHeaderSkeleton />}>
         <NoteDocumentSkeleton />
       </NoteLayout>
     );
   }
+  // One wrapper for the open and the held note, so the note switched from isn't mounted again.
   return (
-    <NoteView key={note.data.id} note={note.data} syncRevision={workspace.activeNoteRevision} />
+    <div data-note-held={held ? true : undefined} inert={Boolean(held)} className="contents">
+      <NoteView key={shown.id} note={shown} syncRevision={workspace.activeNoteRevision} />
+    </div>
   );
 }
